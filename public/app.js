@@ -92,6 +92,18 @@ async function openSource(src) {
 
     if (src.id === 'radio') return renderRadio();
 
+    if (src.id === 'ytdlp') {
+        // Connect first so a missing yt-dlp is reported here, with the install
+        // hint, rather than surfacing as a puzzling failure on the first play.
+        try {
+            await api(`/sources/${src.id}/connect`, { method: 'POST' });
+            await loadSources();
+        } catch (err) {
+            toast(`${src.label}: ${err.message}`, true);
+        }
+        return renderYtdlp();
+    }
+
     try {
         await api(`/sources/${src.id}/connect`, { method: 'POST' });
         await loadSources();
@@ -106,6 +118,11 @@ async function openSource(src) {
 
 async function browse(path, label) {
     const id = state.activeSource;
+
+    // yt-dlp has no library to page through, so its root is the paste box
+    // rather than an empty grid. Reached again when backing out of a playlist.
+    if (!path && id === 'ytdlp') return renderYtdlp();
+
     $('#crumb').textContent = label || state.sources.find((s) => s.id === id)?.label || '';
     $('#back').hidden = state.stack.length === 0;
     $('#search').hidden = false;
@@ -224,6 +241,51 @@ function renderRadio() {
         const url = $('#radio-url').value.trim();
         if (!url) return toast('Enter a stream URL', true);
         play({ url, title: $('#radio-name').value.trim() || url, type: 'station' });
+    };
+}
+
+// --- yt-dlp --------------------------------------------------------------
+
+function renderYtdlp() {
+    $('#crumb').textContent = 'YouTube / SoundCloud';
+    $('#back').hidden = true;
+    $('#empty').hidden = true;
+    // Unlike radio, the search box is useful here: it searches YouTube.
+    $('#search').hidden = false;
+
+    const content = $('#content');
+    content.className = 'list';
+    content.innerHTML = `
+        <div class="form">
+            <label>Paste a link
+                <input id="yt-url" type="url"
+                       placeholder="https://www.youtube.com/watch?v=…">
+            </label>
+            <button class="btn" id="yt-play">Play</button>
+            <button class="btn small" id="yt-open">Open as list</button>
+            <p class="hint">
+                A playlist, album or channel link queues the whole thing.
+                Anything yt-dlp supports works — YouTube, SoundCloud, Bandcamp.
+                Or search YouTube with the box above.
+            </p>
+        </div>`;
+
+    const url = () => $('#yt-url').value.trim();
+
+    $('#yt-play').onclick = () => {
+        if (!url()) return toast('Paste a link first', true);
+        play({ id: url(), title: url(), type: 'track' });
+    };
+
+    // Drills into a playlist instead of queueing it, for picking one track out.
+    $('#yt-open').onclick = () => {
+        if (!url()) return toast('Paste a link first', true);
+        state.stack.push({ path: '', label: 'YouTube / SoundCloud' });
+        browse(`list/${url()}`, 'Link contents');
+    };
+
+    $('#yt-url').onkeydown = (e) => {
+        if (e.key === 'Enter') $('#yt-play').click();
     };
 }
 

@@ -7,8 +7,9 @@
 const { RadioSource } = require('./radio');
 const { SubsonicSource } = require('./subsonic');
 const { JellyfinSource } = require('./jellyfin');
+const { YtdlpSource } = require('./ytdlp');
 
-const REGISTRY = [RadioSource, SubsonicSource, JellyfinSource];
+const REGISTRY = [RadioSource, SubsonicSource, JellyfinSource, YtdlpSource];
 
 class SourceRegistry {
     constructor(config, deps = {}) {
@@ -35,6 +36,9 @@ class SourceRegistry {
     _isConfigured(id) {
         const cfg = this.config.sourceConfig(id);
         if (id === 'radio') return true; // always usable; stations are optional
+        // Nothing to set up: either yt-dlp is installed or connect() explains
+        // how to install it, which is a better message than an empty form.
+        if (id === 'ytdlp') return true;
         if (id === 'subsonic') return Boolean(cfg.url && cfg.username);
         if (id === 'jellyfin') return Boolean(cfg.url && (cfg.token || cfg.username));
         if (id === 'plex') return Boolean(cfg.url && cfg.token);

@@ -53,7 +53,7 @@ executable possible.
 | Navidrome / Subsonic | Direct | Full library browse, search, queue | ✅ Working |
 | Jellyfin | Direct | Full library browse, search, queue | ✅ Working |
 | Plex | Direct | Browse + Plex Companion cast target | ⏳ Planned |
-| YouTube, SoundCloud, Bandcamp | yt-dlp | Search + URL paste | ⏳ Planned |
+| YouTube, SoundCloud, Bandcamp | yt-dlp | Search + URL paste, playlists queue | ✅ Working |
 | Spotify | AirPlay | Official Web API — seek, shuffle, queue | ⏳ Planned |
 | Apple Music, Tidal, anything | AirPlay | DACP back-channel | ⏳ Planned |
 | Any phone | Bluetooth | AVRCP | ⏳ Planned |
@@ -77,6 +77,8 @@ API gives richer control still (seek, shuffle, queue) on top of AirPlay audio.
 
 - Node 20+
 - `ffmpeg` on your PATH
+- `yt-dlp` on your PATH, for the YouTube / SoundCloud source only — everything
+  else works without it
 
 ## Running
 
@@ -113,6 +115,18 @@ project rests on: that a listener stays connected, with unbroken audio, while
 sources are swapped underneath. It also checks ICY framing, bitrate accuracy and
 fast-source backpressure.
 
+It needs no network, which is deliberate — a failure there always means the
+pipeline is broken, never that a website was down.
+
+```bash
+npm run test:ytdlp
+```
+
+Exercises the yt-dlp source for real: search, playlists, queue advance, error
+messages, and that a resolved link actually decodes through to MP3. This one
+does need the network and a working `yt-dlp`, so a failure is not automatically
+a bug in the code.
+
 ## Visualizer
 
 The WebUI includes a Butterchurn visualizer (380 milkdrop presets from `base`,
@@ -133,9 +147,9 @@ Proven against WiiRadio on real hardware.
 - [x] Navidrome / Subsonic
 - [x] Jellyfin
 - [x] WebUI with library browsing and Butterchurn
+- [x] yt-dlp source (YouTube, SoundCloud, Bandcamp)
 - [ ] Plex (browse + Companion cast target)
 - [ ] Jellyfin cast target ("Play On")
-- [ ] yt-dlp source
 - [ ] AirPlay 2 receiver + DACP control
 - [ ] Bluetooth A2DP sink + AVRCP control
 - [ ] Loopback capture
