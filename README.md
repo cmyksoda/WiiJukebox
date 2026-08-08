@@ -1,62 +1,148 @@
-# <img src="./public/images/logo.webp" alt="WiiRadio Stream Bridge Logo" width="400">
+<img src="./public/images/logo.webp" alt="WiiStreamMusic" width="360">
 
-WiiRadio is a long-abandoned, yet wonderful, homebrew application for the Nintendo Wii that allows users to listen to internet radio streams.  
+**One persistent audio stream for your Wii, fed from any source you like.**
 
-The SHOUTcast search functionality has been deprecated for quite a while now, rendering the main purpose of the application to be the playback of pre-downloaded `.pls` or `.m3u` files. However, many of these files found in the present day will not run properly in WiiRadio.  
+WiiStreamMusic is a rework of [wiiradio-stream-bridge](https://github.com/cmyksoda/wiiradio-stream-bridge).
+Where the bridge converted individual internet radio stations into Wii-playable
+mounts, this serves **a single stream that never stops**, and lets you change
+what feeds it from a web interface.
 
-Modern internet radio often uses HTTPS and audio codecs that WiiRadio cannot understand. This tool provides a lightweight web interface to take any modern stream, transcode it into Wii-compatible audio using FFmpeg, and broadcast it over local HTTP via a bundled Icecast server.  
+That difference is the whole design. Because the stream address never changes,
+you set up the Wii **once** — one `.pls` file on the SD card, forever — and
+everything after that happens in the browser. Switching from a Navidrome album
+to a radio station to your phone over Bluetooth doesn't interrupt the Wii at
+all; it just starts playing something else.
 
-## Features
+> **Status: early.** The core pipeline, internet radio, Navidrome/Subsonic,
+> Jellyfin and the WebUI work today. Plex, yt-dlp, the AirPlay/Bluetooth
+> receivers and the standalone packaging are still to come — see
+> [Roadmap](#roadmap).
 
-- **WebUI**: Simple interface to add, pause, resume, and remove streams  
-- **On-the-fly transcoding**: Uses FFmpeg (`libmp3lame`) to convert incoming audio to 44.1 kHz, 128 kbps MP3 streams  
-- **Playlist generation**: Automatically generates `.pls` playlist files for immediate playback in WiiRadio
-- **Persistent across reboots**: Any stream running when the program exits will be stored in a local JSON file
-- **Dockerized and lightweight**: Runs entirely in two containers  
+## How it works
 
-<img src="./demo.gif" alt="Demo GIF" width="800">
-
-## Prerequisites
-
-- Docker and Docker Compose
-
-## Installation
-
-1. Clone the repository:  
-```bash
-git clone https://github.com/cmyksoda/wiiradio-stream-bridge.git
-cd wiiradio-stream-bridge
+```
+source ──> decoder ──> pacer ──> encoder ──> broadcaster ──> Wii
+           (to PCM)   (real-    (to MP3)    (ICY fan-out)
+                       time)
 ```
 
-2. Open `docker-compose.yml` and set your local IP address in the `HOST_IP` environment variable. Optionally, you can change the default Icecast passwords in both `docker-compose.yml` and `server.js`.  
+Everything from the pacer rightwards starts at boot and runs until shutdown.
+Only the left-hand side is ever torn down, and the pacer fills the gap with
+silence while a source is swapped — so the Wii's connection is never dropped.
 
-## Usage
+This matters more than it sounds: WiiRadio falls back to its station list the
+moment a stream ends. If the mount went down on every track change you'd have to
+walk back through the Wii's menus each time.
 
-1. Start the containers:  
+**There is no Icecast.** The old bridge needed it to juggle 20 mountpoints; with
+exactly one, `src/core/broadcaster.js` speaks ICY directly. That removes the
+second container entirely, which is what makes a single self-contained
+executable possible.
+
+## Sources
+
+| Source | Audio | Control & metadata | Status |
+|---|---|---|---|
+| Internet radio | Direct | ICY titles, split into artist/title | ✅ Working |
+| Navidrome / Subsonic | Direct | Full library browse, search, queue | ✅ Working |
+| Jellyfin | Direct | Full library browse, search, queue | ✅ Working |
+| Plex | Direct | Browse + Plex Companion cast target | ⏳ Planned |
+| YouTube, SoundCloud, Bandcamp | yt-dlp | Search + URL paste | ⏳ Planned |
+| Spotify | AirPlay | Official Web API — seek, shuffle, queue | ⏳ Planned |
+| Apple Music, Tidal, anything | AirPlay | DACP back-channel | ⏳ Planned |
+| Any phone | Bluetooth | AVRCP | ⏳ Planned |
+| Any app on this PC | Loopback capture | Whatever the app exposes | ⏳ Planned |
+
+### A note on the closed platforms
+
+Spotify, Apple Music and Tidal have **no API that returns audio**. Spotify's Web
+API is metadata and remote control only, and the 30-second preview URLs were
+removed. So rather than relying on unofficial clients, WiiStreamMusic takes the
+audio via **receiver protocols** — it advertises itself as an AirPlay 2 speaker
+and a Bluetooth sink, and you cast to it from whatever app you already use.
+
+That's fully legitimate, needs no credentials, and covers every platform at once
+including ones that don't exist yet. Transport controls still work, because
+AirPlay carries DACP and Bluetooth carries AVRCP — both let the receiver send
+play/pause/next back to the sender. For Spotify specifically, the official Web
+API gives richer control still (seek, shuffle, queue) on top of AirPlay audio.
+
+## Requirements
+
+- Node 20+
+- `ffmpeg` on your PATH
+
+## Running
+
 ```bash
-docker compose up --build -d
-```  
-2. Open your browser and navigate to `http://localhost:3000` to access the conversion utility.  
-3. Enter a name, your target stream URI, and, optionally, a description.  
-4. Click convert!  
-5. Once the stream starts, click the download icon in the active proxies table to grab the `.pls` file, then place it in the `/apps/radiow/data/pls/` folder on your SD card.  
-6. The proxy will serve the transcoded audio continuously over port 4000.
+npm install
+npm start
+```
 
-*Note: The server is coded to only allow 20 concurrent streams to play at any given time, with the last played stream paused when a new stream is added. You **can** change this functionality by modifying the* `const MAX_STREAMS = 20;` *line near the top of* `server.js` *, but this limitation was included simply to help with performance.*  
+Then open the address it prints. On first run it auto-detects your LAN IP —
+override it in the WebUI if it picks the wrong interface (VPNs and docker
+bridges are the usual culprits).
 
-## Known Bugs
+### Setting up the Wii, once
 
-- ~~Currently, metadata display in WiiRadio is iffy at best. [Progress will be updated here](https://github.com/cmyksoda/wiiradio-stream-bridge/issues/1)~~ *fixed! open an issue please if you find any problems I haven't!*
+1. Click **Download playlist** in the WebUI.
+2. Put the `.pls` in `/apps/radiow/data/pls/` on your SD card.
+3. Open it in WiiRadio.
 
-## Credits & Acknowledgments
+That's it, permanently. From then on you control everything from the browser.
 
-Of course, this project wouldn't exist without the work done by Scanff, Knarrff, and anyone else who has worked on WiiRadio in the past.  
-Check out their repo [here](https://github.com/scanff/wiiradio).  
+## Testing
 
-The lightning bolt/radio tower icon and the background asset used in the WebUI were both designed by TiMeBoMb, another member of the original team.  
+```bash
+npm run smoke
+```
 
-CSS code for rendering the active proxies table was taken and modified from [this post](https://forum.obsidian.md/t/custom-css-for-tables-5-new-styles-ready-to-use-in-your-notes/17084) by user DeaconLight on the Obsidian Forums.
+This runs the pipeline against real ffmpeg and asserts the claim the whole
+project rests on: that a listener stays connected, with unbroken audio, while
+sources are swapped underneath. It also checks ICY framing, bitrate accuracy and
+fast-source backpressure.
 
-Wii Sans font, used in the lower half of the logo, is by [NotSoArtisty on DeviantArt.](https://www.deviantart.com/notsoartisty/art/Wii-Sans-v2-824335667)  
+## Visualizer
 
-Finally, I highly recommend checking out [Deroverda's Recommended Radio Streams](https://github.com/deroverda/recommended-radio-streams) for a great collection of curated internet radio streams.
+The WebUI includes a Butterchurn visualizer (380 milkdrop presets from `base`,
+`extra` and `md1`). It needs the browser to be decoding the stream, so turning it
+on starts local monitoring too. Press <kbd>Esc</kbd> to exit.
+
+The 565 `.milk` presets in `assets/projectm/` are the vanilla WiiRadio set,
+vendored for the Wii-side homebrew app — confirmed working on real hardware.
+
+## Roadmap
+
+- [x] Persistent stream core (ICY broadcaster, pacer, encoder)
+- [x] Internet radio
+- [x] Navidrome / Subsonic
+- [x] Jellyfin
+- [x] WebUI with library browsing and Butterchurn
+- [ ] Plex (browse + Companion cast target)
+- [ ] Jellyfin cast target ("Play On")
+- [ ] yt-dlp source
+- [ ] AirPlay 2 receiver + DACP control
+- [ ] Bluetooth A2DP sink + AVRCP control
+- [ ] Loopback capture
+- [ ] Spotify Web API control layer
+- [ ] Single Linux executable, no Node required
+- [ ] Dedicated homebrew app (architecture TBD)
+
+## Credits
+
+Built on the work of Scanff, Knarrff and everyone else who worked on
+[WiiRadio](https://github.com/scanff/wiiradio).
+
+The lightning bolt/radio tower icon and the WebUI background were designed by
+TiMeBoMb of the original team. Wii Sans font by
+[NotSoArtisty](https://www.deviantart.com/notsoartisty/art/Wii-Sans-v2-824335667).
+
+Visualizer presets via [Butterchurn](https://github.com/jberg/butterchurn);
+integration approach follows the feishin fork's merge strategy.
+
+[Deroverda's Recommended Radio Streams](https://github.com/deroverda/recommended-radio-streams)
+is a good source of stations to try.
+
+## License
+
+GPL-3.0, inherited from wiiradio-stream-bridge.

@@ -1,147 +1,85 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WiiRadio Proxy</title>
-    <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WiiStreamMusic</title>
+<link rel="icon" href="images/favicon.ico">
+<link rel="stylesheet" href="style.css">
+</head>
 <body>
-    <div id="content">
-        <img src="images/logo.webp" alt="WiiRadio">
 
-        <h2>New proxy</h2>
-        <div id="new-proxy-form">
-            <label>Name: <input type="text" id="stream-name" placeholder="cool radio"></label>
-            <label>URI: <input type="text" id="stream-uri" placeholder="https://..."></label>
-            <label>Description (optional): <input type="text" id="stream-description" placeholder="genre, vibe, whatever"></label>
-            <button onclick="startStream()">Convert!</button>
-        </div>
+<!-- The visualizer sits behind everything, so it can be revealed by fading the
+     UI rather than swapping views. -->
+<canvas id="visualizer"></canvas>
+<div id="viz-overlay" hidden><span id="viz-preset"></span></div>
 
-        <h2>Active proxies</h2>
-        <div class="activeTable">
-            <table id="active-table">
-                <thead>
-                    <tr>
-                        <th>Status</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>.pls</th>
-                        <th>Remove</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body"></tbody>
-            </table>
-        </div>
+<div id="app">
+  <aside id="sidebar">
+    <header id="brand">
+      <img src="images/logo.webp" alt="" width="150">
+    </header>
+
+    <nav id="sources" aria-label="Sources"></nav>
+
+    <div id="setup">
+      <h3>Your Wii</h3>
+      <p class="hint">Do this once. The stream address never changes, so the
+        playlist file keeps working forever.</p>
+      <a id="pls-link" class="btn" href="/playlist.pls" download>Download playlist</a>
+      <p class="hint">Put it in <code>/apps/radiow/data/pls/</code> on your SD card.</p>
+      <p class="hint" id="stream-addr"></p>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div id="toolbar">
+      <button id="back" class="icon-btn" title="Back" hidden>&larr;</button>
+      <h2 id="crumb">Pick a source</h2>
+      <input id="search" type="search" placeholder="Search" hidden>
     </div>
 
-    <script>
-        async function startStream() {
-            const name = document.getElementById('stream-name').value;
-            const uri = document.getElementById('stream-uri').value;
-            const description = document.getElementById('stream-description').value;
+    <div id="content"></div>
 
-            if (!name || !uri) return alert('Please enter a name and URI');
+    <div id="empty" class="empty">
+      <p>Choose a source on the left to get started.</p>
+    </div>
+  </main>
+</div>
 
-            const res = await fetch('/api/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, uri, description })
-            });
+<!-- Transport bar. Controls are enabled per-source from the capabilities the
+     server reports, so nothing here ever pretends to work when it can't. -->
+<footer id="player">
+  <div id="np">
+    <img id="np-art" alt="" hidden>
+    <div id="np-text">
+      <div id="np-title">Nothing playing</div>
+      <div id="np-artist"></div>
+    </div>
+  </div>
 
-            if (!res.ok) return alert(await res.text());
+  <div id="controls">
+    <button id="prev" class="icon-btn" title="Previous" disabled>&#9198;</button>
+    <button id="playpause" class="icon-btn big" title="Play" disabled>&#9199;</button>
+    <button id="next" class="icon-btn" title="Next" disabled>&#9197;</button>
+  </div>
 
-            document.getElementById('stream-name').value = '';
-            document.getElementById('stream-uri').value = '';
-            document.getElementById('stream-description').value = '';
-            fetchStatus();
-        }
+  <div id="right">
+    <span id="listeners" title="Wii consoles connected">0 listening</span>
+    <button id="monitor" class="btn small" title="Play the stream here in the browser">Monitor</button>
+    <button id="viz-toggle" class="btn small">Visualizer</button>
+  </div>
+</footer>
 
-        function esc(value) {
-            return String(value ?? '').replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
+<div id="toast" hidden></div>
 
-        const iconCache = {};
-        async function loadIcon(name) {
-            if (iconCache[name]) return iconCache[name];
-            const res = await fetch(`images/${name}.svg`);
-            let svgText = await res.text();
-            svgText = svgText.replace(/\swidth="[^"]*"/, '').replace(/\sheight="[^"]*"/, '');
-            iconCache[name] = svgText;
-            return svgText;
-        }
-        const iconsReady = Promise.all(['play', 'pause', 'download', 'remove'].map(loadIcon));
+<!-- Audio element used only for local monitoring; it is also what feeds the
+     visualizer, since Butterchurn needs a Web Audio node to analyse. -->
+<audio id="monitor-audio" crossorigin="anonymous"></audio>
 
-        // toggles a stream between playing and paused
-        async function toggleStream(mount, isPaused) {
-            const endpoint = isPaused ? '/api/resume' : '/api/pause';
-            await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mount })
-            });
-            fetchStatus();
-        }
-
-        async function removeStream(mount) {
-            await fetch('/api/stop', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mount })
-            });
-            fetchStatus();
-        }
-
-        async function fetchStatus() {
-            await iconsReady; // icons only need to load once; cached after that
-
-            const response = await fetch('/api/status');
-            const streams = await response.json();
-            const tbody = document.getElementById('table-body');
-
-            tbody.innerHTML = '';
-
-            if (streams.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">No active streams</td></tr>';
-                return;
-            }
-
-            streams.forEach(({ mount, name, description, paused }) => {
-                // when playing: default icon is "play" (current state), hover reveals "pause" (the action a click performs)
-                // when paused:  default icon is "pause" (current state), hover reveals "play" (the action a click performs)
-                const defaultIcon = paused ? 'pause' : 'play';
-                const hoverIcon = paused ? 'play' : 'pause';
-
-                // wiiradio shows the filename on its main interface, so save the
-                // playlist as the stream name rather than the mountpoint
-                const plsName = `${String(name).replace(/[\\/:*?"<>|]/g, '').trim() || mount}.pls`;
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <button class="icon-btn status-toggle" onclick="toggleStream('${esc(mount)}', ${paused})" title="${paused ? 'resume' : 'pause'}" aria-label="${paused ? 'resume' : 'pause'}">
-                            <span class="icon-swap">
-                                <span class="icon-default">${iconCache[defaultIcon]}</span>
-                                <span class="icon-hover">${iconCache[hoverIcon]}</span>
-                            </span>
-                        </button>
-                    </td>
-                    <td>${esc(name)}</td>
-                    <td>${esc(description)}</td>
-                    <td><a class="icon-btn icon-darken" href="/api/playlist/${encodeURIComponent(mount)}" download="${esc(plsName)}" aria-label="download .pls">${iconCache.download}</a></td>
-                    <td><button class="icon-btn icon-darken" onclick="removeStream('${esc(mount)}')" aria-label="remove">${iconCache.remove}</button></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        fetchStatus();
-        setInterval(fetchStatus, 3000);
-    </script>
+<!-- Butterchurn 3.x ships as an ES module, so app.js is a module too and
+     imports it directly. The preset bundles are still UMD and are loaded on
+     demand from app.js instead. -->
+<script type="module" src="app.js"></script>
 </body>
 </html>

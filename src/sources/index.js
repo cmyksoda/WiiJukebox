@@ -1,0 +1,83 @@
+// Source registry.
+//
+// Every source is constructed lazily and kept alive once connected, so browsing
+// a library does not require it to be the one currently playing -- you can queue
+// up the next thing from Navidrome while AirPlay is still feeding the stream.
+
+const { RadioSource } = require('./radio');
+const { SubsonicSource } = require('./subsonic');
+const { JellyfinSource } = require('./jellyfin');
+
+const REGISTRY = [RadioSource, SubsonicSource, JellyfinSource];
+
+class SourceRegistry {
+    constructor(config, deps = {}) {
+        this.config = config;
+        this.deps = deps;
+        this._instances = new Map();
+    }
+
+    /** Every source type known, with enough detail for the WebUI to list them. */
+    describe() {
+        return REGISTRY.map((Cls) => {
+            const instance = this._instances.get(Cls.id);
+            return {
+                id: Cls.id,
+                label: Cls.label,
+                family: Cls.family,
+                state: instance ? instance.state : 'idle',
+                configured: this._isConfigured(Cls.id),
+                capabilities: instance ? instance.capabilities : {},
+            };
+        });
+    }
+
+    _isConfigured(id) {
+        const cfg = this.config.sourceConfig(id);
+        if (id === 'radio') return true; // always usable; stations are optional
+        if (id === 'subsonic') return Boolean(cfg.url && cfg.username);
+        if (id === 'jellyfin') return Boolean(cfg.url && (cfg.token || cfg.username));
+        if (id === 'plex') return Boolean(cfg.url && cfg.token);
+        return false;
+    }
+
+    /** Get (creating if needed) the instance for a source id. */
+    get(id) {
+        if (this._instances.has(id)) return this._instances.get(id);
+
+        const Cls = REGISTRY.find((c) => c.id === id);
+        if (!Cls) throw new Error(`unknown source: ${id}`);
+
+        const instance = new Cls(this.config.sourceConfig(id), this.deps);
+
+        // Sources that obtain a token during login hand it back here so the user
+        // is not asked for a password on every restart.
+        instance.on('credentials', (creds) => {
+            this.config.updateSource(id, creds);
+        });
+
+        this._instances.set(id, instance);
+        return instance;
+    }
+
+    /** Connect a source, reusing an existing connection when already ready. */
+    async connect(id) {
+        const source = this.get(id);
+        if (source.state === 'ready' || source.state === 'playing') return source;
+        await source.connect();
+        return source;
+    }
+
+    async disconnectAll() {
+        for (const source of this._instances.values()) {
+            try {
+                await source.disconnect();
+            } catch {
+                /* shutting down anyway */
+            }
+        }
+        this._instances.clear();
+    }
+}
+
+module.exports = { SourceRegistry, REGISTRY };
