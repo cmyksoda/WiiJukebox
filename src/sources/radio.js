@@ -167,7 +167,7 @@ class RadioSource extends Source {
                     `GET ${u.pathname}${u.search} HTTP/1.0\r\n` +
                         `Host: ${u.host}\r\n` +
                         `Icy-MetaData: 1\r\n` +
-                        `User-Agent: WiiStreamMusic\r\n` +
+                        `User-Agent: WiiJukebox\r\n` +
                         `Connection: close\r\n\r\n`,
                 );
             });

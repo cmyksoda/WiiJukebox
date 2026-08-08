@@ -1,4 +1,4 @@
-// WiiStreamMusic WebUI.
+// WiiJukebox WebUI.
 //
 // Deliberately dependency-free and un-built: the whole thing is three files the
 // server hands over as-is. That keeps the eventual single-executable packaging

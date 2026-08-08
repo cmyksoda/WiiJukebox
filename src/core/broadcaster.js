@@ -82,9 +82,9 @@ class Broadcaster extends EventEmitter {
      */
     constructor({
         mount = '/stream',
-        name = 'WiiStreamMusic',
+        name = 'WiiJukebox',
         genre = 'Various',
-        description = 'WiiStreamMusic',
+        description = 'WiiJukebox',
         bitrate = MP3_BITRATE_KBPS,
     } = {}) {
         super();

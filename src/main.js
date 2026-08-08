@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// WiiStreamMusic entry point.
+// WiiJukebox entry point.
 //
 // Brings up the persistent stream first, then the WebUI. Order matters: the
 // mount should be live and serving silence before anything else can fail, so a
@@ -60,7 +60,7 @@ async function main() {
 
     const url = `http://${config.data.hostIp}:${config.data.port}`;
     console.log('');
-    console.log('  WiiStreamMusic is running');
+    console.log('  WiiJukebox is running');
     console.log(`  WebUI    ${url}`);
     console.log(`  Stream   ${url}${config.data.mount}`);
     console.log(`  Playlist ${url}/playlist.pls  -> put on your SD card once`);

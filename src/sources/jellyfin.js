@@ -7,12 +7,12 @@
 // The cast half is why this registers a real device identity rather than just
 // making anonymous API calls: Jellyfin only offers a client as a remote-control
 // target if it has announced itself as a session, so the DeviceId below is what
-// makes WiiStreamMusic appear in that menu.
+// makes WiiJukebox appear in that menu.
 
 const crypto = require('crypto');
 const { Source } = require('./base');
 
-const CLIENT_NAME = 'WiiStreamMusic';
+const CLIENT_NAME = 'WiiJukebox';
 const CLIENT_VERSION = '0.1.0';
 
 class JellyfinSource extends Source {

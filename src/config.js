@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const APP = 'wiistreammusic';
+const APP = 'wiijukebox';
 
 function configDir() {
     const base =
@@ -32,9 +32,9 @@ const DEFAULTS = {
     mount: '/stream',
 
     station: {
-        name: 'WiiStreamMusic',
+        name: 'WiiJukebox',
         genre: 'Various',
-        description: 'WiiStreamMusic',
+        description: 'WiiJukebox',
     },
 
     // Per-source settings, keyed by source id.

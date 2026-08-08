@@ -1,8 +1,8 @@
-<img src="./public/images/logo.webp" alt="WiiStreamMusic" width="360">
+<img src="./public/images/logo.webp" alt="WiiJukebox" width="360">
 
 **One persistent audio stream for your Wii, fed from any source you like.**
 
-WiiStreamMusic is a rework of [wiiradio-stream-bridge](https://github.com/cmyksoda/wiiradio-stream-bridge).
+WiiJukebox is a rework of [wiiradio-stream-bridge](https://github.com/cmyksoda/wiiradio-stream-bridge).
 Where the bridge converted individual internet radio stations into Wii-playable
 mounts, this serves **a single stream that never stops**, and lets you change
 what feeds it from a web interface.
@@ -13,10 +13,16 @@ everything after that happens in the browser. Switching from a Navidrome album
 to a radio station to your phone over Bluetooth doesn't interrupt the Wii at
 all; it just starts playing something else.
 
-> **Status: early.** The core pipeline, internet radio, Navidrome/Subsonic,
-> Jellyfin and the WebUI work today. Plex, yt-dlp, the AirPlay/Bluetooth
-> receivers and the standalone packaging are still to come — see
-> [Roadmap](#roadmap).
+> **Status: phase one, in progress.** The core pipeline, internet radio,
+> Navidrome/Subsonic, Jellyfin and the WebUI work today. Plex, yt-dlp, the
+> AirPlay/Bluetooth receivers and the standalone packaging are still to come —
+> see [Roadmap](#roadmap).
+>
+> **WiiRadio is the testing environment, not the final product.** It is a
+> known-good ICY client on real hardware, which makes it a good way to prove the
+> server half works. Phase two replaces it with a dedicated homebrew app — no
+> `.pls` file, no typing local IP addresses into a Wii. See
+> [HANDOFF.md](./HANDOFF.md).
 
 ## How it works
 
@@ -57,7 +63,7 @@ executable possible.
 
 Spotify, Apple Music and Tidal have **no API that returns audio**. Spotify's Web
 API is metadata and remote control only, and the 30-second preview URLs were
-removed. So rather than relying on unofficial clients, WiiStreamMusic takes the
+removed. So rather than relying on unofficial clients, WiiJukebox takes the
 audio via **receiver protocols** — it advertises itself as an AirPlay 2 speaker
 and a Bluetooth sink, and you cast to it from whatever app you already use.
 
@@ -83,13 +89,18 @@ Then open the address it prints. On first run it auto-detects your LAN IP —
 override it in the WebUI if it picks the wrong interface (VPNs and docker
 bridges are the usual culprits).
 
-### Setting up the Wii, once
+### Setting up the Wii (phase one — temporary)
 
 1. Click **Download playlist** in the WebUI.
 2. Put the `.pls` in `/apps/radiow/data/pls/` on your SD card.
 3. Open it in WiiRadio.
 
-That's it, permanently. From then on you control everything from the browser.
+Because the mount address never changes, this survives restarts and source
+changes — you do it once and then drive everything from the browser.
+
+This is scaffolding, though. Copying files onto an SD card is not an acceptable
+setup flow for the finished product, which is why phase two replaces it with a
+short pairing code typed on the Wii itself.
 
 ## Testing
 
@@ -113,6 +124,10 @@ vendored for the Wii-side homebrew app — confirmed working on real hardware.
 
 ## Roadmap
 
+### Phase one — the persistent stream
+
+Proven against WiiRadio on real hardware.
+
 - [x] Persistent stream core (ICY broadcaster, pacer, encoder)
 - [x] Internet radio
 - [x] Navidrome / Subsonic
@@ -126,7 +141,30 @@ vendored for the Wii-side homebrew app — confirmed working on real hardware.
 - [ ] Loopback capture
 - [ ] Spotify Web API control layer
 - [ ] Single Linux executable, no Node required
-- [ ] Dedicated homebrew app (architecture TBD)
+
+### Phase two — the dedicated homebrew app
+
+Replaces WiiRadio entirely. Architecture still open; see
+[HANDOFF.md](./HANDOFF.md) for the constraints that lift once we own the client
+and for the connection-code options.
+
+- [ ] UDP broadcast discovery — survives DHCP address changes
+- [ ] Pairing code (`XND-EOD` style) identifying *which* server, not where it is
+- [ ] Client-side protocol richer than ICY (structured metadata, album art)
+- [ ] Better codec than 128 kbps MP3
+- [ ] Bidirectional control from the Wii
+- [ ] projectM visualizer using the vendored `.milk` presets
+
+- [ ] Delete `/playlist.pls` and the SD card step entirely
+
+The ICY mount stays regardless — it costs nothing and lets VLC, a phone or any
+other ICY client listen to the same stream. It is the playlist *file* that goes.
+
+### Stretch
+
+- [ ] Album art lookup for sources that carry none (keyless: iTunes, Deezer)
+- [ ] Time-synced lyrics via LRCLIB
+- [ ] Warn when the LAN address drifts (phase one only; throwaway)
 
 ## Credits
 

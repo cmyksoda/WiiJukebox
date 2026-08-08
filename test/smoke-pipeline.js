@@ -166,7 +166,7 @@ function connectListener(port, mount) {
 }
 
 async function main() {
-    console.log('\n=== WiiStreamMusic pipeline smoke test ===\n');
+    console.log('\n=== WiiJukebox pipeline smoke test ===\n');
 
     console.log('generating test audio...');
     const toneA = makeTone('a.wav', 440, 30);

@@ -1,5 +1,5 @@
 {
-  "name": "wiistreammusic",
+  "name": "wiijukebox",
   "version": "0.1.0",
   "description": "One persistent audio stream for WiiRadio, fed from any source you like",
   "main": "src/main.js",

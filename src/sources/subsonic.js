@@ -6,7 +6,7 @@
 // a good chunk of the self-hosted world.
 //
 // Subsonic has no cast/remote-control concept, unlike Jellyfin and Plex, so
-// there is no "play to WiiStreamMusic" button inside a Navidrome client. Here
+// there is no "play to WiiJukebox" button inside a Navidrome client. Here
 // the browsing happens in our WebUI instead.
 
 const crypto = require('crypto');
@@ -15,7 +15,7 @@ const { Source } = require('./base');
 // Version we claim to speak. 1.16.1 is the last Subsonic spec release and what
 // Navidrome targets; asking for more just gets rejected by older servers.
 const API_VERSION = '1.16.1';
-const CLIENT_NAME = 'WiiStreamMusic';
+const CLIENT_NAME = 'WiiJukebox';
 
 class SubsonicSource extends Source {
     static id = 'subsonic';
