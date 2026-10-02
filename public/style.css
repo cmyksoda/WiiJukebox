@@ -110,7 +110,13 @@ body.viz #player { background: rgba(14, 17, 22, .55); backdrop-filter: blur(12px
 .source-btn .sub { display: block; font-size: 12px; color: var(--dim); }
 
 #setup { margin-top: auto; border-top: 1px solid var(--line); padding-top: 16px; }
-#setup h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
+#setup h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--dim);
+}
 .hint { font-size: 12px; color: var(--dim); margin: 6px 0; }
 code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
 
@@ -177,7 +183,14 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
     text-align: left;
 }
 .row:hover { background: var(--panel-2); }
-.row img, .row .ph { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; background: var(--panel-2); flex: none; }
+.row img, .row .ph {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: var(--panel-2);
+    flex: none;
+}
 .row .meta { flex: 1; min-width: 0; }
 .row .dur { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
 
@@ -211,7 +224,14 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
     text-align: center;
 }
 .btn:hover { filter: brightness(1.1); }
-.btn.small { padding: 6px 11px; font-size: 13px; font-weight: 500; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+.btn.small {
+    padding: 6px 11px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+}
 .btn.small[aria-pressed="true"] { background: var(--accent); color: #06121f; border-color: transparent; }
 
 /* --- transport bar ----------------------------------------------------- */
@@ -234,7 +254,13 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 #np-art { width: 52px; height: 52px; border-radius: 6px; object-fit: cover; flex: none; }
 #np-text { min-width: 0; }
 #np-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#np-artist { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#np-artist {
+    font-size: 13px;
+    color: var(--dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 #controls { display: flex; align-items: center; gap: 8px; }
 
