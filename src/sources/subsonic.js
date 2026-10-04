@@ -34,9 +34,9 @@ class SubsonicSource extends Source {
             play: true,
             pause: true,
             stop: true,
-            next: this._queue.length > 0,
-            previous: this._queue.length > 0,
-            seek: true,
+            next: this._queueIndex + 1 < this._queue.length,
+            previous: this._queueIndex > 0,
+            seek: false,
             browse: true,
             search: true,
             queue: true,
@@ -62,7 +62,7 @@ class SubsonicSource extends Source {
             params.set('s', salt);
         } else {
             const s = crypto.randomBytes(8).toString('hex');
-            params.set('t', crypto.createHash('md5').update(password + s).digest('hex'));
+            params.set('t', crypto.createHash('md5').update(String(password ?? '') + s).digest('hex'));
             params.set('s', s);
         }
         return params;
@@ -70,6 +70,7 @@ class SubsonicSource extends Source {
 
     _url(endpoint, extra = {}) {
         const base = String(this.config.url || '').replace(/\/+$/, '');
+        if (!/^https?:\/\//i.test(base)) throw new Error('use an HTTP(S) Navidrome server URL');
         const params = this._authParams();
         for (const [k, v] of Object.entries(extra)) {
             if (v != null) params.set(k, String(v));
@@ -133,6 +134,9 @@ class SubsonicSource extends Source {
      *   'playlist/<id>'       -> that playlist's tracks
      */
     async browse({ path = '', offset = 0, limit = 100 } = {}) {
+        if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+            throw new Error('invalid library page');
+        }
         const [kind, id] = path.split('/');
 
         if (!kind) {
@@ -168,7 +172,7 @@ class SubsonicSource extends Source {
             const res = await this._call('getArtist.view', { id });
             const albums = (res.artist && res.artist.album) || [];
             return {
-                items: albums.map((a) => this._albumItem(a)),
+                items: albums.slice(offset, offset + limit).map((a) => this._albumItem(a)),
                 total: albums.length,
             };
         }
@@ -191,14 +195,14 @@ class SubsonicSource extends Source {
         if (kind === 'album') {
             const res = await this._call('getAlbum.view', { id });
             const songs = (res.album && res.album.song) || [];
-            return { items: songs.map((s) => this._trackItem(s)), total: songs.length };
+            return { items: songs.slice(offset, offset + limit).map((s) => this._trackItem(s)), total: songs.length };
         }
 
         if (kind === 'playlists') {
             const res = await this._call('getPlaylists.view');
             const lists = (res.playlists && res.playlists.playlist) || [];
             return {
-                items: lists.map((p) => ({
+                items: lists.slice(offset, offset + limit).map((p) => ({
                     id: `playlist/${p.id}`,
                     type: 'playlist',
                     title: p.name,
@@ -212,13 +216,13 @@ class SubsonicSource extends Source {
         if (kind === 'playlist') {
             const res = await this._call('getPlaylist.view', { id });
             const songs = (res.playlist && res.playlist.entry) || [];
-            return { items: songs.map((s) => this._trackItem(s)), total: songs.length };
+            return { items: songs.slice(offset, offset + limit).map((s) => this._trackItem(s)), total: songs.length };
         }
 
         if (kind === 'starred') {
             const res = await this._call('getStarred2.view');
             const songs = (res.starred2 && res.starred2.song) || [];
-            return { items: songs.map((s) => this._trackItem(s)), total: songs.length };
+            return { items: songs.slice(offset, offset + limit).map((s) => this._trackItem(s)), total: songs.length };
         }
 
         throw new Error(`unknown browse path: ${path}`);
@@ -284,8 +288,13 @@ class SubsonicSource extends Source {
         const ref = typeof item === 'string' ? { id: item, type: 'track' } : item;
 
         if (ref.type === 'album' || ref.type === 'playlist') {
-            const { items } = await this.browse({ path: ref.id });
-            this._queue = items.filter((i) => i.type === 'track');
+            const [kind, id] = ref.id.split('/');
+            if (kind !== ref.type || !id) throw new Error('invalid album or playlist');
+            const response = await this._call(kind === 'album' ? 'getAlbum.view' : 'getPlaylist.view', { id });
+            const songs = kind === 'album' ? response.album?.song : response.playlist?.entry;
+            // Browsing is paged; a play-container action must still queue every
+            // track, in the order supplied by Navidrome.
+            this._queue = (songs || []).map((song) => this._trackItem(song));
             this._queueIndex = 0;
             if (!this._queue.length) throw new Error('nothing playable in that selection');
             return this._openQueueItem();
@@ -343,6 +352,11 @@ class SubsonicSource extends Source {
 
     get queue() {
         return { items: this._queue, index: this._queueIndex };
+    }
+
+    async disconnect() {
+        await this.close();
+        this._setState('idle');
     }
 
     async close() {

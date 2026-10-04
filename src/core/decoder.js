@@ -20,9 +20,11 @@ class Decoder extends EventEmitter {
      * @param {number} [opts.seekSeconds]  start offset for seekable inputs
      * @param {string} [opts.ffmpegPath]
      */
-    constructor({ uri, headers, seekSeconds = 0, ffmpegPath = 'ffmpeg' } = {}) {
+    constructor({ uri, headers, device, format, seekSeconds = 0, ffmpegPath = 'ffmpeg' } = {}) {
         super();
         this._uri = uri;
+        this._device = device;
+        this._format = format;
         this._headers = headers;
         this._seekSeconds = seekSeconds;
         this._ffmpegPath = ffmpegPath;
@@ -65,7 +67,10 @@ class Decoder extends EventEmitter {
         // Before -i, so ffmpeg seeks rather than decoding and discarding.
         if (this._seekSeconds > 0) args.push('-ss', String(this._seekSeconds));
 
-        args.push('-i', this._uri || 'pipe:0');
+        if (this._device) {
+            if (this._format !== 'pulse') throw new Error('unsupported capture device');
+            args.push('-f', 'pulse', '-i', this._device);
+        } else args.push('-i', this._uri || 'pipe:0');
 
         // Some sources are video containers (YouTube), some carry cover art as a
         // still image "video" stream. Either would make ffmpeg fail on a

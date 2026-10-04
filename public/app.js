@@ -116,7 +116,7 @@ async function openSource(src) {
 
 // --- library browsing ----------------------------------------------------
 
-async function browse(path, label) {
+async function browse(path, label, offset = 0) {
     const id = state.activeSource;
 
     // yt-dlp has no library to page through, so its root is the paste box
@@ -125,24 +125,32 @@ async function browse(path, label) {
 
     $('#crumb').textContent = label || state.sources.find((s) => s.id === id)?.label || '';
     $('#back').hidden = state.stack.length === 0;
-    $('#search').hidden = false;
+    $('#search').hidden = id === 'desktop';
     $('#empty').hidden = true;
 
     const content = $('#content');
     content.innerHTML = '<p class="empty">Loading…</p>';
 
     try {
-        const { items } = await api(
-            `/sources/${id}/browse?path=${encodeURIComponent(path)}`,
+        const result = await api(
+            `/sources/${id}/browse?path=${encodeURIComponent(path)}&offset=${offset}&limit=100`,
         );
-        renderItems(items, path, label);
+        if (state.activeSource !== id) return;
+        const items = result.items.length > 100 ? result.items.slice(offset, offset + 100) : result.items;
+        $('#pagination').hidden = result.total <= 100 && offset === 0;
+        $('#library-prev').disabled = offset === 0;
+        $('#library-next').disabled = offset + items.length >= result.total || !items.length;
+        $('#library-page').textContent = `Page ${Math.floor(offset / 100) + 1}`;
+        $('#library-prev').onclick = () => browse(path, label, Math.max(0, offset - 100));
+        $('#library-next').onclick = () => browse(path, label, offset + 100);
+        renderItems(items, path, label, offset);
     } catch (err) {
         content.innerHTML = '';
         toast(err.message, true);
     }
 }
 
-function renderItems(items, path, label) {
+function renderItems(items, path, label, offset = 0) {
     const content = $('#content');
     content.innerHTML = '';
 
@@ -161,7 +169,7 @@ function renderItems(items, path, label) {
         if (allTracks) {
             el.className = 'row';
             el.innerHTML = `
-                ${item.artwork ? `<img src="${item.artwork}" alt="">` : '<span class="ph"></span>'}
+                ${item.artwork ? `<img src="${escapeHtml(item.artwork)}" alt="">` : '<span class="ph"></span>'}
                 <span class="meta">
                     <span class="t">${escapeHtml(item.title || '')}</span>
                     <span class="s">${escapeHtml(item.subtitle || '')}</span>
@@ -170,7 +178,7 @@ function renderItems(items, path, label) {
         } else {
             el.className = 'card';
             el.innerHTML = `
-                ${item.artwork ? `<img src="${item.artwork}" alt="" loading="lazy">` : '<span class="ph"></span>'}
+                ${item.artwork ? `<img src="${escapeHtml(item.artwork)}" alt="" loading="lazy">` : '<span class="ph"></span>'}
                 <span class="t">${escapeHtml(item.title || '')}</span>
                 <span class="s">${escapeHtml(item.subtitle || '')}</span>`;
         }
@@ -179,12 +187,12 @@ function renderItems(items, path, label) {
             // Folders and containers drill in; anything playable plays. Albums
             // and playlists do both -- clicking one plays it whole, which is
             // what "play this album" should mean.
-            if (item.type === 'track') return play(item);
+            if (item.type === 'track' || item.type === 'station') return play(item);
             if (item.type === 'folder' || item.type === 'artist') {
-                state.stack.push({ path, label });
+                state.stack.push({ path, label, offset });
                 return browse(item.id, item.title);
             }
-            state.stack.push({ path, label });
+            state.stack.push({ path, label, offset });
             browse(item.id, item.title);
         };
 
@@ -219,6 +227,7 @@ async function play(item) {
 // --- radio ---------------------------------------------------------------
 
 function renderRadio() {
+    $('#pagination').hidden = true;
     $('#crumb').textContent = 'Internet Radio';
     $('#search').hidden = true;
     $('#back').hidden = true;
@@ -235,8 +244,11 @@ function renderRadio() {
                 <input id="radio-name" type="text" placeholder="Groove Salad">
             </label>
             <button class="btn" id="radio-play">Play</button>
+            <button class="btn small" id="radio-save">Save station for Wii</button>
+            <div id="favorites"></div>
         </div>`;
 
+    bindFavorites('radio', '#radio-url', '#radio-name', '#radio-save');
     $('#radio-play').onclick = () => {
         const url = $('#radio-url').value.trim();
         if (!url) return toast('Enter a stream URL', true);
@@ -247,6 +259,7 @@ function renderRadio() {
 // --- yt-dlp --------------------------------------------------------------
 
 function renderYtdlp() {
+    $('#pagination').hidden = true;
     $('#crumb').textContent = 'YouTube / SoundCloud';
     $('#back').hidden = true;
     $('#empty').hidden = true;
@@ -261,7 +274,10 @@ function renderYtdlp() {
                 <input id="yt-url" type="url"
                        placeholder="https://www.youtube.com/watch?v=…">
             </label>
+            <label>Name (optional)<input id="yt-name" type="text" placeholder="My saved link"></label>
             <button class="btn" id="yt-play">Play</button>
+            <button class="btn small" id="yt-save">Save link for Wii</button>
+            <div id="favorites"></div>
             <button class="btn small" id="yt-open">Open as list</button>
             <p class="hint">
                 A playlist, album or channel link queues the whole thing.
@@ -270,6 +286,7 @@ function renderYtdlp() {
             </p>
         </div>`;
 
+    bindFavorites('ytdlp', '#yt-url', '#yt-name', '#yt-save');
     const url = () => $('#yt-url').value.trim();
 
     $('#yt-play').onclick = () => {
@@ -289,9 +306,51 @@ function renderYtdlp() {
     };
 }
 
+async function bindFavorites(source, urlInput, nameInput, saveButton) {
+    const container = $('#favorites');
+    const reload = async () => {
+        const { items } = await api(`/sources/${source}/favorites`);
+        container.replaceChildren();
+        for (const item of items) {
+            const row = document.createElement('div');
+            const playButton = document.createElement('button');
+            playButton.className = 'btn small';
+            playButton.textContent = item.name;
+            playButton.onclick = () => play(source === 'radio'
+                ? { url: item.url, title: item.name, type: 'station' }
+                : { id: item.url, title: item.name, type: 'track' });
+            const remove = document.createElement('button');
+            remove.className = 'btn small';
+            remove.textContent = 'Remove';
+            remove.onclick = async () => {
+                try {
+                    await api(`/sources/${source}/favorites`, { method: 'DELETE', body: { id: item.id } });
+                    await reload();
+                } catch (err) { toast(err.message, true); }
+            };
+            row.append(playButton, remove);
+            container.append(row);
+        }
+    };
+    $(saveButton).onclick = async () => {
+        try {
+            await api(`/sources/${source}/favorites`, { method: 'POST', body: {
+                url: $(urlInput).value.trim(), name: $(nameInput).value.trim(),
+            } });
+            await reload();
+            toast('Saved for the Wii source browser');
+        } catch (err) { toast(err.message, true); }
+    };
+    try { await reload(); } catch (err) { toast(err.message, true); }
+}
+
 // --- settings ------------------------------------------------------------
 
 const FIELDS = {
+    plex: [
+        ['url', 'Server URL', 'url', 'http://192.168.1.10:32400'],
+        ['token', 'Plex token', 'password', ''],
+    ],
     subsonic: [
         ['url', 'Server URL', 'url', 'https://music.example.com'],
         ['username', 'Username', 'text', ''],
@@ -305,6 +364,7 @@ const FIELDS = {
 };
 
 function renderSettings(src) {
+    $('#pagination').hidden = true;
     $('#crumb').textContent = `${src.label} setup`;
     $('#search').hidden = true;
     $('#back').hidden = true;
@@ -336,7 +396,7 @@ function renderSettings(src) {
     $('#save-src').onclick = async () => {
         const patch = {};
         for (const input of content.querySelectorAll('input[data-key]')) {
-            patch[input.dataset.key] = input.value.trim();
+            patch[input.dataset.key] = input.type === 'password' ? input.value : input.value.trim();
         }
         try {
             await api(`/sources/${src.id}/config`, { method: 'POST', body: patch });
@@ -372,8 +432,18 @@ function applyStatus(status) {
     const caps = status.capabilities || {};
     $('#prev').disabled = !caps.previous;
     $('#next').disabled = !caps.next;
+    $('#stop').disabled = !caps.stop;
     $('#playpause').disabled = status.paused ? !caps.play : !caps.pause;
     $('#playpause').textContent = status.paused ? '▶' : 'Ⅱ';
+    $('#playpause').title = status.paused ? 'Resume' : 'Pause';
+    const capturing = status.source?.id === 'desktop';
+    $('#monitor').disabled = capturing;
+    $('#viz-toggle').disabled = capturing;
+    if (capturing) {
+        $('#monitor-audio').pause();
+        $('#monitor').setAttribute('aria-pressed', 'false');
+        if (document.body.classList.contains('viz')) toggleVisualizer();
+    }
 
     $('#listeners').textContent =
         status.listeners === 1 ? '1 listening' : `${status.listeners} listening`;
@@ -461,7 +531,8 @@ async function loadPresets() {
 
 function startMonitor() {
     const audio = $('#monitor-audio');
-    if (!audio.src) audio.src = '/stream';
+    if (state.status?.source?.id === 'desktop') throw new Error('monitoring is disabled during desktop capture to prevent feedback');
+    if (!audio.src) audio.src = state.mount || '/stream';
 
     if (!viz.ctx) {
         viz.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -541,11 +612,12 @@ window.addEventListener('resize', () => {
 
 $('#back').onclick = () => {
     const prev = state.stack.pop();
-    if (prev) browse(prev.path, prev.label);
+    if (prev) browse(prev.path, prev.label, prev.offset);
 };
 
 $('#prev').onclick = () => control('previous');
 $('#next').onclick = () => control('next');
+$('#stop').onclick = () => control('stop');
 $('#playpause').onclick = () => control(state.status?.paused ? 'play' : 'pause');
 
 $('#monitor').onclick = async () => {
@@ -569,6 +641,7 @@ $('#viz-toggle').onclick = toggleVisualizer;
 let searchTimer;
 $('#search').oninput = (e) => {
     clearTimeout(searchTimer);
+    $('#pagination').hidden = true;
     const q = e.target.value.trim();
     if (!q) return;
     searchTimer = setTimeout(async () => {
@@ -590,8 +663,9 @@ document.addEventListener('keydown', (e) => {
 (async function init() {
     try {
         const settings = await api('/settings');
-        $('#stream-addr').innerHTML =
-            `Stream address: <code>http://${settings.hostIp}:${settings.port}${settings.mount}</code>`;
+        state.mount = settings.mount;
+        $('#stream-addr').textContent = `Stream address: http://${settings.hostIp}:${settings.port}${settings.mount}`;
+        $('#server-id').textContent = `Server ID: ${settings.serverId?.slice(0, 8) || 'unknown'}`;
     } catch {
         /* non-fatal; the setup panel just shows less */
     }

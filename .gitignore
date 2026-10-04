@@ -2,3 +2,7 @@ node_modules/
 
 # Generated from node_modules by `npm run vendor`; not source.
 public/vendor/
+
+client/build/
+client/dist/apps/wiijukebox/boot.dol
+client/dist/*.zip

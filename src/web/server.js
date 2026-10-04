@@ -6,6 +6,8 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { control } = require('../core/transport');
+const { WiiProtocol } = require('../client/protocol');
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -30,6 +32,7 @@ class WebServer {
         this.pipeline = pipeline;
         this.registry = registry;
         this.config = config;
+        this.wii = new WiiProtocol({ pipeline, registry, config });
         this.publicDir = publicDir || path.join(__dirname, '..', '..', 'public');
 
         this._sseClients = new Set();
@@ -76,6 +79,7 @@ class WebServer {
         const pathname = url.pathname;
 
         try {
+            if (pathname.startsWith('/api/wii/')) return await this.wii.handle(req, res, url);
             if (pathname === '/events') return this._events(req, res);
             if (pathname === '/playlist.pls') return this._playlist(req, res);
             if (pathname.startsWith('/api/')) return await this._api(req, res, url);
@@ -179,6 +183,29 @@ class WebServer {
             const id = rest[0];
             const action = rest[1];
 
+            if (action === 'favorites' && ['radio', 'ytdlp'].includes(id)) {
+                const key = id === 'radio' ? 'stations' : 'links';
+                const cfg = this.config.sourceConfig(id);
+                if (req.method === 'GET') return this._json(res, 200, { items: cfg[key] || [] });
+                const body = await this._readBody(req);
+                let entries = cfg[key] || [];
+                if (req.method === 'POST') {
+                    const link = new URL(body.url);
+                    if (!['http:', 'https:'].includes(link.protocol) || link.username || link.password) {
+                        return this._json(res, 400, { error: 'use an HTTP(S) link without embedded credentials' });
+                    }
+                    const url = link.toString();
+                    const entry = { id: require('node:crypto').randomUUID(), url,
+                        name: String(body.name || link.hostname).slice(0, 200) };
+                    entries = [...entries.filter((item) => item.url !== url), entry];
+                } else if (req.method === 'DELETE') entries = entries.filter((item) => item.id !== body.id);
+                else return this._json(res, 405, { error: 'method not allowed' });
+                this.config.updateSource(id, { [key]: entries });
+                // Favorite edits must not interrupt an active stream or extraction.
+                this.registry.get(id).config[key] = entries;
+                return this._json(res, 200, { items: entries });
+            }
+
             if (req.method === 'POST' && action === 'config') {
                 const patch = await this._readBody(req);
                 await this.pipeline.command(async () => {
@@ -228,28 +255,7 @@ class WebServer {
         }
 
         if (section === 'control' && req.method === 'POST') {
-            const result = await this.pipeline.command(async () => {
-                const action = rest[0];
-                const source = this.pipeline.activeSource;
-                if (!source) return { code: 409, error: 'nothing is playing' };
-                if (!this.pipeline.status.capabilities[action]) {
-                    return { code: 400, error: `${source.label} does not support ${action}` };
-                }
-                if (action === 'stop') {
-                    await this.pipeline.detach();
-                    this.config.data.lastPlayed = null;
-                    this.config.save();
-                } else if (action === 'pause' || action === 'play') {
-                    this.pipeline.setPaused(action === 'pause');
-                } else if (action === 'next' || action === 'previous') {
-                    const handle = await source[action]();
-                    if (!handle) return { ok: true, endOfQueue: true };
-                    await this.pipeline.playHandle(handle);
-                } else {
-                    return { code: 400, error: 'unsupported control' };
-                }
-                return { ok: true, status: this.pipeline.status };
-            });
+            const result = await control(this.pipeline, this.config, rest[0]);
             return this._json(res, result.code || 200, result);
         }
 

@@ -85,6 +85,7 @@ class YtdlpSource extends Source {
         const queued = this._queue.length > 1;
         return {
             play: true,
+            pause: true,
             stop: true,
             next: queued,
             previous: queued,
@@ -289,7 +290,12 @@ class YtdlpSource extends Source {
      *   'list/<url>'      -> the tracks inside that playlist, album or channel
      */
     async browse({ path = '', offset = 0, limit = 100 } = {}) {
-        if (!path) return { items: [], total: 0 };
+        if (!path) {
+            const links = this.config.links || [];
+            return { items: links.slice(offset, offset + limit).map((link) => ({
+                id: link.url, type: 'track', title: link.name, subtitle: link.url,
+            })), total: links.length };
+        }
 
         const url = path.startsWith(LIST_PREFIX) ? path.slice(LIST_PREFIX.length) : path;
         const info = await this._extract(url);

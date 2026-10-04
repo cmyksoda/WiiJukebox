@@ -94,3 +94,20 @@ test('source reconfiguration replaces cached credentials and defaults are isolat
     assert.equal(other.sourceConfig('jellyfin').url, '');
     assert.throws(() => config.updateSource('__proto__', {}), /unknown source/);
 });
+
+test('an old track completion cannot skip the replacement track', async () => {
+    const pipeline = new Pipeline();
+    const source = new Track();
+    let advances = 0;
+    source.advance = async () => { advances++; return null; };
+    try {
+        await pipeline.attach(source);
+        const oldEvent = { source, generation: pipeline._generation };
+        const replacement = new PassThrough();
+        await pipeline.playHandle({ type: 'pcm', stream: replacement });
+        await pipeline.advanceEnded(oldEvent);
+        assert.equal(advances, 0);
+        assert.equal(pipeline.activeSource, source);
+        assert.equal(pipeline._pcmStream, replacement);
+    } finally { await pipeline.shutdown(); }
+});

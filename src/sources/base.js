@@ -49,6 +49,7 @@ const CAPABILITIES = [
  * What a source returns from open(). Either:
  *   { type: 'uri', uri, headers?, seekSeconds? }  -- pipeline decodes it
  *   { type: 'pcm', stream }                       -- already interchange PCM
+ *   { type: 'device', format: 'pulse', device }   -- selected output monitor
  *   { type: 'encoded', stream }                   -- encoded bytes, pipeline decodes
  */
 

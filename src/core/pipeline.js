@@ -37,6 +37,7 @@ class Pipeline extends EventEmitter {
         this._paused = false;
         this._commands = Promise.resolve();
         this._endTimer = null;
+        this._generation = 0;
 
         // What the WebUI shows and what goes out over ICY.
         this._nowPlaying = { title: '', artist: '', album: '', artwork: null };
@@ -76,6 +77,15 @@ class Pipeline extends EventEmitter {
         const result = this._commands.then(work);
         this._commands = result.catch(() => {});
         return result;
+    }
+
+    advanceEnded({ source, generation }) {
+        return this.command(async () => {
+            if (this._generation !== generation || this._source !== source || typeof source?.advance !== 'function') return;
+            const handle = await source.advance(1);
+            if (handle) await this.playHandle(handle);
+            else await this.detach();
+        });
     }
 
     setPaused(paused) {
@@ -140,6 +150,7 @@ class Pipeline extends EventEmitter {
 
     /** Route whatever the source returned into the pacer. */
     _consume(handle) {
+        this._generation++;
         if (!handle) throw new Error('source returned no audio handle');
 
         if (handle.type === 'pcm') {
@@ -155,6 +166,8 @@ class Pipeline extends EventEmitter {
         const decoder = new Decoder({
             uri: handle.type === 'uri' ? handle.uri : undefined,
             headers: handle.headers,
+            device: handle.type === 'device' ? handle.device : undefined,
+            format: handle.format,
             seekSeconds: handle.seekSeconds,
             ffmpegPath: this._ffmpegPath,
         });
@@ -258,13 +271,14 @@ class Pipeline extends EventEmitter {
             if (this.pacer.buffered || this.pacer.paused) return;
             clearInterval(this._endTimer);
             this._endTimer = null;
-            this.emit('track-ended', { source });
+            this.emit('track-ended', { source, generation: this._generation });
         }, 20);
         this._endTimer.unref?.();
     };
 
     /** Stop the current source and clear the left-hand side of the pipeline. */
     async detach() {
+        this._generation++;
         clearInterval(this._endTimer);
         this._endTimer = null;
         this.pacer.paused = false;

@@ -24,8 +24,9 @@
 
     <div id="setup">
       <h3>Your Wii</h3>
-      <p class="hint">Do this once. The stream address never changes, so the
-        playlist file keeps working forever.</p>
+      <p class="hint">Open WiiJukebox on your Wii and choose this server on the same network.</p>
+      <p class="hint" id="server-id"></p>
+      <p class="hint">Using WiiRadio instead?</p>
       <a id="pls-link" class="btn" href="/playlist.pls" download>Download playlist</a>
       <p class="hint">Put it in <code>/apps/radiow/data/pls/</code> on your SD card.</p>
       <p class="hint" id="stream-addr"></p>
@@ -39,6 +40,11 @@
       <input id="search" type="search" placeholder="Search" hidden>
     </div>
 
+    <div id="pagination" hidden>
+      <button class="btn small" id="library-prev">Previous page</button>
+      <span id="library-page"></span>
+      <button class="btn small" id="library-next">Next page</button>
+    </div>
     <div id="content"></div>
 
     <div id="empty" class="empty">
@@ -62,6 +68,7 @@
     <button id="prev" class="icon-btn" title="Previous" disabled>&#9198;</button>
     <button id="playpause" class="icon-btn big" title="Play" disabled>&#9199;</button>
     <button id="next" class="icon-btn" title="Next" disabled>&#9197;</button>
+    <button id="stop" class="icon-btn" title="Stop" disabled>&#9632;</button>
   </div>
 
   <div id="right">

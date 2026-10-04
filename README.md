@@ -1,184 +1,142 @@
 <img src="./public/images/logo.webp" alt="WiiJukebox" width="360">
 
-**One persistent audio stream for your Wii, fed from any source you like.**
+**A persistent music stream, a web controller, and a native Wii client prototype.**
 
-WiiJukebox is a rework of [wiiradio-stream-bridge](https://github.com/cmyksoda/wiiradio-stream-bridge).
-Where the bridge converted individual internet radio stations into Wii-playable
-mounts, this serves **a single stream that never stops**, and lets you change
-what feeds it from a web interface.
+WiiJukebox keeps one MP3 stream connected while its source changes. The server
+fetches and decodes music; the Wii plays the stream and can browse and control it.
+The web UI configures services, saves radio stations and links, and provides a
+Butterchurn visualizer for browser playback.
 
-That difference is the whole design. Because the stream address never changes,
-you set up the Wii **once** — one `.pls` file on the SD card, forever — and
-everything after that happens in the browser. Switching from a Navidrome album
-to a radio station to your phone over Bluetooth doesn't interrupt the Wii at
-all; it just starts playing something else.
-
-> **Status: phase one, in progress.** The core pipeline, internet radio,
-> Navidrome/Subsonic, Jellyfin and the WebUI work today. Plex, yt-dlp, the
-> AirPlay/Bluetooth receivers and the standalone packaging are still to come —
-> see [Roadmap](#roadmap).
->
-> **WiiRadio is the testing environment, not the final product.** It is a
-> known-good ICY client on real hardware, which makes it a good way to prove the
-> server half works. Phase two replaces it with a dedicated homebrew app — no
-> `.pls` file, no typing local IP addresses into a Wii. See
-> [HANDOFF.md](./HANDOFF.md).
-
-## How it works
-
-```
-source ──> decoder ──> pacer ──> encoder ──> broadcaster ──> Wii
-           (to PCM)   (real-    (to MP3)    (ICY fan-out)
-                       time)
-```
-
-Everything from the pacer rightwards starts at boot and runs until shutdown.
-Only the left-hand side is ever torn down, and the pacer fills the gap with
-silence while a source is swapped — so the Wii's connection is never dropped.
-
-This matters more than it sounds: WiiRadio falls back to its station list the
-moment a stream ends. If the mount went down on every track change you'd have to
-walk back through the Wii's menus each time.
-
-**There is no Icecast.** The old bridge needed it to juggle 20 mountpoints; with
-exactly one, `src/core/broadcaster.js` speaks ICY directly. That removes the
-second container entirely, which is what makes a single self-contained
-executable possible.
+The native client now builds with devkitPPC. Its networking code has been tested
+on the host against the server and a real isolated Navidrome instance. **Physical
+Wii playback and the native UI still need validation.** This is a development
+checkpoint, not a release. See [the morning handoff](MORNING-HANDOFF.md) and
+[client setup and controls](client/README.md).
 
 ## Sources
 
-| Source | Audio | Control & metadata | Status |
-|---|---|---|---|
-| Internet radio | Direct | ICY titles, split into artist/title | ✅ Working |
-| Navidrome / Subsonic | Direct | Full library browse, search, queue | ✅ Working |
-| Jellyfin | Direct | Full library browse, search, queue | ✅ Working |
-| Plex | Direct | Browse + Plex Companion cast target | ⏳ Planned |
-| YouTube, SoundCloud, Bandcamp | yt-dlp | Search + URL paste, playlists queue | ✅ Working |
-| Spotify | AirPlay | Official Web API — seek, shuffle, queue | ⏳ Planned |
-| Apple Music, Tidal, anything | AirPlay | DACP back-channel | ⏳ Planned |
-| Any phone | Bluetooth | AVRCP | ⏳ Planned |
-| Any app on this PC | Loopback capture | Whatever the app exposes | ⏳ Planned |
+| Source | Available now | Validation in this checkpoint |
+|---|---|---|
+| Navidrome / Subsonic | Artists, albums, playlists, starred tracks, search, complete album/playlist queues | Real Navidrome 0.64.2 with generated music; native C client -> server -> Navidrome -> decoded MP3 |
+| Internet radio | Direct HTTP(S) streams, saved stations, ICY titles | Generated HTTP audio and persistent-stream tests |
+| Jellyfin | Existing library browsing, search and queues | Existing adapter; no live Jellyfin account tested here |
+| Plex | Music libraries, artists, albums, audio playlists, search and queues | Local API fixture; real Plex account still needed |
+| YouTube, SoundCloud, Bandcamp and other yt-dlp sites | Link playback, saved links, playlist queues; YouTube search | All 30 existing live YouTube checks passed; other sites depend on their extractors |
+| Desktop audio on Linux | Select a PulseAudio / PipeWire-Pulse output monitor | Source selection tests; actual host capture still needs validation |
 
-### A note on the closed platforms
+Desktop audio can carry audio played by a normal service app or browser. It does
+not provide Spotify, Apple Music or Tidal account integration or remote controls.
+AirPlay, Bluetooth, Plex Companion and Jellyfin “Play On” remain planned.
 
-Spotify, Apple Music and Tidal have **no API that returns audio**. Spotify's Web
-API is metadata and remote control only, and the 30-second preview URLs were
-removed. So rather than relying on unofficial clients, WiiJukebox takes the
-audio via **receiver protocols** — it advertises itself as an AirPlay 2 speaker
-and a Bluetooth sink, and you cast to it from whatever app you already use.
+## Running the server
 
-That's fully legitimate, needs no credentials, and covers every platform at once
-including ones that don't exist yet. Transport controls still work, because
-AirPlay carries DACP and Bluetooth carries AVRCP — both let the receiver send
-play/pause/next back to the sender. For Spotify specifically, the official Web
-API gives richer control still (seek, shuffle, queue) on top of AirPlay audio.
-
-## Requirements
-
-- Node 20+
-- `ffmpeg` on your PATH
-- `yt-dlp` on your PATH, for the YouTube / SoundCloud source only — everything
-  else works without it
-
-## Running
+Requires Node 20+, FFmpeg, and `yt-dlp` for web-video/music links. Desktop audio
+also needs `pactl`, a running PulseAudio-compatible session, and an FFmpeg build
+with the `pulse` input device.
 
 ```bash
-npm install
+npm ci
 npm start
 ```
 
-Then open the address it prints. On first run it auto-detects your LAN IP —
-override it in the WebUI if it picks the wrong interface (VPNs and docker
-bridges are the usual culprits).
+Open the printed web address. Configuration is saved in
+`~/.config/wiijukebox/config.json` (or below `XDG_CONFIG_HOME`). Use a separate
+`XDG_CONFIG_HOME` when testing alongside another server.
 
-### Setting up the Wii (phase one — temporary)
+The HTTP API is designed for a **trusted LAN**, with no account authentication
+between controllers and WiiJukebox. Keep it off public port forwards. Service
+credentials belong to the server; the Wii stores only the selected server ID.
 
-1. Click **Download playlist** in the WebUI.
-2. Put the `.pls` in `/apps/radiow/data/pls/` on your SD card.
-3. Open it in WiiRadio.
+## Navidrome setup
 
-Because the mount address never changes, this survives restarts and source
-changes — you do it once and then drive everything from the browser.
+1. Choose **Navidrome / Subsonic** in the web UI.
+2. Enter the server's base URL, username and Navidrome password. Include any
+   deployment prefix, such as `https://music.example.com/navidrome`; omit `/rest`.
+3. Connect, then browse Artists, Albums, Playlists or Starred. Search also works.
+4. On the Wii choose the same source. **A** opens an album/playlist; **2** plays
+   the complete selection. Left/right changes pages. A selected track plays alone.
 
-This is scaffolding, though. Copying files onto an SD card is not an acceptable
-setup flow for the finished product, which is why phase two replaces it with a
-short pairing code typed on the Wii itself.
+The adapter uses the documented Subsonic 1.16.1 API and salted-token auth. It does
+not depend on Navidrome's evolving native API. Password whitespace is preserved.
+An SSO/reverse-proxy login page is not a Subsonic login; the configured account
+must be able to authenticate to Navidrome's `/rest/` endpoints.
+
+Browse pages contain 100 entries in the web UI and 12 on the Wii. Playing an album
+or playlist queues the complete collection, including playlists longer than a
+browse page. Track order follows the server. Scrobbling, ratings and editing
+Navidrome playlists are not implemented.
+
+## Wii setup
+
+```bash
+npm run build:client
+```
+
+With devkitPPC/libogc installed, this produces
+`client/dist/apps/wiijukebox/boot.dol`. Copy that app directory to `sd:/apps/` and
+launch it in Homebrew Channel. The Wii and server must share a LAN; discovery uses
+UDP 4001, with control/audio on the server's HTTP port (4000 by default).
+
+Choose the server by name and the ID shown in the web UI. Selection is saved on
+SD and rediscovered by identity, so the IP address is not the saved identifier.
+No `.pls` file or IP keyboard is needed for this client. Full controls and current
+limits are in [client/README.md](client/README.md).
+
+**WiiRadio compatibility remains:** download `/playlist.pls` into
+`/apps/radiow/data/pls/`. Its address can become stale after a DHCP change; the
+native discovery flow is the intended replacement.
+
+## Saved links and desktop audio
+
+Use **Save station for Wii** or **Save link for Wii** in the web UI to populate
+the Wii source browser. Saved yt-dlp playlist/album links queue their contents.
+Use the web UI for free-text searches and new URLs; the Wii has no keyboard yet.
+
+Desktop audio lists output monitors, not microphones. Capture begins only when
+you select one and ends on Stop or source change. It is not resumed automatically
+when the server starts. Browser monitoring/visualization is disabled during
+capture to prevent feeding the stream back into itself. Control the original
+music app on the host; WiiJukebox cannot skip tracks in that app.
 
 ## Testing
 
 ```bash
-npm run smoke
+npm test                 # host C parser/networking + isolated Node regressions
+npm run smoke           # real FFmpeg, ICY framing, source swaps and backpressure
+npm run build:client     # PowerPC build, warnings treated as errors
+npm run test:ytdlp       # optional live internet/provider test
+NAVIDROME_BINARY=/path/to/navidrome npm run test:navidrome
 ```
 
-This runs the pipeline against real ffmpeg and asserts the claim the whole
-project rests on: that a listener stays connected, with unbroken audio, while
-sources are swapped underneath. It also checks ICY framing, bitrate accuracy and
-fast-source backpressure.
+`npm test` needs a host C compiler and Make, but does not require devkitPPC.
+The optional Navidrome test creates its own loopback instance, test account,
+13 generated FLAC tracks and cover image, tests a 151-track playlist, and removes
+its temporary instance afterward. It never uses a personal Navidrome library.
+Tested with the official 0.64.2 Linux amd64 binary. See
+[validation notes](client/VALIDATION.md) for exact evidence and remaining gaps.
 
-It needs no network, which is deliberate — a failure there always means the
-pipeline is broken, never that a website was down.
+## Architecture and next work
 
-```bash
-npm run test:ytdlp
+```text
+source -> FFmpeg decoder -> PCM pacer -> MP3 encoder -> persistent broadcaster
+                                  ^                         |
+                       shared playback controls             Wii / browser
 ```
 
-Exercises the yt-dlp source for real: search, playlists, queue advance, error
-messages, and that a resolved link actually decodes through to MP3. This one
-does need the network and a working `yt-dlp`, so a failure is not automatically
-a bug in the code.
+Pause preserves queued PCM while the persistent stream emits silence. Natural
+track completion waits for buffered audio to drain before advancing. Source
+changes and transport commands are serialized.
 
-## Visualizer
+The Wii client uses UDP discovery, a bounded versioned text API for browsing and
+metadata, and libogc/libmad for MP3. This first implementation is a text console;
+artwork, a graphical UI, search input and the Wii projectM visualizer remain.
+The existing 565 `.milk` presets are retained for that future work. Browser
+visualization remains available through Butterchurn.
 
-The WebUI includes a Butterchurn visualizer (380 milkdrop presets from `base`,
-`extra` and `md1`). It needs the browser to be decoding the stream, so turning it
-on starts local monitoring too. Press <kbd>Esc</kbd> to exit.
-
-The 565 `.milk` presets in `assets/projectm/` are the vanilla WiiRadio set,
-vendored for the Wii-side homebrew app — confirmed working on real hardware.
-
-## Roadmap
-
-### Phase one — the persistent stream
-
-Proven against WiiRadio on real hardware.
-
-- [x] Persistent stream core (ICY broadcaster, pacer, encoder)
-- [x] Internet radio
-- [x] Navidrome / Subsonic
-- [x] Jellyfin
-- [x] WebUI with library browsing and Butterchurn
-- [x] yt-dlp source (YouTube, SoundCloud, Bandcamp)
-- [ ] Plex (browse + Companion cast target)
-- [ ] Jellyfin cast target ("Play On")
-- [ ] AirPlay 2 receiver + DACP control
-- [ ] Bluetooth A2DP sink + AVRCP control
-- [ ] Loopback capture
-- [ ] Spotify Web API control layer
-- [ ] Single Linux executable, no Node required
-
-### Phase two — the dedicated homebrew app
-
-Replaces WiiRadio entirely. Architecture still open; see
-[HANDOFF.md](./HANDOFF.md) for the constraints that lift once we own the client
-and for the connection-code options.
-
-- [ ] UDP broadcast discovery — survives DHCP address changes
-- [ ] Pairing code (`XND-EOD` style) identifying *which* server, not where it is
-- [ ] Client-side protocol richer than ICY (structured metadata, album art)
-- [ ] Better codec than 128 kbps MP3
-- [ ] Bidirectional control from the Wii
-- [ ] projectM visualizer using the vendored `.milk` presets
-
-- [ ] Delete `/playlist.pls` and the SD card step entirely
-
-The ICY mount stays regardless — it costs nothing and lets VLC, a phone or any
-other ICY client listen to the same stream. It is the playlist *file* that goes.
-
-### Stretch
-
-- [ ] Album art lookup for sources that carry none (keyless: iTunes, Deezer)
-- [ ] Time-synced lyrics via LRCLIB
-- [ ] Warn when the LAN address drifts (phase one only; throwaway)
+Other open work: physical Wii network/audio testing, Plex/Jellyfin account tests,
+desktop capture validation, receiver protocols, service controls, queue editing,
+and standalone server packaging. The earlier architecture notes are retained in
+[HANDOFF.md](HANDOFF.md).
 
 ## Credits
 

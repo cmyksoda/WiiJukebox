@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+  <name>WiiJukebox</name>
+  <coder>cmyksoda</coder>
+  <version>0.1.0 prototype</version>
+  <release_date>20261004</release_date>
+  <short_description>Music from your WiiJukebox server</short_description>
+  <long_description>Native LAN client prototype. Discovers WiiJukebox servers, browses configured music sources and plays their persistent MP3 stream. Set up services in the server web UI first. Same LAN required; allow UDP 4001 and the server HTTP port. GPLv3. Hardware validation pending.</long_description>
+</app>

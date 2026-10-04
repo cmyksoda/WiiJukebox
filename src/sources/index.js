@@ -9,7 +9,10 @@ const { SubsonicSource } = require('./subsonic');
 const { JellyfinSource } = require('./jellyfin');
 const { YtdlpSource } = require('./ytdlp');
 
-const REGISTRY = [RadioSource, SubsonicSource, JellyfinSource, YtdlpSource];
+const { DesktopSource } = require('./desktop');
+const { PlexSource } = require('./plex');
+
+const REGISTRY = [RadioSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource, DesktopSource];
 
 class SourceRegistry {
     constructor(config, deps = {}) {
@@ -35,6 +38,7 @@ class SourceRegistry {
 
     _isConfigured(id) {
         const cfg = this.config.sourceConfig(id);
+        if (id === 'desktop') return process.platform === 'linux';
         if (id === 'radio') return true; // always usable; stations are optional
         // Nothing to set up: either yt-dlp is installed or connect() explains
         // how to install it, which is a better message than an empty form.
@@ -80,6 +84,9 @@ class SourceRegistry {
         // A new login must not silently keep Jellyfin's old cached token.
         if (id === 'jellyfin' && ['url', 'username', 'password'].some((key) => key in patch)) {
             patch = { ...patch, token: null, userId: null };
+        }
+        if (id === 'subsonic' && ['url', 'username', 'password'].some((key) => key in patch)) {
+            patch = { ...patch, token: null, salt: null };
         }
         this.config.updateSource(id, patch);
     }

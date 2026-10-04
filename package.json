@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "One persistent audio stream for WiiRadio, fed from any source you like",
   "main": "src/main.js",
-  "license": "GPL-3.0",
+  "license": "GPL-3.0-only",
   "engines": {
     "node": ">=20"
   },
@@ -12,7 +12,11 @@
     "smoke": "node test/smoke-pipeline.js",
     "test:ytdlp": "node test/ytdlp-live.js",
     "vendor": "mkdir -p public/vendor && cp node_modules/butterchurn/dist/butterchurn.min.js node_modules/butterchurn-presets/dist/base.min.js node_modules/butterchurn-presets/dist/extra.min.js node_modules/butterchurn-presets/dist/md1.min.js public/vendor/",
-    "postinstall": "npm run vendor"
+    "postinstall": "npm run vendor",
+    "test": "make -C client host-test && node --test test/*.test.js",
+    "build:client": "make -C client",
+    "test:navidrome": "python3 test/navidrome-fixture.py",
+    "package:client": "make -C client package"
   },
   "dependencies": {
     "butterchurn": "^3.0.0-beta.5",

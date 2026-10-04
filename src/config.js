@@ -40,13 +40,14 @@ const DEFAULTS = {
     // Per-source settings, keyed by source id.
     sources: {
         radio: { stations: [] },
+        desktop: {},
         subsonic: { url: '', username: '', password: '' },
         jellyfin: { url: '', username: '', password: '', token: null, userId: null, deviceId: null },
         plex: { url: '', token: '' },
         // Needs no setup when yt-dlp is on PATH. `binary` points at it
         // elsewhere, `format` overrides the selector, and `extraArgs` passes
         // flags straight through (--cookies-from-browser, --proxy).
-        ytdlp: { binary: '', format: '', extraArgs: [] },
+        ytdlp: { binary: '', format: '', extraArgs: [], links: [] },
     },
 
     // Last source/item, restored at boot so the stream comes back by itself
