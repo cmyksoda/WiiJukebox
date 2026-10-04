@@ -372,7 +372,8 @@ function applyStatus(status) {
     const caps = status.capabilities || {};
     $('#prev').disabled = !caps.previous;
     $('#next').disabled = !caps.next;
-    $('#playpause').disabled = !(caps.play || caps.pause);
+    $('#playpause').disabled = status.paused ? !caps.play : !caps.pause;
+    $('#playpause').textContent = status.paused ? '▶' : 'Ⅱ';
 
     $('#listeners').textContent =
         status.listeners === 1 ? '1 listening' : `${status.listeners} listening`;
@@ -545,7 +546,7 @@ $('#back').onclick = () => {
 
 $('#prev').onclick = () => control('previous');
 $('#next').onclick = () => control('next');
-$('#playpause').onclick = () => control(state.status?.source ? 'pause' : 'play');
+$('#playpause').onclick = () => control(state.status?.paused ? 'play' : 'pause');
 
 $('#monitor').onclick = async () => {
     const audio = $('#monitor-audio');

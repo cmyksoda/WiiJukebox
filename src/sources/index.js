@@ -72,6 +72,18 @@ class SourceRegistry {
         return source;
     }
 
+    async configure(id, patch) {
+        this.get(id); // Validate before persisting anything.
+        const previous = this._instances.get(id);
+        await previous.disconnect();
+        this._instances.delete(id);
+        // A new login must not silently keep Jellyfin's old cached token.
+        if (id === 'jellyfin' && ['url', 'username', 'password'].some((key) => key in patch)) {
+            patch = { ...patch, token: null, userId: null };
+        }
+        this.config.updateSource(id, patch);
+    }
+
     async disconnectAll() {
         for (const source of this._instances.values()) {
             try {

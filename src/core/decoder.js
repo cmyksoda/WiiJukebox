@@ -98,10 +98,11 @@ class Decoder extends EventEmitter {
 
         proc.on('error', (err) => {
             this._proc = null;
+            this._stopped = true;
             this.emit('error', new Error(`decoder spawn failed: ${err.message}`));
         });
 
-        proc.on('exit', (code, signal) => {
+        proc.on('close', (code, signal) => {
             this._proc = null;
             if (this._stopped) return;
 

@@ -181,7 +181,10 @@ class WebServer {
 
             if (req.method === 'POST' && action === 'config') {
                 const patch = await this._readBody(req);
-                this.config.updateSource(id, patch);
+                await this.pipeline.command(async () => {
+                    if (this.pipeline.activeSource?.id === id) await this.pipeline.detach();
+                    await this.registry.configure(id, patch);
+                });
                 return this._json(res, 200, { ok: true });
             }
 
@@ -214,8 +217,10 @@ class WebServer {
 
             if (req.method === 'POST' && action === 'play') {
                 const item = await this._readBody(req);
-                const source = await this.registry.connect(id);
-                await this.pipeline.attach(source, item);
+                await this.pipeline.command(async () => {
+                    const source = await this.registry.connect(id);
+                    await this.pipeline.attach(source, item);
+                });
                 this.config.data.lastPlayed = { source: id, item };
                 this.config.save();
                 return this._json(res, 200, { ok: true, status: this.pipeline.status });
@@ -223,29 +228,29 @@ class WebServer {
         }
 
         if (section === 'control' && req.method === 'POST') {
-            const action = rest[0];
-            const source = this.pipeline.activeSource;
-            if (!source) return this._json(res, 409, { error: 'nothing is playing' });
-
-            const caps = source.capabilities;
-            if (!caps[action]) {
-                return this._json(res, 400, {
-                    error: `${source.label} does not support ${action}`,
-                });
-            }
-
-            // next/previous return a fresh handle rather than acting in place,
-            // so the pipeline swaps audio without detaching the source.
-            if (action === 'next' || action === 'previous') {
-                const handle = await source[action]();
-                if (!handle) return this._json(res, 200, { ok: true, endOfQueue: true });
-                await this.pipeline.playHandle(handle);
-                return this._json(res, 200, { ok: true, status: this.pipeline.status });
-            }
-
-            const body = await this._readBody(req);
-            await source[action](body.value);
-            return this._json(res, 200, { ok: true, status: this.pipeline.status });
+            const result = await this.pipeline.command(async () => {
+                const action = rest[0];
+                const source = this.pipeline.activeSource;
+                if (!source) return { code: 409, error: 'nothing is playing' };
+                if (!this.pipeline.status.capabilities[action]) {
+                    return { code: 400, error: `${source.label} does not support ${action}` };
+                }
+                if (action === 'stop') {
+                    await this.pipeline.detach();
+                    this.config.data.lastPlayed = null;
+                    this.config.save();
+                } else if (action === 'pause' || action === 'play') {
+                    this.pipeline.setPaused(action === 'pause');
+                } else if (action === 'next' || action === 'previous') {
+                    const handle = await source[action]();
+                    if (!handle) return { ok: true, endOfQueue: true };
+                    await this.pipeline.playHandle(handle);
+                } else {
+                    return { code: 400, error: 'unsupported control' };
+                }
+                return { ok: true, status: this.pipeline.status };
+            });
+            return this._json(res, result.code || 200, result);
         }
 
         if (section === 'settings') {

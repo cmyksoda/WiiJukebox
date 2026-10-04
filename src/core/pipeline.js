@@ -35,6 +35,8 @@ class Pipeline extends EventEmitter {
         // handle. Kept separate so backpressure works the same for both.
         this._input = null;
         this._paused = false;
+        this._commands = Promise.resolve();
+        this._endTimer = null;
 
         // What the WebUI shows and what goes out over ICY.
         this._nowPlaying = { title: '', artist: '', album: '', artwork: null };
@@ -70,6 +72,17 @@ class Pipeline extends EventEmitter {
         this.emit('started');
     }
 
+    command(work) {
+        const result = this._commands.then(work);
+        this._commands = result.catch(() => {});
+        return result;
+    }
+
+    setPaused(paused) {
+        this.pacer.paused = paused;
+        this.emit('status', this.status);
+    }
+
     get nowPlaying() {
         return { ...this._nowPlaying };
     }
@@ -86,7 +99,10 @@ class Pipeline extends EventEmitter {
             nowPlaying: this.nowPlaying,
             listeners: this.broadcaster.listenerCount,
             starving: this.pacer.starving,
-            capabilities: this._source ? this._source.capabilities : {},
+            paused: Boolean(this.pacer.paused),
+            capabilities: this._source
+                ? { ...this._source.capabilities, seek: false, volume: false, shuffle: false, repeat: false }
+                : {},
         };
     }
 
@@ -144,10 +160,15 @@ class Pipeline extends EventEmitter {
         });
         this._decoder = decoder;
 
-        decoder.on('data', (chunk) => this._pushPcm(chunk));
+        decoder.on('data', (chunk) => {
+            if (this._decoder === decoder) this._pushPcm(chunk);
+        });
         decoder.on('log', (line) => this.emit('debug', line));
-        decoder.on('ended', () => this._onSourceEnded());
+        decoder.on('ended', () => {
+            if (this._decoder === decoder) this._onSourceEnded();
+        });
         decoder.on('error', (err) => {
+            if (this._decoder !== decoder) return;
             this.emit('warning', `decode failed: ${err.message}`);
             this._onSourceEnded();
         });
@@ -188,12 +209,13 @@ class Pipeline extends EventEmitter {
         };
         // Wait until roughly half the buffer has drained rather than resuming on
         // a fixed timer, so the rate settles instead of oscillating.
-        this._awaitDrain(resume);
+        this._awaitDrain(resume, input);
     }
 
     /** Poll the pacer until its buffer has drained enough to accept more. */
-    _awaitDrain(done) {
+    _awaitDrain(done, input) {
         const check = () => {
+            if (this._input !== input) return;
             if (this.pacer.buffered <= this.pacer.lowWater) {
                 done();
                 return;
@@ -229,11 +251,23 @@ class Pipeline extends EventEmitter {
     };
 
     _onSourceEnded = () => {
-        this.emit('track-ended', { source: this._source ? this._source.id : null });
+        if (this._endTimer) return;
+        const source = this._source;
+        this.pacer.finishInput();
+        this._endTimer = setInterval(() => {
+            if (this.pacer.buffered || this.pacer.paused) return;
+            clearInterval(this._endTimer);
+            this._endTimer = null;
+            this.emit('track-ended', { source });
+        }, 20);
+        this._endTimer.unref?.();
     };
 
     /** Stop the current source and clear the left-hand side of the pipeline. */
     async detach() {
+        clearInterval(this._endTimer);
+        this._endTimer = null;
+        this.pacer.paused = false;
         this._input = null;
         this._paused = false;
         if (this._decoder) {
@@ -264,6 +298,7 @@ class Pipeline extends EventEmitter {
         this.pacer.reset();
         this._nowPlaying = { title: '', artist: '', album: '', artwork: null };
         this.broadcaster.setMetadata({ title: '' });
+        this.emit('status', this.status);
     }
 
     /**
@@ -271,6 +306,9 @@ class Pipeline extends EventEmitter {
      * path when a track finishes and a queue advances.
      */
     async playHandle(handle) {
+        clearInterval(this._endTimer);
+        this._endTimer = null;
+        this.pacer.paused = false;
         this._input = null;
         this._paused = false;
         if (this._decoder) {
@@ -279,6 +317,7 @@ class Pipeline extends EventEmitter {
         }
         if (this._pcmStream) {
             this._pcmStream.removeAllListeners?.();
+            this._pcmStream.destroy?.();
             this._pcmStream = null;
         }
         this.pacer.reset();

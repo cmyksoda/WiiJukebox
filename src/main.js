@@ -35,15 +35,13 @@ async function main() {
 
     // When a track ends, advance the queue if the source has one. Without this
     // an album would stop after its first track.
-    pipeline.on('track-ended', async () => {
-        const source = pipeline.activeSource;
-        if (!source || typeof source.advance !== 'function') return;
-        try {
+    pipeline.on('track-ended', ({ source }) => {
+        pipeline.command(async () => {
+            if (pipeline.activeSource !== source || typeof source?.advance !== 'function') return;
             const handle = await source.advance(1);
             if (handle) await pipeline.playHandle(handle);
-        } catch (err) {
-            console.warn(`! advancing queue: ${err.message}`);
-        }
+            else await pipeline.detach();
+        }).catch((err) => console.warn(`! advancing queue: ${err.message}`));
     });
 
     pipeline.start();

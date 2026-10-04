@@ -150,6 +150,11 @@ class Pacer extends EventEmitter {
         this._priming = true;
     }
 
+    finishInput() {
+        // Short tracks must drain even when they never filled the prebuffer.
+        this._priming = false;
+    }
+
     _tick() {
         if (!this._write) return;
 
@@ -174,14 +179,14 @@ class Pacer extends EventEmitter {
             this.emit('resync');
         }
 
-        const emitted = this._priming ? 0 : this._drain(owed);
+        const emitted = this._priming || this.paused ? 0 : this._drain(owed);
 
         if (emitted < owed) {
             this._fillSilence(owed - emitted);
             // Priming is the expected quiet moment right after a source change,
             // not a fault, so it must not be reported as one -- otherwise every
             // track change would raise a spurious "underrun" in the UI.
-            if (this._priming) {
+            if (this._priming || this.paused) {
                 this._bytesEmitted += owed;
                 return;
             }

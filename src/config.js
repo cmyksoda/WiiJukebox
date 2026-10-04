@@ -59,6 +59,7 @@ function merge(base, saved) {
     if (!saved || typeof saved !== 'object') return base;
     const out = Array.isArray(base) ? [...base] : { ...base };
     for (const [k, v] of Object.entries(saved)) {
+        if (["__proto__", "prototype", "constructor"].includes(k)) continue;
         if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object') {
             out[k] = merge(base[k], v);
         } else if (v !== undefined) {
@@ -72,21 +73,21 @@ class Config {
     constructor(dir = configDir()) {
         this.dir = dir;
         this.file = path.join(dir, 'config.json');
-        this.data = { ...DEFAULTS };
+        this.data = structuredClone(DEFAULTS);
         this._saveTimer = null;
     }
 
     load() {
         try {
             const raw = fs.readFileSync(this.file, 'utf8');
-            this.data = merge(DEFAULTS, JSON.parse(raw));
+            this.data = merge(structuredClone(DEFAULTS), JSON.parse(raw));
         } catch (err) {
             if (err.code !== 'ENOENT') {
                 // A corrupt config should not stop the stream coming up; fall
                 // back to defaults and say so.
                 console.warn(`config unreadable (${err.message}); using defaults`);
             }
-            this.data = { ...DEFAULTS };
+            this.data = structuredClone(DEFAULTS);
         }
         return this.data;
     }
@@ -108,6 +109,7 @@ class Config {
     }
 
     sourceConfig(id) {
+        if (!Object.hasOwn(DEFAULTS.sources, id)) throw new Error(`unknown source: ${id}`);
         this.data.sources[id] = this.data.sources[id] || {};
         return this.data.sources[id];
     }
