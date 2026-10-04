@@ -69,8 +69,10 @@ async function main() {
     if (config.data.lastPlayed && config.data.lastPlayed.source !== 'desktop') {
         const { source: id, item } = config.data.lastPlayed;
         try {
-            const source = await registry.connect(id);
-            await pipeline.attach(source, item);
+            await pipeline.command(async () => {
+                const source = await registry.connect(id);
+                await pipeline.attach(source, item);
+            });
             console.log(`resumed ${id}`);
         } catch (err) {
             console.warn(`! could not resume ${id}: ${err.message}`);

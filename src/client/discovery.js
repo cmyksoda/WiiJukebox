@@ -32,8 +32,8 @@ class Discovery {
             if (!match) return;
             budget--;
             const fields = ['WIIJUKEBOX', '1', match[1], this.id, this.port,
-                encodeURIComponent(String(this.config.data.station.name).slice(0, 80)),
-                encodeURIComponent(this.config.data.mount)];
+                encodeURIComponent(Array.from(String(this.config.data.station.name)).slice(0, 80).join('').toWellFormed()),
+                encodeURIComponent(String(this.config.data.mount).toWellFormed())];
             socket.send(fields.join('\t') + '\n', remote.port, remote.address, (err) => {
                 if (err) this.onWarning(`discovery reply: ${err.message}`);
             });

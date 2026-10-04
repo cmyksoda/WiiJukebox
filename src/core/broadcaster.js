@@ -146,9 +146,11 @@ class Broadcaster extends EventEmitter {
             // that chunks or caches this would break the live stream outright.
             'Cache-Control': 'no-cache, no-store',
             Connection: 'close',
-            'icy-name': icySafe(this.name),
-            'icy-genre': icySafe(this.genre),
-            'icy-description': icySafe(this.description),
+            // Node HTTP headers cannot carry Unicode station names; metadata
+            // bodies still retain UTF-8 titles.
+            'icy-name': icySafe(this.name).replace(/[^\x20-\x7e]/g, '?'),
+            'icy-genre': icySafe(this.genre).replace(/[^\x20-\x7e]/g, '?'),
+            'icy-description': icySafe(this.description).replace(/[^\x20-\x7e]/g, '?'),
             'icy-br': String(this.bitrate),
             'icy-sr': '44100',
             'icy-pub': '0',

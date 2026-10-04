@@ -24,7 +24,8 @@ test('native C networking talks to the live server and receives decodable MP3', 
     const config = new Config(tmp);
     config.save = () => {};
     config.data.sources.radio.stations = [{ name: 'Fixture station', url: `http://127.0.0.1:${media.address().port}/tone.wav` }];
-    const pipeline = new Pipeline();
+    config.data.station.name = 'a'.repeat(79) + '🎶';
+    const pipeline = new Pipeline({ station: config.data.station });
     const registry = new SourceRegistry(config);
     const web = new WebServer({ pipeline, registry, config });
     const address = await web.listen(0, '127.0.0.1');
