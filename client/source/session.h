@@ -5,6 +5,7 @@
 #include "audio_buffer.h"
 
 #define WJ_ART_SIZE 128
+#define WJ_MESSAGE_MS 4000
 
 enum wj_view { WJ_VIEW_SERVERS, WJ_VIEW_SOURCES, WJ_VIEW_BROWSE };
 
@@ -23,6 +24,11 @@ enum {
 struct wj_session {
     enum wj_view view;
     char title[257], message[257], network[80], server_name[128], server_id[37];
+    /* Held messages describe a condition that still applies; others expire. */
+    int message_held;
+    long long message_at;
+    /* Why the current list is empty, shown in place of rows. */
+    char empty[96];
     struct wj_menu menu;
     int count, selected, total, offset, depth;
     /* Startup and server-chooser discovery progress. */

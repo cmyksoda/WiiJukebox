@@ -54,6 +54,7 @@ int wj_ui_grid_columns(enum wj_view view) { return view == WJ_VIEW_SERVERS ? col
 void wj_ui_seek_preview(int position_ms) { seek_preview = position_ms; }
 void wj_ui_volume_changed(void) { volume_shown = wj_milliseconds(); }
 
+
 int wj_ui_init(void *logo_texels) {
     wj_gfx_image_i8(&logo, logo_texels, 32, 48);
     L.w = wj_gfx_width();
@@ -115,6 +116,27 @@ static void label_two_lines(const char *text, float cx, float baseline, int size
     snprintf(first, sizeof(first), "%.*s", cut, text);
     label(first, cx, baseline, size, bold, color, max_width, 1);
     label(text + cut + 1, cx, baseline + size + 1, size, bold, color, max_width, 1);
+}
+
+/* Centered lines broken at spaces; returns the baseline after the last line. */
+static float paragraph(const char *text, float cx, float baseline, int size, int bold, u32 color, float max_width, int lines) {
+    int style[2] = { size, bold };
+    while (*text && lines--) {
+        int truncated;
+        int cut = wj_fit_text(text, max_width, 0, measure, style, &truncated);
+        if (truncated && lines) {
+            int space = cut;
+            while (space > 0 && text[space] != ' ') space--;
+            if (space > 0) cut = space;
+        } else cut = (int)strlen(text);
+        char line[WJ_FIELD];
+        snprintf(line, sizeof(line), "%.*s", cut, text);
+        label(line, cx, baseline, size, bold, color, max_width, 1);
+        baseline += size + 6;
+        text += cut;
+        while (*text == ' ') text++;
+    }
+    return baseline;
 }
 
 /* Baseline that visually centers Latin capitals and kana around cy. */
@@ -262,8 +284,8 @@ static void header(const struct wj_session *s, long long now) {
             s->stream_started ? "Connected" : "Buffering";
         dot = !s->audio_running || !s->audio.connected ? WJ_RGBA(0xe2, 0x5c, 0x5c, 0xff) :
             s->stream_started ? WJ_RGBA(0x4c, 0xc2, 0x6c, 0xff) : WJ_RGBA(0xf0, 0xb0, 0x3a, 0xff);
-        int length = snprintf(status, sizeof(status), "%s  \xc2\xb7  %s  \xc2\xb7  %d kbps  \xc2\xb7  %d.%ds buffer",
-                              s->server_name, state, s->audio.bitrate, tenths / 10, tenths % 10);
+        int length = snprintf(status, sizeof(status), "%s  \xc2\xb7  %d kbps  \xc2\xb7  %d.%ds buffer",
+                              state, s->audio.bitrate, tenths / 10, tenths % 10);
         if (s->underruns && length > 0 && length < (int)sizeof(status))
             snprintf(status + length, sizeof(status) - length, "  \xc2\xb7  %d restarts", s->underruns);
     }
@@ -292,14 +314,25 @@ static void spinner(float cx, float cy, float r, long long now) {
 static void discovery(const struct wj_session *s, long long now) {
     float x = L.content_x, w = L.w - 40;
     panel(x, TOP, w, PANEL_H, 18);
-    spinner(L.w / 2, TOP + 96, 26, now);
-    label(s->discovering && s->phase ? s->phase : "Looking for WiiJukebox servers", L.w / 2, TOP + 168, 19, 1, INK, w - 40, 1);
+    int failed = !s->discovering && s->message[0];
+    if (failed) {
+        u32 amber = WJ_RGBA(0xf0, 0xa8, 0x30, 0xff);
+        wj_gfx_circle(L.w / 2, TOP + 96, 28, WJ_RGBA(0xfd, 0xf1, 0xdc, 0xff));
+        wj_gfx_ring(L.w / 2, TOP + 96, 28, 3, amber);
+        wj_gfx_round(L.w / 2 - 3, TOP + 80, 6, 22, 3, amber, amber);
+        wj_gfx_circle(L.w / 2, TOP + 110, 3.5f, amber);
+    } else spinner(L.w / 2, TOP + 96, 26, now);
+    const char *heading = s->discovering && s->phase ? s->phase : failed ? "Couldn't find your server" :
+        "Looking for WiiJukebox servers";
+    label(heading, L.w / 2, TOP + 168, 19, 1, INK, w - 40, 1);
     char line[96];
     if (s->discovering) snprintf(line, sizeof(line), "Attempt %d  \xc2\xb7  %llds", s->attempt,
                                  (now - s->discovery_started) / 1000);
     else snprintf(line, sizeof(line), "%s", s->network);
-    label(line, L.w / 2, TOP + 196, 15, 0, MUTED, w - 40, 1);
-    label("Press 1 to start again", L.w / 2, TOP + 236, 14, 0, FAINT, w - 40, 1);
+    label(line, L.w / 2, TOP + 194, 15, 0, MUTED, w - 40, 1);
+    // A failure here needs the whole sentence, so it sits in the panel, not in a toast.
+    if (failed) paragraph(s->message, L.w / 2, TOP + 228, 15, 0, INK, w - 80, 3);
+    else label("Press 1 to start again", L.w / 2, TOP + 236, 14, 0, FAINT, w - 40, 1);
 }
 
 static void tiles(const struct wj_session *s, long long now) {
@@ -328,6 +361,7 @@ static void tiles(const struct wj_session *s, long long now) {
         } else label_two_lines(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8);
         hit(tx, ty, tile_w, tile_h, WJ_TARGET_ITEM, i);
     }
+    if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, MUTED, w - 60, 2);
 }
 
 static void list(const struct wj_session *s, long long now) {
@@ -378,6 +412,7 @@ static void list(const struct wj_session *s, long long now) {
         } else label(item->title, text_x, centered(cy, 15), 15, selected, INK, title_room, 0);
         hit(x + 8, y, w - 16, ROW_H, WJ_TARGET_ITEM, i);
     }
+    if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, MUTED, w - 60, 2);
 }
 
 static int over(const struct wj_pointer *pointer, float x, float y, float w, float h) {
@@ -535,7 +570,8 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
 }
 
 static void toast_and_volume(const struct wj_session *s, long long now) {
-    if (s->message[0]) {
+    // The finding-server panel already shows the whole message.
+    if (s->message[0] && !(s->view == WJ_VIEW_SERVERS && !s->count)) {
         snprintf(toast, sizeof(toast), "%s", s->message);
         toast_alpha += (1 - toast_alpha) * 0.25f;
     } else toast_alpha *= 0.85f;

@@ -63,7 +63,16 @@ const struct wj_session *wj_session(void) { return &S; }
 const unsigned char *wj_session_art(void) { return art; }
 
 static void copy(char *out, size_t size, const char *in) { snprintf(out, size, "%s", in); }
-void wj_session_set_message(const char *text) { copy(S.message, sizeof(S.message), text); }
+/* Transient messages fade after a few seconds; held ones stay until replaced
+   or cleared, because they describe a condition that still applies. */
+static void post(const char *text, int held) {
+    copy(S.message, sizeof(S.message), text);
+    S.message_held = held;
+    S.message_at = wj_milliseconds();
+}
+static void say(const char *text) { post(text, 0); }
+static void hold(const char *text) { post(text, 1); }
+void wj_session_set_message(const char *text) { say(text); }
 
 static void log_event(const char *format, ...) {
     if (!storage) return;
@@ -181,7 +190,7 @@ static void start_job(enum job_kind kind, const char *method, const char *path) 
         S.attempt++;
         S.discovery_started = wj_milliseconds();
         copy(S.network, sizeof(S.network), "Initializing network...");
-        copy(S.message, sizeof(S.message), "Connecting...");
+        hold("Connecting...");
     }
     job = kind;
     job_started = wj_milliseconds();
@@ -192,7 +201,7 @@ static void start_job(enum job_kind kind, const char *method, const char *path) 
     job_done = 0;
     if (LWP_CreateThread(&worker, run_job, NULL, NULL, 65536, 60) < 0) {
         S.busy = 0;
-        copy(S.message, sizeof(S.message), "Could not create network worker");
+        hold("Could not create network worker");
     }
 }
 
@@ -201,7 +210,8 @@ static void load_list(void) {
     if (S.view == WJ_VIEW_SOURCES) copy(path, sizeof(path), "/api/wii/sources");
     else snprintf(path, sizeof(path), "/api/wii/browse?source=%s&ref=%s&offset=%d",
                   source, location.ref, location.offset);
-    copy(S.message, sizeof(S.message), "Loading...");
+    hold("Loading...");
+    S.empty[0] = 0;
     start_job(JOB_LIST, "GET", path);
 }
 
@@ -255,7 +265,7 @@ static void choose_server(int index) {
     status_failures = 0;
     copy(S.title, sizeof(S.title), "Music sources");
     S.audio_running = !wj_audio_start(open_stream);
-    if (!S.audio_running) copy(S.message, sizeof(S.message), "Could not start the audio connection");
+    if (!S.audio_running) hold("Could not start the audio connection");
     load_list();
 }
 
@@ -282,7 +292,7 @@ static void update_audio(void) {
         S.stream_started = 0;
         S.underruns++;
         log_event("underrun count=%d connected=%d buffered=%d", S.underruns, audio.connected, audio.buffered);
-        copy(S.message, sizeof(S.message), "Refilling audio buffer...");
+        hold("Refilling audio buffer...");
     } else if (S.stream_started && audio.buffered > wj_audio_bytes(WJ_AUDIO_RESYNC_MS, audio.bitrate)) {
         log_event("resync buffered=%d bitrate=%d", audio.buffered, audio.bitrate);
         wj_audio_resync();
@@ -318,8 +328,7 @@ static void finish_discovery(void) {
               S.attempt, job_network_result, job_init_deadline, job_result,
               wj_milliseconds() - job_started);
     if (job_network_result < 0)
-        snprintf(S.network, sizeof(S.network), "Network %s (%d); 1: retry",
-                 job_init_deadline ? "deadline" : "init failed", job_network_result);
+        copy(S.network, sizeof(S.network), job_init_deadline ? "Network timed out" : "Not connected to the network");
     else snprintf(S.network, sizeof(S.network), "Wii %s", job_ip);
     next_discovery = wj_milliseconds() + 5000;
     int found = job_result > 0 ? job_result : 0;
@@ -335,9 +344,15 @@ static void finish_discovery(void) {
             return;
         }
     }
+    char text[200];
     if (found) S.message[0] = 0;
-    else if (job_result < 0) snprintf(S.message, sizeof(S.message), "Network/discovery error %d. 1: retry", job_result);
-    else copy(S.message, sizeof(S.message), "No server found on your network.");
+    else if (job_network_result < 0) hold("The Wii couldn't join the network. Check its Internet settings, then press 1 to retry.");
+    else if (direct_address[0]) {
+        snprintf(text, sizeof(text), "The server at %s didn't answer. Check that it's running, then press 1 to retry.", direct_address);
+        hold(text);
+    } else if (job_result < 0)
+        hold("Server discovery isn't available on this network. Launch with the server's address (see README), or press 1 to retry.");
+    else hold("No server answered. Check that it's running on this network, or launch with its address (see README).");
 }
 
 static void finish_status(struct wj_document *doc) {
@@ -349,8 +364,9 @@ static void finish_status(struct wj_document *doc) {
         if (row->count == 4 && !strcmp(row->field[0], "command") && pending_command) {
             int id;
             if (!wj_number(row->field[2], 1, 2147483647, &id) && id == pending_command) {
-                copy(S.message, sizeof(S.message), row->field[1]);
-                if (!strcmp(row->field[3], "complete") || !strcmp(row->field[3], "failed")) pending_command = 0;
+                int finished = !strcmp(row->field[3], "complete") || !strcmp(row->field[3], "failed");
+                post(row->field[1], !finished);
+                if (finished) pending_command = 0;
             }
         } else if (row->count == 3 && !strcmp(row->field[0], "progress")) {
             S.has_progress = !wj_number(row->field[1], 0, 2147483647, &S.position_ms) &&
@@ -402,7 +418,9 @@ static void finish_job(void) {
     if (job == JOB_REDISCOVER) {
         log_event("rediscover result=%d", job_result);
         if (job_result > 0) {
-            snprintf(S.message, sizeof(S.message), "Server found at %s", server.ip);
+            char text[64];
+            snprintf(text, sizeof(text), "Server found at %s", server.ip);
+            say(text);
             status_failures = 0;
             next_status = 0;
         }
@@ -412,7 +430,7 @@ static void finish_job(void) {
     if (job == JOB_STATUS && job_result != 200) {
         // Keep the last known song on screen and poll less often while the
         // server is away, instead of replacing the message every second.
-        if (++status_failures == 2) copy(S.message, sizeof(S.message), not_responding);
+        if (++status_failures == 2) hold(not_responding);
         next_status = wj_milliseconds() + (1000 << (status_failures < 4 ? status_failures : 3));
         log_event("status failure count=%d stage=%s error=%d", status_failures,
                   wj_http_stage_name(job_trace.stage), job_trace.error);
@@ -427,23 +445,26 @@ static void finish_job(void) {
     if (job_result != 200) {
         if (!wj_document(reply, &doc) && doc.count && doc.rows[0].count >= 2 &&
             !strcmp(doc.rows[0].field[0], "error")) {
-            copy(S.message, sizeof(S.message), doc.rows[0].field[1]);
-        } else snprintf(S.message, sizeof(S.message), "Request %s failed (%d)",
-                        wj_http_stage_name(job_trace.stage), job_result);
+            say(doc.rows[0].field[1]);
+        } else {
+            char text[64];
+            snprintf(text, sizeof(text), "Request %s failed (%d)", wj_http_stage_name(job_trace.stage), job_result);
+            say(text);
+        }
         if (job == JOB_CONTROL) S.seek_until = 0;
         return;
     }
     if (wj_document(reply, &doc)) {
         if (job == JOB_LIST) log_event("menu malformed bytes=%d", job_trace.received);
-        copy(S.message, sizeof(S.message), "Unsupported or malformed server response");
+        say("Unsupported or malformed server response");
         return;
     }
     if (job == JOB_CONTROL) {
         if (doc.count == 1 && doc.rows[0].count == 3 &&
             !strcmp(doc.rows[0].field[0], "ok") && !strcmp(doc.rows[0].field[1], "accepted") &&
             !wj_number(doc.rows[0].field[2], 1, 2147483647, &pending_command)) {
-            copy(S.message, sizeof(S.message), "Accepted; waiting for server result...");
-        } else copy(S.message, sizeof(S.message), "Command accepted; update server for completion status");
+            hold("Accepted; waiting for server result...");
+        } else say("Command accepted; update server for completion status");
         next_status = 0;
         fast_status_until = wj_milliseconds() + 6000;
         return;
@@ -451,7 +472,7 @@ static void finish_job(void) {
     if (job == JOB_STATUS) { finish_status(&doc); return; }
     if (wj_menu_parse(&doc, S.view == WJ_VIEW_SOURCES, location.offset, &S.menu)) {
         log_event("menu rejected screen=%d rows=%d offset=%d", S.view, doc.count, location.offset);
-        copy(S.message, sizeof(S.message), "Invalid list reply");
+        say("Invalid list reply");
         return;
     }
     S.count = S.menu.count;
@@ -459,11 +480,12 @@ static void finish_job(void) {
     S.offset = location.offset;
     log_event("menu accepted screen=%d rows=%d items=%d total=%d", S.view, doc.count, S.count, S.total);
     S.selected = location.selected < S.count ? location.selected : 0;
-    if (S.count) S.message[0] = 0;
-    else if (S.view == WJ_VIEW_SOURCES) copy(S.message, sizeof(S.message), "No configured sources");
+    S.message[0] = 0;
+    if (S.count) S.empty[0] = 0;
+    else if (S.view == WJ_VIEW_SOURCES) copy(S.empty, sizeof(S.empty), "No sources are set up yet. Add one in the web UI.");
     else if (!strcmp(source, "radio") || !strcmp(source, "ytdlp"))
-        copy(S.message, sizeof(S.message), "No saved entries. Add them in the web UI.");
-    else copy(S.message, sizeof(S.message), "This folder is empty.");
+        copy(S.empty, sizeof(S.empty), "No saved entries. Add them in the web UI.");
+    else copy(S.empty, sizeof(S.empty), "This folder is empty.");
 }
 
 static void control(const char *action) {
@@ -479,12 +501,12 @@ static void play_item(int whole_list) {
         ref = location.ref;
     else if (whole_list && strcmp(S.menu.items[S.selected].type, "album") &&
              strcmp(S.menu.items[S.selected].type, "playlist")) {
-        copy(S.message, sizeof(S.message), "Choose an album or playlist first.");
+        say("Choose an album or playlist first.");
         return;
     }
     char path[256];
     snprintf(path, sizeof(path), "/api/wii/play?source=%s&ref=%s", source, ref);
-    copy(S.message, sizeof(S.message), "Starting selection...");
+    hold("Starting selection...");
     copy(S.state, sizeof(S.state), "queued");
     S.position_ms = 0;
     S.seek_until = 0;
@@ -504,7 +526,7 @@ static void open_item(void) {
     } else {
         const char *type = S.menu.items[S.selected].type;
         if (!strcmp(type, "track") || !strcmp(type, "station")) { play_item(0); return; }
-        if (S.depth == DEPTH) { copy(S.message, sizeof(S.message), "Folder depth limit reached"); return; }
+        if (S.depth == DEPTH) { say("Folder depth limit reached"); return; }
         location.selected = S.selected;
         stack[S.depth++] = location;
         memset(&location, 0, sizeof(location));
@@ -583,7 +605,7 @@ void wj_session_act(enum wj_action action, int argument) {
     if (!S.busy) { perform(action, argument); return; }
     queued = action;
     queued_argument = argument;
-    if (S.view != WJ_VIEW_SERVERS) copy(S.message, sizeof(S.message), "Input queued; waiting for network request...");
+    if (S.view != WJ_VIEW_SERVERS) say("Input queued; waiting for network request...");
 }
 
 int wj_session_restart_network(void) {
@@ -592,7 +614,7 @@ int wj_session_restart_network(void) {
     LWP_MutexLock(mutex);
     cancel_discovery = 1;
     LWP_MutexUnlock(mutex);
-    copy(S.message, sizeof(S.message), "Restart requested; resetting network...");
+    hold("Restart requested; resetting network...");
     return 1;
 }
 
@@ -648,6 +670,7 @@ void wj_session_update(void) {
     LWP_MutexUnlock(mutex);
     S.discovering = S.busy && job == JOB_DISCOVER;
     long long now = wj_milliseconds();
+    if (S.message[0] && !S.message_held && now - S.message_at > WJ_MESSAGE_MS) S.message[0] = 0;
     update_audio();
     if (S.busy) return;
     if (queued) {
