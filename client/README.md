@@ -86,7 +86,14 @@ nine seconds while playing reconnects at the live edge, so recovery never
 leaves controls lagging far behind. The decoder reads memory instead of waiting
 for the network; short gaps get a bounded 50 ms wait before it treats them as
 EOF. Status polling backs off to eight seconds while the server is unreachable
-and keeps the last song on screen. Navigation movement stays responsive during
+and keeps the last song on screen.
+
+Seeking, next/previous, choosing something new and stop no longer wait for the
+four buffered seconds of old audio to play out. The server reports the byte where
+the change begins, the client jumps straight there and the server sends the
+first new seconds at once (see "Jumps" in PROTOCOL.md). On the host this cut
+seek-to-audible time from about 4.3 s to 0.3 s, measured with real-time playout;
+a Wii adds its Wi-Fi round trip and decoder restart. Navigation movement stays responsive during
 requests; open/back and transport presses wait for the current request to
 finish.
 

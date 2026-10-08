@@ -19,6 +19,10 @@ const { Broadcaster } = require('./broadcaster');
 const { Decoder } = require('./decoder');
 const { PlaybackTimeline } = require('./playback-timeline');
 
+// A jump-aware listener drops its stale buffer at a transport change; this much
+// new audio is sent at once so it refills to its usual depth immediately.
+const JUMP_BURST_MS = 4000;
+
 class Pipeline extends EventEmitter {
     constructor({ ffmpegPath = 'ffmpeg', station = {}, audio = {} } = {}) {
         super();
@@ -29,6 +33,12 @@ class Pipeline extends EventEmitter {
             bitrate: this.encoder.bitrate, sampleRate: this.encoder.sampleRate });
         this.timeline = new PlaybackTimeline({ sampleRate: this.encoder.sampleRate });
         this.pacer = new Pacer({ write: (chunk, timing) => {
+            const jump = this._jump;
+            if (jump && jump.byte === null && this.encoder.running && jump.generation === this._generation &&
+                (timing.audio || !jump.audio)) {
+                jump.byte = Math.floor(this.timeline.time * this.broadcaster.bitrate / 8);
+                jump.epoch = this.broadcaster.epoch;
+            }
             if (this.encoder.running) this.timeline.write(chunk.length, {
                 generation: this._generation, position: timing.position,
                 metadata: this._nowPlaying,
@@ -51,6 +61,9 @@ class Pipeline extends EventEmitter {
         this._commands = Promise.resolve();
         this._endTimer = null;
         this._generation = 0;
+        // The latest transport change listeners may skip to, once its byte is known.
+        this._jump = null;
+        this._jumpId = 0;
         this._audioReady = false;
         this._audioError = null;
 
@@ -162,9 +175,27 @@ class Pipeline extends EventEmitter {
         const target = Math.max(0, Math.min(seconds, this._nowPlaying.duration - 0.5));
         const paused = this.pacer.paused;
         await this.playHandle({ ...this._handle, seekSeconds: target }, target);
+        this.markJump();
         this.pacer.paused = paused;
         this.emit('status', this.status);
         return target;
+    }
+
+    /**
+     * Mark a user-visible change: listeners that follow jumps may skip from
+     * their buffered audio straight to the stream byte where it begins (the
+     * first new audio, or for `audio: false` the first byte after the change).
+     * Natural track ends are continuous and are never marked.
+     */
+    markJump({ audio = true } = {}) {
+        this._jump = { id: ++this._jumpId, generation: this._generation, audio, byte: null, epoch: null };
+        if (audio && this.broadcaster.jumpListeners > 0) this.pacer.burst(JUMP_BURST_MS);
+    }
+
+    /** The latest marked change once its stream byte is known, else null. */
+    get jump() {
+        const jump = this._jump;
+        return jump && jump.byte !== null ? { id: jump.id, epoch: jump.epoch, byte: jump.byte } : null;
     }
 
     playbackAt(epoch, byte, playedMs) {
@@ -186,6 +217,7 @@ class Pipeline extends EventEmitter {
                 ? { id: this._source.id, label: this._source.label, state: this._source.state }
                 : null,
             nowPlaying: this.nowPlaying,
+            jump: this.jump,
             listeners: this.broadcaster.listenerCount,
             starving: this.pacer.starving,
             paused: Boolean(this.pacer.paused),
@@ -215,6 +247,7 @@ class Pipeline extends EventEmitter {
         try {
             const handle = await source.open(item);
             this._consume(handle);
+            this.markJump();
             this.emit('status', this.status);
         } catch (err) {
             this.emit('warning', `${source.id}: ${err.message}`);

@@ -36,7 +36,12 @@ static struct wj_server servers[WJ_SERVERS], server;
 static struct location stack[DEPTH], location;
 static char source[64], source_title[257], saved_id[37], direct_address[32];
 static int storage, decode_epoch, status_failures, pending_command;
+/* The last jump marker seen; -1 until the first status sets the baseline, so a
+   change made before this client connected is never replayed. */
+static int jump_seen = -1;
 static long long next_status, next_discovery, next_rediscovery, next_art;
+/* After a transport command, poll quickly until its jump marker arrives. */
+static long long fast_status_until;
 static char art_key[17], art_loaded[17], art_failed[17], art_request[17];
 static unsigned char art[ART_BYTES] ATTRIBUTE_ALIGN(32);
 static enum wj_action queued;
@@ -355,11 +360,19 @@ static void finish_status(struct wj_document *doc) {
             copy(S.artist, sizeof(S.artist), row->field[2]);
             copy(S.state, sizeof(S.state), row->field[3]);
             S.capabilities = row->count >= 6 ? parse_capabilities(row->field[5]) : 0;
+        } else if (row->count == 4 && !strcmp(row->field[0], "jump")) {
+            int id, epoch;
+            long long byte = strtoll(row->field[3], NULL, 10);
+            if (wj_number(row->field[1], 1, 2147483647, &id) || wj_number(row->field[2], 1, 2147483647, &epoch)) continue;
+            if (jump_seen >= 0 && id != jump_seen && wj_audio_jump(epoch, byte))
+                log_event("jump id=%d byte=%lld", id, byte);
+            jump_seen = id;
         } else if (row->count == 2 && !strcmp(row->field[0], "art")) {
             if (strlen(row->field[1]) < sizeof(art_key) && strspn(row->field[1], "0123456789abcdef") == strlen(row->field[1]))
                 copy(art_key, sizeof(art_key), row->field[1]);
         }
     }
+    if (jump_seen < 0) jump_seen = 0;
     // The heard position catching up to the target ends the optimistic display.
     if (S.seek_until && (wj_milliseconds() > S.seek_until ||
         (S.has_progress && abs(S.position_ms - S.seek_target_ms) < 3000))) S.seek_until = 0;
@@ -432,6 +445,7 @@ static void finish_job(void) {
             copy(S.message, sizeof(S.message), "Accepted; waiting for server result...");
         } else copy(S.message, sizeof(S.message), "Command accepted; update server for completion status");
         next_status = 0;
+        fast_status_until = wj_milliseconds() + 6000;
         return;
     }
     if (job == JOB_STATUS) { finish_status(&doc); return; }
@@ -650,7 +664,8 @@ void wj_session_update(void) {
         next_rediscovery = now + 10000;
         start_job(JOB_REDISCOVER, NULL, NULL);
     } else if (now >= next_status) {
-        next_status = now + (pending_command || S.seek_until ? 500 : strcmp(S.state, "idle") ? 1000 : 3000);
+        next_status = now + (now < fast_status_until ? 250 : pending_command || S.seek_until ? 500 :
+                             strcmp(S.state, "idle") ? 1000 : 3000);
         struct wj_playback_clock clock = wj_mp3_clock();
         char path[180];
         snprintf(path, sizeof(path), "/api/wii/status?audible=1&epoch=%d&byte=%lld&played=%lld",

@@ -70,8 +70,8 @@ for (const mode of ['dropped', 'silently stalled']) test(`a ${mode} Wii stream r
         const { stdout } = await run('./client/build/resume_probe', [String(proxy.address().port), output, '260000'],
             { timeout: 25000 });
         assert.match(stdout, /reconnects=[1-9]/);
-        assert.equal(requests[0], 'GET /stream HTTP/1.0');
-        assert.match(requests[1], /^GET \/stream\?epoch=\d+&from=\d+ HTTP\/1\.0$/);
+        assert.equal(requests[0], 'GET /stream?v=2 HTTP/1.0');
+        assert.match(requests[1], /^GET \/stream\?v=2&epoch=\d+&from=\d+ HTTP\/1\.0$/);
         const file = await fs.readFile(output);
         const newline = file.indexOf(10);
         const first = Number(file.subarray(0, newline).toString());

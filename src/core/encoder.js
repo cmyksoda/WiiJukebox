@@ -60,12 +60,14 @@ class Encoder extends EventEmitter {
         const args = [
             '-hide_banner',
             '-loglevel', 'error',
+            '-filter_threads', '1',
             ...FFMPEG_PCM_INPUT,
             '-i', 'pipe:0',
             // A longer windowed-sinc filter than the default; this runs once on
             // the server instead of the Wii's nearest-sample resampler.
             ...(this._sampleRate === SAMPLE_RATE ? [] : ['-af', `aresample=${this._sampleRate}:filter_size=64`]),
             '-c:a', 'libmp3lame',
+            '-threads', '1',
             '-b:a', `${this._bitrate}k`,
             '-compression_level', '2',
             // CBR keeps the advertised bitrate and byte-based stream clock accurate.
