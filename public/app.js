@@ -327,20 +327,54 @@ function renderYtdlp() {
 
 async function bindFavorites(source, urlInput, nameInput, saveButton) {
     const container = $('#favorites');
+    container.className = 'favorites';
     const reload = async () => {
         const { items } = await api(`/sources/${source}/favorites`);
         container.replaceChildren();
+        const heading = document.createElement('h2');
+        heading.className = 'favorites-heading';
+        heading.textContent = source === 'radio' ? 'Saved stations' : 'Saved links';
+        const count = document.createElement('span');
+        count.className = 'favorites-count';
+        count.textContent = items.length;
+        heading.append(count);
+        container.append(heading);
+        if (!items.length) {
+            const empty = document.createElement('p');
+            empty.className = 'favorites-empty';
+            empty.textContent = source === 'radio'
+                ? 'Save a station above to keep it here and on your Wii.'
+                : 'Save a link above to keep it here and on your Wii.';
+            container.append(empty);
+        }
         for (const item of items) {
             const row = document.createElement('div');
+            row.className = 'favorite-row';
             const playButton = document.createElement('button');
-            playButton.className = 'btn small';
-            playButton.textContent = item.name;
+            playButton.className = 'favorite-play';
+            playButton.setAttribute('aria-label', `Play ${item.name}`);
+            playButton.innerHTML = '<span class="favorite-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z"/></svg></span>';
+            const details = document.createElement('span');
+            details.className = 'favorite-details';
+            const name = document.createElement('span');
+            name.className = 'favorite-name';
+            name.textContent = item.name;
+            details.append(name);
+            try {
+                const host = document.createElement('span');
+                host.className = 'favorite-host';
+                host.textContent = new URL(item.url).hostname;
+                details.append(host);
+            } catch { /* Older saved links may not have an absolute URL. */ }
+            playButton.append(details);
             playButton.onclick = () => play(source === 'radio'
                 ? { url: item.url, title: item.name, type: 'station' }
                 : { id: item.url, title: item.name, type: 'track' });
             const remove = document.createElement('button');
-            remove.className = 'btn small';
-            remove.textContent = 'Remove';
+            remove.className = 'icon-btn favorite-remove';
+            remove.title = `Remove ${item.name}`;
+            remove.setAttribute('aria-label', `Remove ${item.name}`);
+            remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"/></svg>';
             remove.onclick = async () => {
                 try {
                     await api(`/sources/${source}/favorites`, { method: 'DELETE', body: { id: item.id } });
