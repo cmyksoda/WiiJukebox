@@ -41,9 +41,12 @@ function serverEnvironment() {
     return env;
 }
 
-function showPage(page, params = {}) {
+async function showPage(page, params = {}) {
     const query = new URLSearchParams(params).toString();
-    return win.loadFile(path.join(__dirname, page), { search: query });
+    // A newer navigation replacing this one is normal, not an error.
+    await win.loadFile(path.join(__dirname, page), { search: query }).catch((err) => {
+        if (err.code !== 'ERR_ABORTED') throw err;
+    });
 }
 
 async function startServer() {

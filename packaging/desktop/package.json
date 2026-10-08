@@ -11,7 +11,8 @@
     "start": "electron . --no-sandbox",
     "dist:linux": "node scripts/stage.js linux && electron-builder --linux AppImage",
     "dist:win": "node scripts/stage.js win && electron-builder --win zip nsis",
-    "dist:mac": "node scripts/stage.js mac && electron-builder --mac zip --universal"
+    "dist:mac": "node scripts/stage.js mac && electron-builder --mac zip --x64",
+    "dist:mac-arm64": "node scripts/stage.js mac-arm64 && electron-builder --mac zip --arm64"
   },
   "devDependencies": {
     "electron": "41.7.2",
@@ -62,7 +63,9 @@
         "zip"
       ],
       "icon": "build/icon.png",
-      "artifactName": "WiiJukebox-${version}-win-${arch}.${ext}"
+      "artifactName": "WiiJukebox-${version}-win-${arch}.${ext}",
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
