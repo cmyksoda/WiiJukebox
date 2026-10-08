@@ -38,6 +38,8 @@ class Pipeline extends EventEmitter {
                 (timing.audio || !jump.audio)) {
                 jump.byte = Math.floor(this.timeline.time * this.broadcaster.bitrate / 8);
                 jump.epoch = this.broadcaster.epoch;
+                // Pushed, not just polled, so browser players can follow the jump too.
+                queueMicrotask(() => this.emit('status', this.status));
             }
             if (this.encoder.running) this.timeline.write(chunk.length, {
                 generation: this._generation, position: timing.position,

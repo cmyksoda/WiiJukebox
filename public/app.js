@@ -830,6 +830,7 @@ function setPlayPauseGlyph(paused) {
 
 function applyStatus(status) {
     state.status = status;
+    followJump(status.jump);
 
     const np = status.nowPlaying || {};
     const title = np.title || 'Nothing playing';
@@ -1003,9 +1004,21 @@ function setMonitoring(enabled) {
     if (!enabled && !viz.starting && !document.body.classList.contains('viz')) $('#monitor-audio').pause();
 }
 
+// A Wii seek or skip bursts the new audio to every listener; following its jump
+// marker keeps this player from falling further behind each time.
+function followJump(jump) {
+    if (!jump) return;
+    const seen = state.jumpId;
+    state.jumpId = jump.id;
+    const audio = $('#monitor-audio');
+    if (seen === undefined || seen === jump.id || !audio.src || audio.paused) return;
+    audio.src = `${state.mount || '/stream'}?v=2&epoch=${jump.epoch}&from=${jump.byte}`;
+    audio.play().catch(() => {});
+}
+
 async function startAudio() {
     const audio = $('#monitor-audio');
-    if (!audio.src) audio.src = state.mount || '/stream';
+    if (!audio.src) audio.src = `${state.mount || '/stream'}?v=2`;
 
     if (!viz.ctx) {
         viz.ctx = new (window.AudioContext || window.webkitAudioContext)();

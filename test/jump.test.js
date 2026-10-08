@@ -64,6 +64,8 @@ test('transport changes mark the byte where new audio starts; only jump listener
 
         listener(pipeline, '/stream?v=2');
         assert.equal(pipeline.broadcaster.jumpListeners, 1);
+        const announced = [];
+        pipeline.on('status', (status) => { if (status.jump) announced.push(status.jump.id); });
         await control(pipeline, { data: {}, save() {} }, 'next');
         assert.ok(pipeline.pacer._burstBytes > 0, 'a jump listener gets a burst');
         assert.equal(pipeline.jump, null, 'the next marker waits for its audio');
@@ -71,6 +73,7 @@ test('transport changes mark the byte where new audio starts; only jump listener
         await sleep(300);
         assert.equal(pipeline.jump.id, 2);
         assert.ok(pipeline.jump.byte > first.byte);
+        assert.ok(announced.includes(2), 'a status event announces the marker once its byte is known');
 
         // A track ending on its own is continuous, so it is never marked.
         await pipeline.playHandle({ type: 'pcm', stream: new PassThrough() });
