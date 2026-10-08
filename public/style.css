@@ -456,17 +456,6 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 .status-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 .steps li::marker { color: var(--accent-text); font-weight: 800; }
-.code-box {
-    align-self: flex-start;
-    padding: 10px 22px;
-    border: 2px dashed var(--accent);
-    border-radius: var(--radius);
-    background: var(--accent-soft);
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: .24em;
-    color: var(--accent-text);
-}
 .notice { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--tile); font-size: 14px; }
 .notice.error { border: 1px solid var(--danger); color: var(--danger); background: transparent; }
 

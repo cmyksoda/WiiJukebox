@@ -19,7 +19,7 @@ const state = {
 // What each channel is, for the label on its tile.
 const KINDS = {
     subsonic: 'Library', jellyfin: 'Library', plex: 'Library',
-    radio: 'Live', ytdlp: 'Streaming', ytmusic: 'Streaming', tidal: 'Streaming',
+    radio: 'Live', ytdlp: 'Streaming', ytmusic: 'Streaming',
     spotify: 'Receiver', airplay: 'Receiver', desktop: 'Capture',
 };
 const NO_SEARCH = new Set(['radio', 'desktop', 'spotify', 'airplay']);
@@ -190,12 +190,6 @@ async function openSource(src) {
     };
 
     if (src.id === 'radio') return renderRadio(src);
-
-    if (src.id === 'tidal') {
-        const problem = src.configured ? await connect() : null;
-        if (!src.configured || problem) return renderTidal(src, problem);
-        return browse('');
-    }
 
     if (src.family === 'push') {
         const problem = await connect();
@@ -513,62 +507,6 @@ async function renderReceiver(src) {
     state.panelTimer = setInterval(draw, 3000);
 }
 
-// --- Tidal ------------------------------------------------------------------
-
-async function renderTidal(src, problem) {
-    setToolbar({ title: 'Tidal', settings: src.configured ? settingsAction(src) : null });
-    const content = $('#content');
-    content.className = '';
-    const panel = h('div', { class: 'panel' });
-    content.replaceChildren(panel);
-
-    let polling = null;
-    const draw = (login, message) => {
-        panel.replaceChildren(...kids([
-            h('h3', { text: src.configured ? 'Sign in again' : 'Sign in to Tidal' }),
-            problem || message ? h('p', { class: 'notice error', text: message || problem }) : null,
-            login
-                ? [
-                    h('p', { text: 'Open the link and enter this code. Waiting for you to approve…' }),
-                    h('div', { class: 'code-box', text: login.userCode }),
-                    h('div', { class: 'buttons' },
-                        h('a', { class: 'pill primary', href: login.url, target: '_blank', rel: 'noopener', text: 'Open Tidal sign-in' })),
-                ]
-                : [
-                    h('p', { text: 'Uses your own Tidal subscription. You approve the sign-in on tidal.com; no password is typed here.' }),
-                    h('div', { class: 'buttons' },
-                        h('button', { class: 'pill primary', text: 'Sign in with Tidal', onclick: start })),
-                ],
-            h('p', { class: 'hint', text: 'Streams play at the quality chosen in Settings (High by default).' })]));
-    };
-
-    async function start() {
-        try {
-            const login = await api('/sources/tidal/action/login-start', { method: 'POST', body: {} });
-            draw(login);
-            clearInterval(polling);
-            polling = setInterval(async () => {
-                if (state.activeSource !== 'tidal') return clearInterval(polling);
-                try {
-                    const result = await api('/sources/tidal/action/login-poll', { method: 'POST', body: {} });
-                    if (result.status !== 'ok') return;
-                    clearInterval(polling);
-                    toast('Signed in to Tidal');
-                    await loadSources();
-                    openSource(state.sources.find((s) => s.id === 'tidal'));
-                } catch (err) {
-                    clearInterval(polling);
-                    draw(null, err.message);
-                }
-            }, Math.max(2, login.interval || 2) * 1000);
-            state.panelTimer = polling;
-        } catch (err) {
-            draw(null, err.message);
-        }
-    }
-    draw(null);
-}
-
 // --- settings ------------------------------------------------------------------
 
 const f = (key, label, type = 'text', extra = {}) => ({ key, label, type, ...extra });
@@ -581,11 +519,6 @@ const SETTINGS = {
     jellyfin: [
         f('url', 'Server URL', 'url', { placeholder: 'http://192.168.1.10:8096' }),
         f('username', 'Username'), f('password', 'Password', 'password', { secret: true }),
-    ],
-    tidal: [
-        f('quality', 'Streaming quality', 'select', { options: [['LOW', 'Low (96 kbps AAC)'], ['HIGH', 'High (320 kbps AAC)'], ['LOSSLESS', 'Lossless (FLAC)']] }),
-        f('clientId', 'OAuth client ID', 'text', { advanced: true, hint: 'Leave empty to read it from Python’s tidalapi package.' }),
-        f('clientSecret', 'OAuth client secret', 'password', { advanced: true, secret: true }),
     ],
     spotify: [
         f('deviceName', 'Device name', 'text', { hint: 'What the Spotify app shows in its device list.' }),
@@ -686,14 +619,7 @@ async function renderSettings(src, { problem } = {}) {
         advanced.length ? h('details', { class: 'advanced', open: problem ? true : null },
             h('summary', { text: 'Advanced' }), h('div', { class: 'form' }, advanced)) : null,
         h('div', { class: 'buttons' },
-            h('button', { class: 'pill primary', id: 'save-src', text: ['spotify', 'airplay', 'ytmusic', 'ytdlp', 'tidal'].includes(src.id) ? 'Save' : 'Connect', onclick: save }),
-            src.id === 'tidal' && src.configured
-                ? h('button', { class: 'pill danger', text: 'Sign out', onclick: async () => {
-                    await api('/sources/tidal/action/logout', { method: 'POST', body: {} });
-                    await loadSources();
-                    openSource(state.sources.find((s) => s.id === 'tidal'));
-                } })
-                : null))]));
+            h('button', { class: 'pill primary', id: 'save-src', text: ['spotify', 'airplay', 'ytmusic', 'ytdlp'].includes(src.id) ? 'Save' : 'Connect', onclick: save })))]));
 }
 
 // --- transport -----------------------------------------------------------

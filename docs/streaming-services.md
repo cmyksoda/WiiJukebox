@@ -9,7 +9,7 @@ decrypts DRM (Widevine, FairPlay, PlayReady) or shares accounts.
 | Spotify | Spotify Connect receiver (librespot) | Premium, `librespot` binary | Start entry; the Spotify app controls playback | Built. Receiver starts and advertises over zeroconf; no real Spotify session was tested |
 | Apple Music | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac, `shairport-sync` binary | Start entry; the sender controls playback | Built. Receiver, metadata pipe and cover art parsed against the real program; no Apple sender was tested |
 | YouTube Music | music.youtube.com search plus yt-dlp | `yt-dlp` (and your browser cookies for Premium or your library) | Saved links, Liked Music with cookies | Built. Search, albums and playback were run live |
-| Tidal | Official device-code login, then the v1 API | Tidal subscription, an OAuth client ID and secret (see below) | Playlists, favorite albums, tracks and artists | Built against a fixture server. Not tested with a real account |
+| Tidal | none | | | Not offered. See below |
 | Amazon Music | none | | | Not possible. See below |
 | Deezer | none | | | Not possible. See below |
 
@@ -94,33 +94,13 @@ yt-dlp, so everything the YouTube / SoundCloud source supports applies.
 - If the search endpoint changes, the source falls back to titles from yt-dlp's
   own search.
 
-## Tidal
+## Why not Tidal, Amazon Music and Deezer
 
-Sign-in uses Tidal's device-code flow: the web UI shows a code and a link, you
-approve on tidal.com, and the server stores refresh tokens (mode 0600 in
-`config.json`). No password is typed into WiiJukebox.
-
-**This is an unofficial interface.** Tidal's public developer API gives
-metadata only. Streaming uses the same private API as Mopidy-Tidal and
-tidalapi, and needs the OAuth client identity of a Tidal app. That identity is
-not bundled with WiiJukebox. It is read from one of two places:
-
-1. The `clientId` and `clientSecret` settings (Settings, Advanced), or
-2. The Python package `tidalapi` if it is installed (`pip install tidalapi`),
-   which the server queries once at sign-in.
-
-Tidal's terms restrict unofficial clients. Use it on your own subscription at
-your own risk.
-
-- Only unencrypted streams are played. A track that reports encryption, or that
-  Tidal offers only as a segmented stream, is skipped with a warning and never
-  decrypted. Quality defaults to High (320 kbps AAC); Lossless asks for FLAC
-  where Tidal returns a plain file.
-- Hi-res (MQA, Atmos, 24-bit) is not requested. The pipeline encodes to 128 kbps
-  MP3 for the Wii.
-- Nothing is written to the account: no playlist edits, favorites or scrobbles.
-
-## Why not Amazon Music and Deezer
+**Tidal.** Its public developer API gives metadata only. Streaming needs the
+private API that Tidal's own apps use, signed in with one of those apps' OAuth
+client identities, which Tidal's terms do not allow third parties to use.
+Alternative: Tidal Connect is closed, but the Tidal app can play over AirPlay
+from an Apple device, or be captured with the Desktop audio source.
 
 **Amazon Music.** Streams are delivered with Widevine. Amazon offers no
 receiver protocol or public streaming API to third parties, and there is no
@@ -144,14 +124,12 @@ send the audio.
 |---|---|---|
 | [librespot](https://github.com/librespot-org/librespot) | Spawned as a separate program, not bundled | MIT |
 | [shairport-sync](https://github.com/mikebrady/shairport-sync) | Spawned as a separate program, not bundled | MIT and BSD-style (see its LICENSES folder) |
-| [tidalapi](https://github.com/tamland/python-tidal) / Mopidy-Tidal | API shapes (endpoint names, login flow, manifest fields) followed; no code copied | LGPL-3.0 |
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Search request format followed; no code copied | MIT |
 | [Nunito](https://github.com/googlefonts/nunito) (`public/fonts/`) | Web UI typeface, latin subset | SIL OFL 1.1 (`public/fonts/OFL.txt`) |
 | `public/images/*` | WiiRadio logo and tile, kept from the original project | See `client/vendor/README.md` |
 
 ## Testing without the real programs
 
-`test/spotify.test.js`, `test/airplay.test.js`, `test/ytmusic.test.js` and
-`test/tidal.test.js` use small fake programs and fixture HTTP servers, so
+`test/spotify.test.js`, `test/airplay.test.js` and `test/ytmusic.test.js` use small fake programs and fixture HTTP servers, so
 `npm test` never contacts a streaming service. `test/helpers/fake-binary.js`
 writes the fakes.
