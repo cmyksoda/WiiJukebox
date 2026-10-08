@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// The desktop app's own small settings file (the server keeps its settings in config.json).
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+const DEFAULTS = {
+    // False until the first-run window has been completed.
+    setupDone: false,
+    // What closing the window does: 'ask' the first time, then 'background' or 'quit'.
+    onClose: 'ask',
+};
+
+class Settings {
+    constructor(file) {
+        this.file = file;
+        this.data = { ...DEFAULTS };
+        try {
+            const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+            for (const key of Object.keys(DEFAULTS)) {
+                if (typeof saved[key] === typeof DEFAULTS[key]) this.data[key] = saved[key];
+            }
+        } catch (err) {
+            // A missing or damaged file just means a fresh start.
+            if (err.code !== 'ENOENT') console.warn(`desktop settings unreadable (${err.message}); using defaults`);
+        }
+    }
+
+    get(key) {
+        return this.data[key];
+    }
+
+    set(key, value) {
+        if (!Object.hasOwn(DEFAULTS, key)) throw new Error(`unknown setting: ${key}`);
+        this.data[key] = value;
+        fs.mkdirSync(path.dirname(this.file), { recursive: true });
+        fs.writeFileSync(this.file, JSON.stringify(this.data, null, 2));
+    }
+}
+
+module.exports = { Settings, DEFAULTS };
