@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
 const lib = path.join(__dirname, '..', 'packaging', 'desktop', 'lib');
-const { Settings } = require(path.join(lib, 'settings'));
+const { Settings, closeAction } = require(path.join(lib, 'settings'));
 const { createAutostart } = require(path.join(lib, 'autostart'));
 const { isLocalAddress, wiiAddress, probeDiscovery, findFreePort } = require(path.join(lib, 'network'));
 const { guidance, windowsCommand, allowWindowsFirewall } = require(path.join(lib, 'firewall'));
@@ -40,6 +40,15 @@ test('settings start fresh, persist changes and ignore damaged or mistyped files
     } finally {
         console.warn = originalWarn;
     }
+});
+
+test('closing the window keeps the music playing unless the user chose to quit', () => {
+    const done = { quitting: false, setupDone: true };
+    assert.equal(closeAction({ ...done, mode: 'ask' }), 'ask');
+    assert.equal(closeAction({ ...done, mode: 'background' }), 'hide');
+    assert.equal(closeAction({ ...done, mode: 'quit' }), 'close');
+    assert.equal(closeAction({ ...done, mode: 'background', quitting: true }), 'close', 'quitting always closes');
+    assert.equal(closeAction({ ...done, mode: 'background', setupDone: false }), 'close', 'the setup window just closes');
 });
 
 test('start at login writes a quoted autostart entry on Linux and uses login items elsewhere', () => {

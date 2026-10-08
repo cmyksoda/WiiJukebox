@@ -8,7 +8,7 @@ const path = require('node:path');
 const { detect, searchPath } = require('./lib/tools');
 const { ServerProcess } = require('./lib/server');
 const { installYtdlp } = require('./lib/ytdlp-install');
-const { Settings } = require('./lib/settings');
+const { Settings, closeAction } = require('./lib/settings');
 const { createAutostart, HIDDEN_ARG } = require('./lib/autostart');
 const { serverConfig } = require('./lib/server-config');
 const { wiiAddress, probeDiscovery, findFreePort, portIsFree } = require('./lib/network');
@@ -137,12 +137,10 @@ function createWindow() {
 }
 
 function onWindowClose(event) {
-    if (quitting) return;
-    const mode = settings.get('onClose');
-    // Nothing is playing before setup finishes, so closing that window just closes the app.
-    if (mode === 'quit' || !settings.get('setupDone')) return;
+    const action = closeAction({ quitting, mode: settings.get('onClose'), setupDone: settings.get('setupDone') });
+    if (action === 'close') return;
     event.preventDefault();
-    if (mode === 'background') win.hide();
+    if (action === 'hide') win.hide();
     else askWhatClosingDoes();
 }
 

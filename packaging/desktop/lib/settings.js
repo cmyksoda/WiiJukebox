@@ -38,4 +38,13 @@ class Settings {
     }
 }
 
-module.exports = { Settings, DEFAULTS };
+/**
+ * What closing the window does: 'close' it for real, 'hide' it and keep playing, or 'ask' first.
+ * Nothing is playing before setup finishes, so that window just closes the app.
+ */
+function closeAction({ quitting, mode, setupDone }) {
+    if (quitting || mode === 'quit' || !setupDone) return 'close';
+    return mode === 'background' ? 'hide' : 'ask';
+}
+
+module.exports = { Settings, DEFAULTS, closeAction };
