@@ -243,9 +243,10 @@ class Pipeline extends EventEmitter {
             starving: this.pacer.starving,
             paused: Boolean(this.pacer.paused),
             modes: this.modes,
+            // With nothing playing the modes can still be chosen for what plays next.
             capabilities: caps ? {
                 ...caps, seek: this.seekable, volume: false, shuffle: Boolean(caps.shuffle), repeat: Boolean(caps.repeat),
-            } : {},
+            } : { shuffle: true, repeat: true },
         };
     }
 

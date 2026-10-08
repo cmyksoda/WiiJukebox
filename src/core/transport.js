@@ -5,8 +5,7 @@ function control(pipeline, config, action, { position, value } = {}) {
     return pipeline.command(async () => {
         const source = pipeline.activeSource;
         if (action === 'shuffle' || action === 'repeat') {
-            // Modes are player-wide, so they can be set before anything plays.
-            if (source && !pipeline.status.capabilities[action]) {
+            if (!pipeline.status.capabilities[action]) {
                 return { code: 400, error: `${source.label} does not support ${action}` };
             }
             let mode;

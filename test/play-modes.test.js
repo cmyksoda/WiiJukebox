@@ -77,7 +77,7 @@ test('status reports the modes and which of them the active source supports', as
     const pipeline = new Pipeline({ modes: { shuffle: true, repeat: 'all' } });
     try {
         assert.deepEqual(pipeline.status.modes, { shuffle: true, repeat: 'all' });
-        assert.deepEqual(pipeline.status.capabilities, {});
+        assert.deepEqual(pipeline.status.capabilities, { shuffle: true, repeat: true }, 'with nothing playing they can be preset');
         await pipeline.attach(new Library());
         assert.equal(pipeline.status.capabilities.shuffle, true);
         assert.equal(pipeline.status.capabilities.repeat, true);

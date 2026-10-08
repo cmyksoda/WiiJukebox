@@ -75,11 +75,11 @@ pause state; radio, live and desktop sources cannot seek.
 Shuffle and repeat are player-wide and saved by the server, so they survive
 restarts and carry over from one source to the next; the `modes` row always
 reports them. The `shuffle` and `repeat` controls appear in the controls list
-only while the source can honor them (queue-based sources: Navidrome/Subsonic,
-Jellyfin, Plex, yt-dlp and YouTube Music). Radio, podcasts, Spotify Connect,
-AirPlay and desktop audio omit them, and asking anyway ends in a failed
-command. With nothing playing the modes can still be chosen, so they apply to the
-next album or playlist. Shuffle keeps a picked track first and shuffles the
+while the source can honor them (queue-based sources: Navidrome/Subsonic,
+Jellyfin, Plex, yt-dlp and YouTube Music) and while nothing is playing, so the
+modes can be chosen ahead of the next album or playlist. Radio, podcasts,
+Spotify Connect, AirPlay and desktop audio omit them, and asking anyway ends in
+a failed command. Shuffle keeps a picked track first and shuffles the
 rest; repeat `one` replays a track that ends on its own, while Next and
 Previous still move on.
 
