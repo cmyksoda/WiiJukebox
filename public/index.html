@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d141c" media="(prefers-color-scheme: dark)">
 <title>WiiJukebox</title>
-<link rel="icon" href="data:,">
+<link rel="icon" href="images/favicon.ico">
+<link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,11 +19,11 @@
 <div id="viz-overlay" hidden><span id="viz-preset"></span></div>
 
 <div id="app">
-  <button id="sidebar-shade" aria-label="Close sources" tabindex="-1"></button>
+  <button id="sidebar-shade" aria-label="Close channels" tabindex="-1"></button>
   <aside id="sidebar" aria-label="Music sources">
     <header id="brand">
       <strong><span class="wii-word">Wii</span>Jukebox</strong>
-      <button id="sources-close" class="icon-btn" aria-label="Close sources">&times;</button>
+      <button id="sources-close" class="pill icon" aria-label="Close channels"><span class="glyph" aria-hidden="true">&#x2715;&#xFE0E;</span></button>
     </header>
 
     <nav id="sources" aria-label="Sources"></nav>
@@ -34,52 +38,83 @@
 
   <main id="main">
     <div id="toolbar">
-      <button id="sources-toggle" class="icon-btn menu-button" aria-label="Open sources" aria-controls="sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
-      <button id="back" class="icon-btn" title="Back" aria-label="Back to previous folder" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
-      <h2 id="crumb">Pick a source</h2>
-      <input id="search" type="search" placeholder="Search" hidden>
+      <button id="sources-toggle" class="pill menu-button" aria-label="Open channels" aria-controls="sidebar" aria-expanded="false"><i class="g g-menu" aria-hidden="true"></i><span class="pill-label">Channels</span></button>
+      <button id="back" class="pill icon" title="Back" aria-label="Back to previous folder" hidden><span class="glyph" aria-hidden="true">&#x25C0;&#xFE0E;</span></button>
+      <h2 id="crumb">Channels</h2>
+      <button id="settings-btn" class="pill small" hidden>Settings</button>
+      <input id="search" type="search" placeholder="Search" aria-label="Search" hidden>
     </div>
 
     <nav id="pagination" aria-label="Library pages" hidden>
-      <button class="icon-btn page-button" id="library-prev" title="Previous page" aria-label="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+      <button class="pill icon page-button" id="library-prev" title="Previous page" aria-label="Previous page"><span class="glyph" aria-hidden="true">&#x25C0;&#xFE0E;</span></button>
       <span id="library-page" aria-live="polite"></span>
-      <button class="icon-btn page-button" id="library-next" title="Next page" aria-label="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+      <button class="pill icon page-button" id="library-next" title="Next page" aria-label="Next page"><span class="glyph" aria-hidden="true">&#x25B6;&#xFE0E;</span></button>
     </nav>
     <div id="content"></div>
-
-    <div id="empty" class="empty">
-      <p>Choose a source to get started.</p>
-    </div>
   </main>
-</div>
 
-<!-- Transport bar. Controls are enabled per-source from the capabilities the
-     server reports, so nothing here ever pretends to work when it can't. -->
-<footer id="player">
-  <div id="np">
-    <span id="np-placeholder" aria-hidden="true">♫</span>
-    <img id="np-art" alt="" hidden>
+  <!-- A column beside the library on wide screens, a sheet over it on phones. -->
+  <section id="nowplaying" aria-label="Now playing">
+    <header id="np-head">
+      <span class="eyebrow">Now playing</span>
+      <button id="np-close" class="pill icon" aria-label="Hide now playing"><span class="glyph" aria-hidden="true">&#x25BE;&#xFE0E;</span></button>
+    </header>
+
+    <div id="np-art-frame">
+      <span id="np-placeholder" aria-hidden="true">&#x266A;&#xFE0E;</span>
+      <img id="np-art" alt="" hidden>
+    </div>
+
     <div id="np-text">
       <div id="np-title">Nothing playing</div>
       <div id="np-artist"></div>
+      <span id="np-source" class="chip" hidden></span>
     </div>
-  </div>
 
-  <div id="controls">
-    <button id="prev" aria-label="Previous track" class="icon-btn" title="Previous" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 5 8 12l11 7Z"/></svg></button>
-    <button id="playpause" aria-label="Play" class="icon-btn big" title="Play" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-icon" d="M8 5v14M16 5v14"/><path class="play-icon" d="m8 5 11 7-11 7Z"/></svg></button>
-    <button id="next" aria-label="Next track" class="icon-btn" title="Next" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 5l11 7-11 7Z"/></svg></button>
-    <button id="stop" aria-label="Stop" class="icon-btn" title="Stop" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
-  </div>
+    <div id="seek">
+      <span id="np-elapsed" class="time">0:00</span>
+      <input id="seekbar" type="range" min="0" max="1000" value="0" step="1" aria-label="Playback position" disabled>
+      <span id="np-total" class="time">0:00</span>
+    </div>
 
-  <div id="right">
-    <span id="listeners" title="Devices connected to the stream">0 listening</span>
-    <button id="monitor" class="btn small" title="Play the stream here in the browser" aria-label="Monitor audio on this device" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v7h4v-7Zm16 0h2v7h-4v-7Z"/></svg><span class="button-label">Monitor</span></button>
-    <button id="viz-toggle" class="btn small" aria-label="Toggle visualizer" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4M8 5v14M12 8v8M16 3v18M20 9v6"/></svg><span class="button-label">Visualizer</span></button>
+    <!-- Controls are enabled per-source from the capabilities the server
+         reports, so nothing here ever pretends to work when it can't. -->
+    <div id="controls">
+      <button id="prev" aria-label="Previous track" class="round" title="Previous" disabled><i class="g g-prev" aria-hidden="true"></i></button>
+      <button id="playpause" aria-label="Play" class="round big" title="Play" disabled><i class="g g-play" aria-hidden="true"></i><i class="g g-pause" aria-hidden="true"></i></button>
+      <button id="next" aria-label="Next track" class="round" title="Next" disabled><i class="g g-next" aria-hidden="true"></i></button>
+      <button id="stop" aria-label="Stop" class="round small" title="Stop" disabled><i class="g g-stop" aria-hidden="true"></i></button>
+    </div>
+
+    <div id="np-extras">
+      <span id="listeners" class="chip" title="Devices connected to the stream">0 listening</span>
+      <button id="monitor" class="pill small" title="Play the stream here in the browser" aria-label="Monitor audio on this device" aria-pressed="false">Monitor</button>
+      <button id="viz-toggle" class="pill small" aria-label="Toggle visualizer" aria-pressed="false">Visualizer</button>
+    </div>
+  </section>
+</div>
+
+<!-- Phone transport bar; opens the sheet. In visualizer mode it is the only
+     UI left, so it carries the extra controls too. -->
+<footer id="player">
+  <div id="mini-progress" aria-hidden="true"><i></i></div>
+  <button id="mini-open" aria-label="Open now playing" aria-controls="nowplaying" aria-expanded="false">
+    <span id="mini-art"><span id="mini-placeholder" aria-hidden="true">&#x266A;&#xFE0E;</span><img id="mini-img" alt="" hidden></span>
+    <span id="mini-text">
+      <span id="mini-title">Nothing playing</span>
+      <span id="mini-artist"></span>
+    </span>
+  </button>
+  <div id="mini-controls">
+    <button id="mini-prev" aria-label="Previous track" class="round small viz-only" disabled><i class="g g-prev" aria-hidden="true"></i></button>
+    <button id="mini-playpause" aria-label="Play" class="round" disabled><i class="g g-play" aria-hidden="true"></i><i class="g g-pause" aria-hidden="true"></i></button>
+    <button id="mini-next" aria-label="Next track" class="round small viz-only" disabled><i class="g g-next" aria-hidden="true"></i></button>
+    <button id="mini-monitor" class="pill small viz-only" aria-label="Monitor audio on this device" aria-pressed="false">Monitor</button>
+    <button id="mini-viz" class="pill small viz-only" aria-label="Close visualizer" aria-pressed="true">Close</button>
   </div>
 </footer>
 
-<div id="toast" hidden></div>
+<div id="toast" hidden role="status"></div>
 
 <!-- Audio element used only for local monitoring; it is also what feeds the
      visualizer, since Butterchurn needs a Web Audio node to analyse. -->

@@ -1,6 +1,6 @@
 // WiiJukebox WebUI.
 //
-// Deliberately dependency-free and un-built: the whole thing is three files the
+// Deliberately dependency-free and un-built: the whole thing is a few files the
 // server hands over as-is. That keeps the eventual single-executable packaging
 // honest -- there is no bundler step that has to happen before the app can run.
 
@@ -13,7 +13,17 @@ const state = {
     activeSource: null, // id of the source being browsed
     status: null,
     stack: [], // browse history, for the back button
+    panelTimer: null, // polling for the receiver / sign-in panels
 };
+
+// What each channel is, for the label on its tile.
+const KINDS = {
+    subsonic: 'Library', jellyfin: 'Library', plex: 'Library',
+    radio: 'Live', ytdlp: 'Streaming', ytmusic: 'Streaming', tidal: 'Streaming',
+    spotify: 'Receiver', airplay: 'Receiver', desktop: 'Capture',
+};
+const NO_SEARCH = new Set(['radio', 'desktop', 'spotify', 'airplay']);
+const PHONE = window.matchMedia('(max-width: 900px)');
 
 // --- helpers -------------------------------------------------------------
 
@@ -26,6 +36,32 @@ async function api(path, opts = {}) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     return data;
+}
+
+/** Build an element; string children become text, so nothing is parsed as HTML. */
+function h(tag, props = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+        if (value === undefined || value === null || value === false) continue;
+        if (key === 'class') node.className = value;
+        else if (key === 'text') node.textContent = value;
+        else if (key.startsWith('on')) node[key] = value;
+        else node.setAttribute(key, value === true ? '' : value);
+    }
+    node.append(...kids(children));
+    return node;
+}
+
+/** Flatten nested arrays and drop empty slots, so conditionals read naturally. */
+function kids(children) {
+    return children.flat(Infinity)
+        .filter((child) => child !== null && child !== undefined && child !== false)
+        .map((child) => (child instanceof Node ? child : document.createTextNode(String(child))));
+}
+
+/** Only http(s) and inline images reach an <img>. */
+function safeImage(url) {
+    return typeof url === 'string' && /^(https?:\/\/|data:image\/)/i.test(url) ? url : null;
 }
 
 let toastTimer;
@@ -41,10 +77,30 @@ function toast(message, isError = false) {
 }
 
 function fmtDuration(seconds) {
-    if (!seconds && seconds !== 0) return '';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${String(s).padStart(2, '0')}`;
+    if (!Number.isFinite(seconds) || seconds < 0) return '';
+    const total = Math.floor(seconds);
+    const hours = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return hours
+        ? `${hours}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+        : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function stopPanelTimer() {
+    clearInterval(state.panelTimer);
+    state.panelTimer = null;
+}
+
+function setToolbar({ title, back = false, search = false, settings = null, pages = false }) {
+    stopPanelTimer();
+    $('#crumb').textContent = title;
+    $('#back').hidden = !back;
+    $('#search').hidden = !search;
+    $('#search').value = '';
+    $('#settings-btn').hidden = !settings;
+    $('#settings-btn').onclick = settings;
+    if (!pages) $('#pagination').hidden = true;
 }
 
 // --- sources -------------------------------------------------------------
@@ -55,82 +111,130 @@ async function loadSources() {
     renderSources();
 }
 
+let sourcesSignature = '';
 function renderSources() {
+    const playingId = state.status?.source?.id;
+    const signature = JSON.stringify([
+        state.sources.map((s) => [s.id, s.state, s.configured]), playingId, state.activeSource,
+    ]);
+    if (signature === sourcesSignature) return;
+    sourcesSignature = signature;
+
     const nav = $('#sources');
-    nav.innerHTML = '';
+    nav.replaceChildren(...state.sources.map((src) => {
+        const playing = playingId === src.id;
+        const sub = playing ? 'playing' : src.configured ? 'ready' : 'needs setup';
+        const btn = h('button', {
+            class: `source-btn ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
+            'aria-current': String(state.activeSource === src.id),
+            onclick: () => openSource(src),
+        }, h('span', { class: 'dot' }),
+        h('span', {}, h('span', { class: 'name', text: src.label }), h('span', { class: 'sub', text: sub })));
+        return btn;
+    }));
 
-    for (const src of state.sources) {
-        const btn = document.createElement('button');
-        btn.className = `source-btn ${src.state}`;
-        btn.setAttribute('aria-current', String(state.activeSource === src.id));
+    if (state.activeSource === null && $('#content').dataset.view === 'home') renderHome();
+}
 
-        const playing = state.status?.source?.id === src.id;
-        if (playing) btn.classList.add('playing');
-
-        btn.innerHTML = `
-            <span class="dot"></span>
-            <span>
-                ${src.label}
-                <span class="sub">${
-                    playing ? 'playing' : src.configured ? 'ready' : 'needs setup'
-                }</span>
-            </span>`;
-
-        btn.onclick = () => openSource(src);
-        nav.append(btn);
-    }
+function renderHome() {
+    stopPanelTimer();
+    setToolbar({ title: 'Pick a channel' });
+    const content = $('#content');
+    content.className = '';
+    content.dataset.view = 'home';
+    const playingId = state.status?.source?.id;
+    const tiles = state.sources.map((src) => {
+        const playing = playingId === src.id;
+        const label = playing ? 'Playing' : src.configured ? 'Ready' : 'Needs setup';
+        return h('button', {
+            class: `channel ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
+            onclick: () => openSource(src),
+        }, h('span', { class: 'kind', text: KINDS[src.id] || '' }),
+        h('span', { class: 'name', text: src.label }),
+        h('span', { class: 'state' }, h('span', { class: 'dot' }), label));
+    });
+    content.replaceChildren(
+        h('div', { class: 'grid' }, tiles),
+        h('div', { class: 'panel', style: 'margin-top:18px' },
+            h('h3', { text: 'Your Wii' }),
+            h('p', { class: 'hint', text: 'Open WiiJukebox on your Wii and choose this server on the same network.' }),
+            h('p', { class: 'hint', text: $('#server-id').textContent }),
+            h('p', { class: 'hint', text: $('#stream-addr').textContent })),
+    );
 }
 
 async function openSource(src) {
     setSourcesOpen(false);
     state.activeSource = src.id;
     state.stack = [];
+    sourcesSignature = '';
     renderSources();
+    $('#content').dataset.view = src.id;
+    $('#content').replaceChildren(h('p', { class: 'empty', text: 'Loading…' }));
 
-    // An unconfigured server has nothing to browse, so go straight to the form
-    // rather than showing an empty library and an error.
-    if (!src.configured) return renderSettings(src);
-
-    if (src.id === 'radio') return renderRadio();
-
-    if (src.id === 'ytdlp') {
-        // Connect first so a missing yt-dlp is reported here, with the install
-        // hint, rather than surfacing as a puzzling failure on the first play.
+    // Every connect failure lands on the settings screen with the reason, so a
+    // missing program or a bad login explains itself where it can be fixed.
+    const connect = async () => {
         try {
             await api(`/sources/${src.id}/connect`, { method: 'POST' });
             await loadSources();
+            return null;
         } catch (err) {
-            toast(`${src.label}: ${err.message}`, true);
+            await loadSources().catch(() => {});
+            return err.message;
         }
-        return renderYtdlp();
+    };
+
+    if (src.id === 'radio') return renderRadio(src);
+
+    if (src.id === 'tidal') {
+        const problem = src.configured ? await connect() : null;
+        if (!src.configured || problem) return renderTidal(src, problem);
+        return browse('');
     }
 
-    try {
-        await api(`/sources/${src.id}/connect`, { method: 'POST' });
-        await loadSources();
-        browse('');
-    } catch (err) {
-        toast(`${src.label}: ${err.message}`, true);
-        renderSettings(src);
+    if (src.family === 'push') {
+        const problem = await connect();
+        return problem ? renderSettings(src, { problem }) : renderReceiver(src);
     }
+
+    if (!src.configured) return renderSettings(src);
+
+    const problem = await connect();
+    if (src.id === 'ytdlp' || src.id === 'ytmusic') {
+        if (problem) toast(`${src.label}: ${problem}`, true);
+        return renderLinks(src);
+    }
+    if (problem) {
+        toast(`${src.label}: ${problem}`, true);
+        return renderSettings(src, { problem });
+    }
+    return browse('');
 }
+
+const settingsAction = (src) => (SETTINGS[src.id] ? () => renderSettings(src) : null);
 
 // --- library browsing ----------------------------------------------------
 
 async function browse(path, label, offset = 0) {
     const id = state.activeSource;
+    const src = state.sources.find((s) => s.id === id);
 
-    // yt-dlp has no library to page through, so its root is the paste box
-    // rather than an empty grid. Reached again when backing out of a playlist.
-    if (!path && id === 'ytdlp') return renderYtdlp();
+    // Link-based sources have no library to page through, so their root is the
+    // paste box rather than an empty grid. Reached again when backing out of a playlist.
+    if (!path && (id === 'ytdlp' || id === 'ytmusic')) return renderLinks(src);
 
-    $('#crumb').textContent = label || state.sources.find((s) => s.id === id)?.label || '';
-    $('#back').hidden = state.stack.length === 0;
-    $('#search').hidden = id === 'desktop';
-    $('#empty').hidden = true;
-
+    setToolbar({
+        title: label || src?.label || '',
+        back: state.stack.length > 0,
+        search: !NO_SEARCH.has(id),
+        settings: path ? null : settingsAction(src),
+        pages: true,
+    });
     const content = $('#content');
-    content.innerHTML = '<p class="empty">Loading…</p>';
+    content.dataset.view = id;
+    content.className = '';
+    content.replaceChildren(h('p', { class: 'empty', text: 'Loading…' }));
 
     try {
         const result = await api(
@@ -149,89 +253,87 @@ async function browse(path, label, offset = 0) {
         $('#library-next').onclick = () => browse(path, label, offset + 100);
         renderItems(items, path, label, offset);
     } catch (err) {
-        content.innerHTML = '';
+        content.replaceChildren();
         toast(err.message, true);
     }
 }
 
-function itemArtwork(item) {
-    if (item.artwork) return `<img src="${escapeHtml(item.artwork)}" alt="" loading="lazy">`;
-    const icons = {
-        artists: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/>',
-        albums: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
-        playlists: '<path d="M4 5h16M4 10h16M4 15h8M4 20h8m4-6 5 3-5 3Z"/>',
-        starred: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/>',
-        folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
-        track: '<path d="M10 18V5l10-2v13M10 8l10-2"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
-    };
-    const key = item.type === 'folder' ? item.id : { artist: 'artists', album: 'albums', playlist: 'playlists' }[item.type];
-    const icon = icons[key] || icons[item.type] || icons.track;
-    return `<span class="ph" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>`;
+function artwork(item, extraClass = '') {
+    const url = safeImage(item.artwork);
+    const frame = h('span', { class: `art ${extraClass}`.trim() });
+    if (url) {
+        frame.append(h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }));
+        return frame;
+    }
+    frame.append(h('span', { class: 'ph', 'aria-hidden': 'true' }, h('b', { text: (item.title || '♪').trim().charAt(0).toUpperCase() || '♪' })));
+    return frame;
 }
 
 function renderItems(items, path, label, offset = 0) {
     const content = $('#content');
-    content.innerHTML = '';
+    content.replaceChildren();
+    content.className = '';
 
     if (!items.length) {
-        content.innerHTML = '<p class="empty">Nothing here.</p>';
+        content.append(h('p', { class: 'empty', text: 'Nothing here.' }));
         return;
     }
 
-    // Tracks read better as a list; everything else as artwork.
-    const allTracks = items.every((i) => i.type === 'track');
-    content.className = allTracks ? 'list' : '';
+    const open = (item) => {
+        // Folders and containers drill in; anything playable plays.
+        if (item.type === 'track' || item.type === 'station') return play(item);
+        state.stack.push({ path, label, offset });
+        browse(item.id, item.title);
+    };
 
-    for (const item of items) {
-        const el = document.createElement('button');
+    const rowFor = (item) => {
+        const el = h('button', { class: `row${item.unavailable ? ' unavailable' : ''}`, onclick: () => open(item) },
+            artwork(item),
+            h('span', { class: 'meta' },
+                h('span', { class: 't', text: item.title || '' }),
+                h('span', { class: 's', text: item.subtitle || '' })),
+            h('span', { class: 'dur', text: fmtDuration(item.duration) }));
+        return el;
+    };
 
-        if (allTracks) {
-            el.className = 'row';
-            el.innerHTML = `
-                ${itemArtwork(item)}
-                <span class="meta">
-                    <span class="t">${escapeHtml(item.title || '')}</span>
-                    <span class="s">${escapeHtml(item.subtitle || '')}</span>
-                </span>
-                <span class="dur">${fmtDuration(item.duration)}</span>`;
-        } else {
-            el.className = item.type === 'folder' && !item.artwork ? 'card category-card' : 'card';
-            el.innerHTML = `
-                ${itemArtwork(item)}
-                <span class="t">${escapeHtml(item.title || '')}</span>
-                <span class="s">${escapeHtml(item.subtitle || '')}</span>`;
+    const cardFor = (item) => {
+        if (item.type === 'folder' && !item.artwork) {
+            return h('button', { class: 'category', onclick: () => open(item) }, item.title || '');
         }
-
-        el.onclick = () => {
-            // Folders and containers drill in; anything playable plays. Albums
-            // and playlists do both -- clicking one plays it whole, which is
-            // what "play this album" should mean.
-            if (item.type === 'track' || item.type === 'station') return play(item);
-            if (item.type === 'folder' || item.type === 'artist') {
-                state.stack.push({ path, label, offset });
-                return browse(item.id, item.title);
-            }
-            state.stack.push({ path, label, offset });
-            browse(item.id, item.title);
-        };
-
-        // Right-click an album or playlist to play it rather than open it.
-        if (item.type === 'album' || item.type === 'playlist' || item.type === 'station') {
-            el.oncontextmenu = (e) => {
+        const card = h('button', { class: 'card', onclick: () => open(item) },
+            artwork(item),
+            h('span', { class: 't', text: item.title || '' }),
+            h('span', { class: 's', text: item.subtitle || '' }));
+        const wrap = h('div', { class: 'card-wrap' }, card);
+        // Tapping opens an album or playlist; the round button plays it whole.
+        if (['album', 'playlist', 'station'].includes(item.type)) {
+            wrap.append(h('button', {
+                class: 'play-all', 'aria-label': `Play ${item.title}`, title: 'Play all',
+                onclick: () => play(item),
+            }, h('span', { 'aria-hidden': 'true', text: '▶︎' })));
+            card.oncontextmenu = (e) => {
                 e.preventDefault();
                 play(item);
             };
-            el.title = 'Click to open, right-click to play';
         }
+        return wrap;
+    };
 
-        content.append(el);
+    // Search results from some sources arrive tagged with a group (Songs, Albums...).
+    const groups = new Map();
+    for (const item of items) {
+        const key = item.group || '';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
     }
-}
 
-function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => (
-        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-    ));
+    for (const [name, members] of groups) {
+        if (name) content.append(h('h3', { class: 'group-title', text: name }));
+        const tracks = members.filter((i) => i.type === 'track');
+        const others = members.filter((i) => i.type !== 'track');
+        if (others.length) content.append(h('div', { class: 'grid' }, others.map(cardFor)));
+        if (tracks.length) content.append(h('div', { class: 'list' }, tracks.map(rowFor)));
+    }
 }
 
 async function play(item) {
@@ -246,26 +348,17 @@ async function play(item) {
 // --- radio ---------------------------------------------------------------
 
 function renderRadio() {
-    $('#pagination').hidden = true;
-    $('#crumb').textContent = 'Internet Radio';
-    $('#search').hidden = true;
-    $('#back').hidden = true;
-    $('#empty').hidden = true;
-
+    setToolbar({ title: 'Internet Radio' });
     const content = $('#content');
-    content.className = 'list';
-    content.innerHTML = `
-        <div class="form">
-            <label>Stream URL
-                <input id="radio-url" type="url" placeholder="http://ice1.somafm.com/groovesalad-128-mp3">
-            </label>
-            <label>Name (optional)
-                <input id="radio-name" type="text" placeholder="Groove Salad">
-            </label>
-            <button class="btn" id="radio-play">Play</button>
-            <button class="btn small" id="radio-save">Save station for Wii</button>
-            <div id="favorites"></div>
-        </div>`;
+    content.className = '';
+    content.replaceChildren(h('div', { class: 'form' },
+        h('label', {}, 'Stream URL',
+            h('input', { id: 'radio-url', type: 'url', placeholder: 'http://ice1.somafm.com/groovesalad-128-mp3' })),
+        h('label', {}, 'Name (optional)', h('input', { id: 'radio-name', type: 'text', placeholder: 'Groove Salad' })),
+        h('div', { class: 'buttons' },
+            h('button', { class: 'pill primary', id: 'radio-play', text: 'Play' }),
+            h('button', { class: 'pill', id: 'radio-save', text: 'Save station for Wii' })),
+        h('div', { id: 'favorites' })));
 
     bindFavorites('radio', '#radio-url', '#radio-name', '#radio-save');
     $('#radio-play').onclick = () => {
@@ -275,54 +368,41 @@ function renderRadio() {
     };
 }
 
-// --- yt-dlp --------------------------------------------------------------
+// --- yt-dlp and YouTube Music -----------------------------------------------
 
-function renderYtdlp() {
-    $('#pagination').hidden = true;
-    $('#crumb').textContent = 'YouTube / SoundCloud';
-    $('#back').hidden = true;
-    $('#empty').hidden = true;
-    // Unlike radio, the search box is useful here: it searches YouTube.
-    $('#search').hidden = false;
-
+function renderLinks(src) {
+    const music = src.id === 'ytmusic';
+    setToolbar({ title: src.label, search: true, settings: settingsAction(src) });
     const content = $('#content');
-    content.className = 'list';
-    content.innerHTML = `
-        <div class="form">
-            <label>Paste a link
-                <input id="yt-url" type="url"
-                       placeholder="https://www.youtube.com/watch?v=…">
-            </label>
-            <label>Name (optional)<input id="yt-name" type="text" placeholder="My saved link"></label>
-            <button class="btn" id="yt-play">Play</button>
-            <button class="btn small" id="yt-save">Save link for Wii</button>
-            <div id="favorites"></div>
-            <button class="btn small" id="yt-open">Open as list</button>
-            <p class="hint">
-                A playlist, album or channel link queues the whole thing.
-                Anything yt-dlp supports works — YouTube, SoundCloud, Bandcamp.
-                Or search YouTube with the box above.
-            </p>
-        </div>`;
+    content.className = '';
 
-    bindFavorites('ytdlp', '#yt-url', '#yt-name', '#yt-save');
     const url = () => $('#yt-url').value.trim();
+    content.replaceChildren(h('div', { class: 'form' },
+        h('label', {}, 'Paste a link',
+            h('input', {
+                id: 'yt-url', type: 'url',
+                placeholder: music ? 'https://music.youtube.com/playlist?list=…' : 'https://www.youtube.com/watch?v=…',
+                onkeydown: (e) => { if (e.key === 'Enter') $('#yt-play').click(); },
+            })),
+        h('label', {}, 'Name (optional)', h('input', { id: 'yt-name', type: 'text', placeholder: 'My saved link' })),
+        h('div', { class: 'buttons' },
+            h('button', { class: 'pill primary', id: 'yt-play', text: 'Play', onclick: () => {
+                if (!url()) return toast('Paste a link first', true);
+                play({ id: url(), title: url(), type: 'track' });
+            } }),
+            h('button', { class: 'pill', id: 'yt-save', text: 'Save link for Wii' }),
+            // Drills into a playlist instead of queueing it, for picking one track out.
+            h('button', { class: 'pill', id: 'yt-open', text: 'Open as list', onclick: () => {
+                if (!url()) return toast('Paste a link first', true);
+                state.stack.push({ path: '', label: src.label });
+                browse(`list/${url()}`, 'Link contents');
+            } })),
+        h('div', { id: 'favorites' }),
+        h('p', { class: 'hint', text: music
+            ? 'Search songs, albums and playlists with the box above. A playlist or album link queues the whole thing. For Premium quality and your own library, add your browser cookies in Settings.'
+            : 'A playlist, album or channel link queues the whole thing. Anything yt-dlp supports works: YouTube, SoundCloud, Bandcamp. Or search YouTube with the box above.' })));
 
-    $('#yt-play').onclick = () => {
-        if (!url()) return toast('Paste a link first', true);
-        play({ id: url(), title: url(), type: 'track' });
-    };
-
-    // Drills into a playlist instead of queueing it, for picking one track out.
-    $('#yt-open').onclick = () => {
-        if (!url()) return toast('Paste a link first', true);
-        state.stack.push({ path: '', label: 'YouTube / SoundCloud' });
-        browse(`list/${url()}`, 'Link contents');
-    };
-
-    $('#yt-url').onkeydown = (e) => {
-        if (e.key === 'Enter') $('#yt-play').click();
-    };
+    bindFavorites(src.id, '#yt-url', '#yt-name', '#yt-save');
 }
 
 async function bindFavorites(source, urlInput, nameInput, saveButton) {
@@ -330,60 +410,35 @@ async function bindFavorites(source, urlInput, nameInput, saveButton) {
     container.className = 'favorites';
     const reload = async () => {
         const { items } = await api(`/sources/${source}/favorites`);
-        container.replaceChildren();
-        const heading = document.createElement('h2');
-        heading.className = 'favorites-heading';
-        heading.textContent = source === 'radio' ? 'Saved stations' : 'Saved links';
-        const count = document.createElement('span');
-        count.className = 'favorites-count';
-        count.textContent = items.length;
-        heading.append(count);
-        container.append(heading);
-        if (!items.length) {
-            const empty = document.createElement('p');
-            empty.className = 'favorites-empty';
-            empty.textContent = source === 'radio'
-                ? 'Save a station above to keep it here and on your Wii.'
-                : 'Save a link above to keep it here and on your Wii.';
-            container.append(empty);
-        }
-        for (const item of items) {
-            const row = document.createElement('div');
-            row.className = 'favorite-row';
-            const playButton = document.createElement('button');
-            playButton.className = 'favorite-play';
-            playButton.setAttribute('aria-label', `Play ${item.name}`);
-            playButton.innerHTML = '<span class="favorite-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z"/></svg></span>';
-            const details = document.createElement('span');
-            details.className = 'favorite-details';
-            const name = document.createElement('span');
-            name.className = 'favorite-name';
-            name.textContent = item.name;
-            details.append(name);
+        const radio = source === 'radio';
+        const rows = items.map((item) => {
+            const details = h('span', { class: 'favorite-details' }, h('span', { class: 'favorite-name', text: item.name }));
             try {
-                const host = document.createElement('span');
-                host.className = 'favorite-host';
-                host.textContent = new URL(item.url).hostname;
-                details.append(host);
+                details.append(h('span', { class: 'favorite-host', text: new URL(item.url).hostname }));
             } catch { /* Older saved links may not have an absolute URL. */ }
-            playButton.append(details);
-            playButton.onclick = () => play(source === 'radio'
-                ? { url: item.url, title: item.name, type: 'station' }
-                : { id: item.url, title: item.name, type: 'track' });
-            const remove = document.createElement('button');
-            remove.className = 'icon-btn favorite-remove';
-            remove.title = `Remove ${item.name}`;
-            remove.setAttribute('aria-label', `Remove ${item.name}`);
-            remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"/></svg>';
-            remove.onclick = async () => {
-                try {
-                    await api(`/sources/${source}/favorites`, { method: 'DELETE', body: { id: item.id } });
-                    await reload();
-                } catch (err) { toast(err.message, true); }
-            };
-            row.append(playButton, remove);
-            container.append(row);
-        }
+            return h('div', { class: 'favorite-row' },
+                h('button', {
+                    class: 'favorite-play', 'aria-label': `Play ${item.name}`,
+                    onclick: () => play(radio
+                        ? { url: item.url, title: item.name, type: 'station' }
+                        : { id: item.url, title: item.name, type: 'track' }),
+                }, h('span', { class: 'favorite-symbol', 'aria-hidden': 'true', text: '▶︎' }), details),
+                h('button', {
+                    class: 'favorite-remove', title: `Remove ${item.name}`, 'aria-label': `Remove ${item.name}`,
+                    onclick: async () => {
+                        try {
+                            await api(`/sources/${source}/favorites`, { method: 'DELETE', body: { id: item.id } });
+                            await reload();
+                        } catch (err) { toast(err.message, true); }
+                    },
+                }, h('span', { 'aria-hidden': 'true', text: '✕︎' })));
+        });
+        container.replaceChildren(...kids([
+            h('h2', { class: 'favorites-heading' }, radio ? 'Saved stations' : 'Saved links',
+                h('span', { class: 'favorites-count', text: items.length })),
+            items.length ? null : h('p', { class: 'favorites-empty',
+                text: 'Save a link above to keep it here and on your Wii.' }),
+            rows]));
     };
     $(saveButton).onclick = async () => {
         try {
@@ -397,120 +452,375 @@ async function bindFavorites(source, urlInput, nameInput, saveButton) {
     try { await reload(); } catch (err) { toast(err.message, true); }
 }
 
-// --- settings ------------------------------------------------------------
+// --- receivers (Spotify Connect, AirPlay) ------------------------------------
 
-const FIELDS = {
-    plex: [
-        ['url', 'Server URL', 'url', 'http://192.168.1.10:32400'],
-        ['token', 'Plex token', 'password', ''],
-    ],
+const RECEIVER_COPY = {
+    spotify: {
+        title: 'Spotify Connect',
+        steps: (name) => [
+            'Press Start receiver below.',
+            'Open Spotify on your phone or computer and play something.',
+            `Tap the speaker icon (Connect) and choose “${name}”.`,
+        ],
+        note: 'Needs Spotify Premium. Play, pause and skip happen in the Spotify app.',
+    },
+    airplay: {
+        title: 'AirPlay',
+        steps: (name) => [
+            'Press Start receiver below.',
+            'On your iPhone, iPad or Mac, open Apple Music (or any app) and play something.',
+            `Tap the AirPlay icon and choose “${name}”.`,
+        ],
+        note: 'Plays Apple Music and anything else you send over AirPlay. Controls stay on the sending device.',
+    },
+};
+
+async function renderReceiver(src) {
+    const copy = RECEIVER_COPY[src.id] || { title: src.label, steps: () => [], note: '' };
+    setToolbar({ title: copy.title, settings: settingsAction(src) });
+    const content = $('#content');
+    content.className = '';
+
+    const panel = h('div', { class: 'panel' });
+    content.replaceChildren(panel);
+
+    const draw = async () => {
+        if (state.activeSource !== src.id) return;
+        let info = {};
+        try { info = await api(`/sources/${src.id}/info`); } catch { /* shown as not running */ }
+        const running = state.status?.source?.id === src.id;
+        const name = info.deviceName || 'WiiJukebox';
+        const detail = [info.user && `Signed in as ${info.user}`, info.client && `From ${info.client}`]
+            .filter(Boolean).join(' · ');
+        panel.replaceChildren(...kids([
+            h('div', { class: 'status-line' },
+                h('h3', { text: running ? 'Receiver is running' : 'Receiver is stopped' }),
+                h('span', { class: `chip${running ? ' live' : ''}`, text: running ? 'Listening' : 'Off' })),
+            h('ol', { class: 'steps' }, copy.steps(name).slice(running ? 1 : 0).map((step) => h('li', { text: step }))),
+            detail ? h('p', { class: 'hint', text: detail }) : null,
+            h('p', { class: 'hint', text: copy.note }),
+            h('div', { class: 'buttons' },
+                running
+                    ? h('button', { class: 'pill', text: 'Stop receiver', onclick: () => control('stop') })
+                    : h('button', { class: 'pill primary', text: 'Start receiver',
+                        onclick: () => play({ id: 'receiver', type: 'station', title: name }) }))]));
+    };
+    await draw();
+    state.panelTimer = setInterval(draw, 3000);
+}
+
+// --- Tidal ------------------------------------------------------------------
+
+async function renderTidal(src, problem) {
+    setToolbar({ title: 'Tidal', settings: src.configured ? settingsAction(src) : null });
+    const content = $('#content');
+    content.className = '';
+    const panel = h('div', { class: 'panel' });
+    content.replaceChildren(panel);
+
+    let polling = null;
+    const draw = (login, message) => {
+        panel.replaceChildren(...kids([
+            h('h3', { text: src.configured ? 'Sign in again' : 'Sign in to Tidal' }),
+            problem || message ? h('p', { class: 'notice error', text: message || problem }) : null,
+            login
+                ? [
+                    h('p', { text: 'Open the link and enter this code. Waiting for you to approve…' }),
+                    h('div', { class: 'code-box', text: login.userCode }),
+                    h('div', { class: 'buttons' },
+                        h('a', { class: 'pill primary', href: login.url, target: '_blank', rel: 'noopener', text: 'Open Tidal sign-in' })),
+                ]
+                : [
+                    h('p', { text: 'Uses your own Tidal subscription. You approve the sign-in on tidal.com; no password is typed here.' }),
+                    h('div', { class: 'buttons' },
+                        h('button', { class: 'pill primary', text: 'Sign in with Tidal', onclick: start })),
+                ],
+            h('p', { class: 'hint', text: 'Streams play at the quality chosen in Settings (High by default).' })]));
+    };
+
+    async function start() {
+        try {
+            const login = await api('/sources/tidal/action/login-start', { method: 'POST', body: {} });
+            draw(login);
+            clearInterval(polling);
+            polling = setInterval(async () => {
+                if (state.activeSource !== 'tidal') return clearInterval(polling);
+                try {
+                    const result = await api('/sources/tidal/action/login-poll', { method: 'POST', body: {} });
+                    if (result.status !== 'ok') return;
+                    clearInterval(polling);
+                    toast('Signed in to Tidal');
+                    await loadSources();
+                    openSource(state.sources.find((s) => s.id === 'tidal'));
+                } catch (err) {
+                    clearInterval(polling);
+                    draw(null, err.message);
+                }
+            }, Math.max(2, login.interval || 2) * 1000);
+            state.panelTimer = polling;
+        } catch (err) {
+            draw(null, err.message);
+        }
+    }
+    draw(null);
+}
+
+// --- settings ------------------------------------------------------------------
+
+const f = (key, label, type = 'text', extra = {}) => ({ key, label, type, ...extra });
+const SETTINGS = {
+    plex: [f('url', 'Server URL', 'url', { placeholder: 'http://192.168.1.10:32400' }), f('token', 'Plex token', 'password', { secret: true })],
     subsonic: [
-        ['url', 'Server URL', 'url', 'https://music.example.com'],
-        ['username', 'Username', 'text', ''],
-        ['password', 'Password', 'password', ''],
+        f('url', 'Server URL', 'url', { placeholder: 'https://music.example.com' }),
+        f('username', 'Username'), f('password', 'Password', 'password', { secret: true }),
     ],
     jellyfin: [
-        ['url', 'Server URL', 'url', 'http://192.168.1.10:8096'],
-        ['username', 'Username', 'text', ''],
-        ['password', 'Password', 'password', ''],
+        f('url', 'Server URL', 'url', { placeholder: 'http://192.168.1.10:8096' }),
+        f('username', 'Username'), f('password', 'Password', 'password', { secret: true }),
+    ],
+    tidal: [
+        f('quality', 'Streaming quality', 'select', { options: [['LOW', 'Low (96 kbps AAC)'], ['HIGH', 'High (320 kbps AAC)'], ['LOSSLESS', 'Lossless (FLAC)']] }),
+        f('clientId', 'OAuth client ID', 'text', { advanced: true, hint: 'Leave empty to read it from Python’s tidalapi package.' }),
+        f('clientSecret', 'OAuth client secret', 'password', { advanced: true, secret: true }),
+    ],
+    spotify: [
+        f('deviceName', 'Device name', 'text', { hint: 'What the Spotify app shows in its device list.' }),
+        f('bitrate', 'Stream quality', 'select', { number: true, options: [[96, 'Low (96 kbps)'], [160, 'Normal (160 kbps)'], [320, 'High (320 kbps)']] }),
+        f('normalise', 'Even out volume between tracks', 'checkbox'),
+        f('binary', 'librespot path', 'text', { advanced: true, placeholder: 'librespot', hint: 'Only needed when librespot is not on PATH.' }),
+        f('extraArgs', 'Extra librespot options', 'args', { advanced: true }),
+    ],
+    airplay: [
+        f('deviceName', 'Device name', 'text', { hint: 'What iPhones and Macs show under AirPlay.' }),
+        f('password', 'Password (optional)', 'password', { secret: true }),
+        f('binary', 'shairport-sync path', 'text', { advanced: true, placeholder: 'shairport-sync', hint: 'Only needed when shairport-sync is not on PATH.' }),
+    ],
+    ytmusic: [
+        f('extraArgs', 'Extra yt-dlp options', 'args', { advanced: true, placeholder: '--cookies-from-browser firefox', hint: 'Your browser cookies unlock your library and Premium quality.' }),
+        f('binary', 'yt-dlp path', 'text', { advanced: true, placeholder: 'yt-dlp' }),
+    ],
+    ytdlp: [
+        f('extraArgs', 'Extra yt-dlp options', 'args', { advanced: true, placeholder: '--cookies-from-browser firefox' }),
+        f('binary', 'yt-dlp path', 'text', { advanced: true, placeholder: 'yt-dlp' }),
     ],
 };
 
-function renderSettings(src) {
-    $('#pagination').hidden = true;
-    $('#crumb').textContent = `${src.label} setup`;
-    $('#search').hidden = true;
-    $('#back').hidden = true;
-    $('#empty').hidden = true;
-
-    const fields = FIELDS[src.id];
+async function renderSettings(src, { problem } = {}) {
+    const fields = SETTINGS[src.id];
+    setToolbar({ title: `${src.label} setup`, back: false });
     const content = $('#content');
-    content.className = 'list';
+    content.className = '';
 
     if (!fields) {
-        content.innerHTML = `<p class="empty">${src.label} has no settings yet.</p>`;
+        content.replaceChildren(h('p', { class: 'empty', text: `${src.label} has no settings yet.` }));
         return;
     }
 
-    content.innerHTML = `
-        <div class="form">
-            ${fields
-                .map(
-                    ([key, label, type, ph]) => `
-                <label>${label}
-                    <input data-key="${key}" type="${type}" placeholder="${ph}"
-                           autocomplete="${type === 'password' ? 'current-password' : 'off'}">
-                </label>`,
-                )
-                .join('')}
-            <button class="btn" id="save-src">Connect</button>
-        </div>`;
+    let current = { values: {}, secrets: {} };
+    try { current = await api(`/sources/${src.id}/settings`); } catch { /* a fresh source has nothing saved */ }
 
-    $('#save-src').onclick = async () => {
+    const inputs = new Map();
+    const fieldFor = (field) => {
+        const value = current.values[field.key];
+        let input;
+        if (field.type === 'select') {
+            input = h('select', {}, field.options.map(([val, text]) => h('option', { value: val, text })));
+            input.value = String(value ?? field.options[0][0]);
+        } else if (field.type === 'checkbox') {
+            input = h('input', { type: 'checkbox' });
+            input.checked = Boolean(value);
+        } else {
+            input = h('input', {
+                type: field.type === 'args' ? 'text' : field.type, placeholder: field.placeholder || '',
+                autocomplete: field.secret ? 'new-password' : 'off', spellcheck: 'false',
+            });
+            input.value = field.secret ? '' : field.type === 'args' ? (value || []).join(' ') : (value ?? '');
+        }
+        inputs.set(field.key, input);
+        const secretSet = field.secret && current.secrets[field.key];
+        if (secretSet) input.placeholder = 'Saved (leave empty to keep)';
+        const hint = field.hint ? h('span', { class: 'field-hint', text: field.hint }) : null;
+        return field.type === 'checkbox'
+            ? h('label', { class: 'check' }, input, field.label)
+            : h('label', {}, field.label, input, hint);
+    };
+
+    const basic = fields.filter((fld) => !fld.advanced).map(fieldFor);
+    const advanced = fields.filter((fld) => fld.advanced).map(fieldFor);
+
+    const save = async () => {
         const patch = {};
-        for (const input of content.querySelectorAll('input[data-key]')) {
-            patch[input.dataset.key] = input.type === 'password' ? input.value : input.value.trim();
+        for (const field of fields) {
+            const input = inputs.get(field.key);
+            if (field.type === 'checkbox') {
+                if (input.checked !== Boolean(current.values[field.key])) patch[field.key] = input.checked;
+            } else if (field.secret) {
+                if (input.value) patch[field.key] = input.value;
+            } else if (field.type === 'args') {
+                const args = input.value.split(/\s+/).filter(Boolean);
+                if (args.join(' ') !== (current.values[field.key] || []).join(' ')) patch[field.key] = args;
+            } else {
+                const value = field.number ? Number(input.value) : input.value.trim();
+                if (value !== (current.values[field.key] ?? (field.number ? 0 : ''))) patch[field.key] = value;
+            }
         }
         try {
-            await api(`/sources/${src.id}/config`, { method: 'POST', body: patch });
-            await api(`/sources/${src.id}/connect`, { method: 'POST' });
-            toast(`Connected to ${src.label}`);
+            if (Object.keys(patch).length) await api(`/sources/${src.id}/config`, { method: 'POST', body: patch });
             await loadSources();
-            openSource(state.sources.find((s) => s.id === src.id));
+            const updated = state.sources.find((s) => s.id === src.id);
+            toast(updated.configured ? `Saved ${src.label}` : 'Saved');
+            if (updated.configured) openSource(updated);
+            else renderSettings(updated, { problem });
         } catch (err) {
             toast(err.message, true);
         }
     };
+
+    content.replaceChildren(...kids([h('div', { class: 'form' },
+        problem ? h('p', { class: 'notice error', text: problem }) : null,
+        basic,
+        advanced.length ? h('details', { class: 'advanced', open: problem ? true : null },
+            h('summary', { text: 'Advanced' }), h('div', { class: 'form' }, advanced)) : null,
+        h('div', { class: 'buttons' },
+            h('button', { class: 'pill primary', id: 'save-src', text: ['spotify', 'airplay', 'ytmusic', 'ytdlp', 'tidal'].includes(src.id) ? 'Save' : 'Connect', onclick: save }),
+            src.id === 'tidal' && src.configured
+                ? h('button', { class: 'pill danger', text: 'Sign out', onclick: async () => {
+                    await api('/sources/tidal/action/logout', { method: 'POST', body: {} });
+                    await loadSources();
+                    openSource(state.sources.find((s) => s.id === 'tidal'));
+                } })
+                : null))]));
 }
 
 // --- transport -----------------------------------------------------------
+
+// The server reports position when something changes; between reports the
+// bar advances on its own clock and is corrected by the next report.
+const clock = { position: 0, duration: 0, at: 0, running: false, dragging: false };
+
+function currentPosition() {
+    const elapsed = clock.running ? (performance.now() - clock.at) / 1000 : 0;
+    const position = clock.position + elapsed;
+    return clock.duration > 0 ? Math.min(clock.duration, position) : position;
+}
+
+function drawProgress() {
+    if (clock.dragging) return;
+    const seek = $('#seekbar');
+    const live = !(clock.duration > 0);
+    $('#seek').classList.toggle('live', live);
+    const fraction = live ? 0 : currentPosition() / clock.duration;
+    seek.value = String(Math.round(fraction * 1000));
+    seek.style.setProperty('--pct', `${(fraction * 100).toFixed(2)}%`);
+    $('#mini-progress i').style.width = `${(fraction * 100).toFixed(2)}%`;
+    $('#np-elapsed').textContent = fmtDuration(currentPosition());
+    $('#np-total').textContent = clock.duration > 0 ? fmtDuration(clock.duration) : '';
+}
+
+function setPlayPauseGlyph(paused) {
+    for (const id of ['#playpause', '#mini-playpause']) {
+        $(id).classList.toggle('show-play', paused);
+        $(id).setAttribute('aria-label', paused ? 'Resume' : 'Pause');
+        $(id).title = paused ? 'Resume' : 'Pause';
+    }
+}
 
 function applyStatus(status) {
     state.status = status;
 
     const np = status.nowPlaying || {};
-    $('#np-title').textContent = np.title || 'Nothing playing';
-    $('#np-artist').textContent = [np.artist, np.album].filter(Boolean).join(' — ');
+    const title = np.title || 'Nothing playing';
+    const subtitle = [np.artist, np.album].filter(Boolean).join(' — ');
+    $('#np-title').textContent = title;
+    $('#np-artist').textContent = subtitle;
+    $('#mini-title').textContent = title;
+    $('#mini-artist').textContent = subtitle || (status.source ? status.source.label : 'Pick a channel');
+    document.title = np.title ? `${np.title}${np.artist ? ` — ${np.artist}` : ''} · WiiJukebox` : 'WiiJukebox';
 
-    const art = $('#np-art');
-    if (np.artwork) {
-        art.src = np.artwork;
-        art.hidden = false;
-        $('#np-placeholder').hidden = true;
-    } else {
-        art.hidden = true;
-        $('#np-placeholder').hidden = false;
+    const art = safeImage(np.artwork);
+    for (const [img, placeholder] of [['#np-art', '#np-placeholder'], ['#mini-img', '#mini-placeholder']]) {
+        if (art) $(img).src = art;
+        $(img).hidden = !art;
+        $(placeholder).hidden = Boolean(art);
     }
+
+    const source = $('#np-source');
+    source.hidden = !status.source;
+    source.textContent = status.source ? status.source.label : '';
 
     // Enable only what the active source actually supports, so a control never
     // silently does nothing.
     const caps = status.capabilities || {};
-    $('#prev').disabled = !caps.previous;
-    $('#next').disabled = !caps.next;
-    $('#stop').disabled = !caps.stop;
-    $('#playpause').disabled = status.paused ? !caps.play : !caps.pause;
-    $('#playpause').classList.toggle('show-play', !!status.paused || !status.source);
-    $('#playpause').setAttribute('aria-label', status.paused ? 'Resume' : 'Pause');
-    $('#playpause').title = status.paused ? 'Resume' : 'Pause';
-    const capturing = status.source?.id === 'desktop';
-    $('#monitor').disabled = capturing;
-    if (capturing) {
-        setMonitoring(false);
+    for (const [a, b] of [['#prev', '#mini-prev'], ['#next', '#mini-next']]) {
+        $(a).disabled = $(b).disabled = !caps[a === '#prev' ? 'previous' : 'next'];
     }
+    $('#stop').disabled = !caps.stop;
+    const canToggle = status.paused ? caps.play : caps.pause;
+    $('#playpause').disabled = $('#mini-playpause').disabled = !canToggle;
+    setPlayPauseGlyph(Boolean(status.paused) || !status.source);
+
+    clock.position = np.position || 0;
+    clock.duration = np.duration || 0;
+    clock.at = performance.now();
+    clock.running = Boolean(status.source) && !status.paused && !status.starving;
+    $('#seekbar').disabled = !(caps.seek && clock.duration > 0);
+    drawProgress();
+
+    const capturing = status.source?.id === 'desktop';
+    $('#monitor').disabled = $('#mini-monitor').disabled = capturing;
+    if (capturing) setMonitoring(false);
 
     $('#listeners').textContent =
         status.listeners === 1 ? '1 listening' : `${status.listeners} listening`;
 
+    updateMediaSession(np, status);
     renderSources();
 }
 
-async function control(action) {
+async function control(action, body = {}) {
     try {
-        const res = await api(`/control/${action}`, { method: 'POST', body: {} });
+        const res = await api(`/control/${action}`, { method: 'POST', body });
         if (res.endOfQueue) toast('End of queue');
     } catch (err) {
         toast(err.message, true);
     }
+}
+
+const seekbar = $('#seekbar');
+seekbar.addEventListener('input', () => {
+    clock.dragging = true;
+    const fraction = Number(seekbar.value) / 1000;
+    seekbar.style.setProperty('--pct', `${(fraction * 100).toFixed(2)}%`);
+    $('#np-elapsed').textContent = fmtDuration(fraction * clock.duration);
+});
+seekbar.addEventListener('change', async () => {
+    const seconds = (Number(seekbar.value) / 1000) * clock.duration;
+    await control('seek', { seconds: Math.round(seconds) });
+    clock.dragging = false;
+});
+
+setInterval(drawProgress, 250);
+// Pauses and underruns are announced, but drift is not; a slow resync keeps the bar honest.
+setInterval(async () => {
+    if (!clock.running || clock.dragging || document.hidden) return;
+    try { applyStatus(await api('/status')); } catch { /* the event stream will recover */ }
+}, 7000);
+
+function updateMediaSession(np, status) {
+    if (!('mediaSession' in navigator) || !np.title) return;
+    const art = safeImage(np.artwork);
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: np.title, artist: np.artist || '', album: np.album || '',
+        artwork: art ? [{ src: art }] : [],
+    });
+    const caps = status.capabilities || {};
+    const bind = (name, enabled, fn) => {
+        try { navigator.mediaSession.setActionHandler(name, enabled ? fn : null); } catch { /* unsupported action */ }
+    };
+    bind('play', caps.play, () => control('play'));
+    bind('pause', caps.pause, () => control('pause'));
+    bind('nexttrack', caps.next, () => control('next'));
+    bind('previoustrack', caps.previous, () => control('previous'));
 }
 
 // --- live updates --------------------------------------------------------
@@ -585,7 +895,7 @@ async function loadPresets() {
 
 function setMonitoring(enabled) {
     viz.monitoring = enabled;
-    $('#monitor').setAttribute('aria-pressed', String(enabled));
+    for (const id of ['#monitor', '#mini-monitor']) $(id).setAttribute('aria-pressed', String(enabled));
     if (viz.outputGain) viz.outputGain.gain.value = enabled ? 1 : 0;
     if (!enabled && !viz.starting && !document.body.classList.contains('viz')) $('#monitor-audio').pause();
 }
@@ -606,11 +916,16 @@ async function startAudio() {
     await audio.play();
 }
 
+function setVizPressed(pressed) {
+    $('#viz-toggle').setAttribute('aria-pressed', String(pressed));
+    $('#mini-viz').setAttribute('aria-pressed', String(pressed));
+}
+
 async function toggleVisualizer() {
     if (viz.starting) return;
     if (document.body.classList.contains('viz')) {
         document.body.classList.remove('viz');
-        $('#viz-toggle').setAttribute('aria-pressed', 'false');
+        setVizPressed(false);
         $('#viz-overlay').hidden = true;
         cancelAnimationFrame(viz.raf);
         clearInterval(viz.cycleTimer);
@@ -646,8 +961,9 @@ async function toggleVisualizer() {
         viz.instance.connectAudio(viz.sourceNode);
     }
 
+    setNowPlayingOpen(false);
     document.body.classList.add('viz');
-    $('#viz-toggle').setAttribute('aria-pressed', 'true');
+    setVizPressed(true);
     $('#viz-overlay').hidden = false;
 
     loadPreset(Math.floor(Math.random() * viz.names.length));
@@ -684,7 +1000,7 @@ window.addEventListener('resize', () => {
 function setSourcesOpen(open) {
     document.body.classList.toggle('sources-open', open);
     $('#sources-toggle').setAttribute('aria-expanded', String(open));
-    const modal = open && window.matchMedia('(max-width: 780px)').matches;
+    const modal = open && PHONE.matches;
     $('#main').inert = modal;
     $('#player').inert = modal;
     $('#sidebar').setAttribute('role', modal ? 'dialog' : 'complementary');
@@ -693,15 +1009,38 @@ function setSourcesOpen(open) {
     else if ($('#sidebar').contains(document.activeElement)) $('#sources-toggle').focus();
 }
 
+function setNowPlayingOpen(open) {
+    const sheet = open && PHONE.matches;
+    document.body.classList.toggle('np-open', sheet);
+    $('#mini-open').setAttribute('aria-expanded', String(sheet));
+    $('#main').inert = sheet;
+    $('#player').inert = sheet;
+    $('#nowplaying').setAttribute('role', sheet ? 'dialog' : 'region');
+    if (sheet) $('#np-close').focus();
+    else if ($('#nowplaying').contains(document.activeElement)) $('#mini-open').focus();
+}
+
 $('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
 $('#sources-close').onclick = () => setSourcesOpen(false);
 $('#sidebar-shade').onclick = () => setSourcesOpen(false);
-window.matchMedia('(max-width: 780px)').addEventListener('change', () => setSourcesOpen(false));
+$('#mini-open').onclick = () => setNowPlayingOpen(true);
+$('#np-close').onclick = () => setNowPlayingOpen(false);
+PHONE.addEventListener('change', () => {
+    setSourcesOpen(false);
+    setNowPlayingOpen(false);
+});
+
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setSourcesOpen(false);
+    if (event.key === 'Escape') {
+        if (document.body.classList.contains('viz')) toggleVisualizer();
+        else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
+        else setSourcesOpen(false);
+    }
     if (event.key === 'Tab' && $('#main').inert) {
-        const targets = [...$('#sidebar').querySelectorAll('button, a[href]')].filter(el => !el.disabled);
-        const first = targets[0], last = targets.at(-1);
+        const scope = document.body.classList.contains('np-open') ? $('#nowplaying') : $('#sidebar');
+        const targets = [...scope.querySelectorAll('button, a[href], input:not([disabled])')].filter((el) => !el.disabled && !el.hidden);
+        const first = targets[0];
+        const last = targets.at(-1);
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }
@@ -712,12 +1051,14 @@ $('#back').onclick = () => {
     if (prev) browse(prev.path, prev.label, prev.offset);
 };
 
-$('#prev').onclick = () => control('previous');
-$('#next').onclick = () => control('next');
-$('#stop').onclick = () => control('stop');
-$('#playpause').onclick = () => control(state.status?.paused ? 'play' : 'pause');
+for (const [ids, action] of [[['#prev', '#mini-prev'], 'previous'], [['#next', '#mini-next'], 'next'], [['#stop'], 'stop']]) {
+    for (const id of ids) $(id).onclick = () => control(action);
+}
+for (const id of ['#playpause', '#mini-playpause']) {
+    $(id).onclick = () => control(state.status?.paused ? 'play' : 'pause');
+}
 
-$('#monitor').onclick = async () => {
+async function toggleMonitor() {
     if (viz.monitoring) {
         setMonitoring(false);
         return;
@@ -730,9 +1071,12 @@ $('#monitor').onclick = async () => {
         setMonitoring(false);
         toast(`Could not play here: ${err.message}`, true);
     }
-};
+}
+$('#monitor').onclick = toggleMonitor;
+$('#mini-monitor').onclick = toggleMonitor;
 
 $('#viz-toggle').onclick = toggleVisualizer;
+$('#mini-viz').onclick = toggleVisualizer;
 
 let searchTimer;
 $('#search').oninput = (e) => {
@@ -752,10 +1096,6 @@ $('#search').oninput = (e) => {
     }, 350);
 };
 
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.body.classList.contains('viz')) toggleVisualizer();
-});
-
 (async function init() {
     try {
         const settings = await api('/settings');
@@ -766,5 +1106,7 @@ document.addEventListener('keydown', (e) => {
         /* non-fatal; the setup panel just shows less */
     }
     await loadSources();
+    $('#content').dataset.view = 'home';
+    renderHome();
     connectEvents();
 })();
