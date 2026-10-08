@@ -124,8 +124,8 @@ taken or blocked on this computer is reported with "type the address on the Wii"
 
 ### FFmpeg and yt-dlp
 
-FFmpeg is bundled and used before anything on `PATH` by default: a system build such as
-Fedora's `ffmpeg-free` can lack the MP3 encoder the stream needs. The setting
+FFmpeg is bundled and used before anything on `PATH` by default, since some system builds
+leave out the MP3 encoder the stream needs. The setting
 `useBundledFfmpeg` in the app's `settings.json` (ticked by default; the welcome page and
 the menu change it) turns that around: the included folder is skipped and the server gets
 the first FFmpeg found among the overrides, `PATH` and the common install folders.

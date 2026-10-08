@@ -11,7 +11,7 @@ const FIRST_RUN_NOTES = {
     darwin: 'macOS may ask whether WiiJukebox may accept incoming network connections. Choose Allow so your Wii can connect.',
 };
 const FFMPEG_COMMANDS = {
-    linux: 'Fedora:  sudo dnf install ffmpeg   (from RPM Fusion; Fedora\'s own ffmpeg-free has no MP3 encoder)\nDebian / Ubuntu:  sudo apt install ffmpeg\nArch:  sudo pacman -S ffmpeg',
+    linux: 'Fedora:  sudo dnf install ffmpeg-free   (or ffmpeg from RPM Fusion)\nDebian / Ubuntu:  sudo apt install ffmpeg\nArch:  sudo pacman -S ffmpeg',
     darwin: 'brew install ffmpeg',
     win32: 'winget install Gyan.FFmpeg\n\nor, with Scoop:  scoop install ffmpeg',
 };
