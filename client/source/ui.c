@@ -40,7 +40,7 @@ enum icon { ICON_NOTE, ICON_FOLDER, ICON_ALBUM, ICON_RADIO, ICON_ARTIST, ICON_PL
 
 static struct { float w, content_x, content_w, card_x, card_w; } L;
 static struct { float x, y, w, h; enum wj_target target; int index; } hits[MAX_HITS];
-static int hit_count, columns = 3, seek_preview = -1;
+static int hit_count, columns = 3, seek_preview = -1, seek_pointer;
 static float bar_x, bar_w, highlight_y = -1;
 static long long volume_shown, selection_changed;
 static int last_selected = -1, last_view = -1;
@@ -479,8 +479,11 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
             wj_format_time(time, sizeof(time), preview);
             float tw = wj_font_measure(time, (int)strlen(time), 12, 1) + 14;
             float bx = px - tw / 2 < x + 4 ? x + 4 : px + tw / 2 > x + w - 4 ? x + w - 4 - tw : px - tw / 2;
-            wj_gfx_circle(px, bar_y, 5, DEEP_BLUE);
+            wj_gfx_circle(px, bar_y + 1, 8, SHADOW);
+            wj_gfx_circle(px, bar_y, 8, PALE_BLUE);
+            wj_gfx_ring(px, bar_y, 8, 2.5f, DEEP_BLUE);
             wj_gfx_round(bx, bar_y - 30, tw, 18, 9, DEEP_BLUE, DEEP_BLUE);
+            seek_pointer = seek_hover;
             label(time, bx + tw / 2, bar_y - 17, 12, 1, WHITE, tw, 1);
         }
         hit(bar_x - 8, bar_y - 12, bar_w + 16, 24, WJ_TARGET_SEEK, 0);
@@ -558,7 +561,8 @@ static void toast_and_volume(const struct wj_session *s, long long now) {
 }
 
 static void cursor(const struct wj_pointer *pointer) {
-    if (!pointer->valid) return;
+    // Over the seek bar the preview knob, sitting on the track, stands in for the cursor.
+    if (!pointer->valid || seek_pointer) return;
     int active = wj_ui_hit(pointer->x, pointer->y).target != WJ_TARGET_NONE;
     wj_gfx_circle(pointer->x + 2, pointer->y + 3, 11, WJ_RGBA(0, 0, 0, 0x30));
     wj_gfx_circle(pointer->x, pointer->y, 11, active ? PALE_BLUE : WHITE);
@@ -573,6 +577,7 @@ int wj_ui_seek_at(const struct wj_session *s, float x) {
 
 void wj_ui_draw(const struct wj_session *s, const struct wj_pointer *pointer) {
     long long now = wj_milliseconds();
+    seek_pointer = 0;
     if (s->selected != last_selected) { last_selected = s->selected; selection_changed = now; }
     if (s->art_version != art_version) {
         art_version = s->art_version;

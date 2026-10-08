@@ -16,7 +16,8 @@
 #define SEEK_STEP_MS 10000
 #define SEEK_SETTLE_MS 900
 
-extern const unsigned char wj_font_latin[], wj_font_latin_end[], wj_font_cjk[], wj_font_cjk_end[];
+extern const unsigned char wj_font_latin[], wj_font_latin_end[], wj_font_greek[], wj_font_greek_end[],
+    wj_font_cjk[], wj_font_cjk_end[];
 
 static int visualizer, pcm_available;
 
@@ -69,8 +70,12 @@ int main(int argc, char **argv) {
     if (wj_gfx_init()) return 1;
     WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
     WPAD_SetVRes(WPAD_CHAN_0, (u32)wj_gfx_width(), (u32)WJ_GFX_HEIGHT);
-    int font = wj_font_init(wj_font_latin, (long)(wj_font_latin_end - wj_font_latin), wj_font_cjk,
-                            (long)(wj_font_cjk_end - wj_font_cjk), wj_gfx_scale_x(), wj_gfx_scale_y());
+    const struct wj_font_face faces[] = {
+        { wj_font_latin, (long)(wj_font_latin_end - wj_font_latin) },
+        { wj_font_greek, (long)(wj_font_greek_end - wj_font_greek) },
+        { wj_font_cjk, (long)(wj_font_cjk_end - wj_font_cjk) },
+    };
+    int font = wj_font_init(faces, 3, wj_gfx_scale_x(), wj_gfx_scale_y());
     wj_ui_init();
     ASND_Init();
     MP3Player_Init();

@@ -21,15 +21,22 @@ static long load(const char *path, unsigned char *data, long capacity) {
 }
 
 int main(int argc, char **argv) {
-    assert(argc == 3);
-    static unsigned char latin[1024 * 1024], cjk[2 * 1024 * 1024];
-    long latin_size = load(argv[1], latin, sizeof(latin)), cjk_size = load(argv[2], cjk, sizeof(cjk));
-    assert(!wj_font_init(latin, latin_size, cjk, cjk_size, 1, 1));
+    assert(argc == 4);
+    static unsigned char latin[1024 * 1024], greek[256 * 1024], cjk[2 * 1024 * 1024];
+    const struct wj_font_face faces[] = {
+        { latin, load(argv[1], latin, sizeof(latin)) },
+        { greek, load(argv[2], greek, sizeof(greek)) },
+        { cjk, load(argv[3], cjk, sizeof(cjk)) },
+    };
+    assert(!wj_font_init(faces, 3, 1, 1));
     int rendered, resets, changed;
     float hello = wj_font_measure("Hello", 5, 20, 0);
     assert(hello > 30 && hello < 80);
     assert(wj_font_measure("Hello", 5, 20, 1) > hello);
     assert(wj_font_measure("Hello", 5, 40, 0) > hello * 1.8f);
+    // Baked kerning pulls A and V together; unrelated letters keep their plain advances.
+    assert(wj_font_measure("AV", 2, 20, 0) < wj_font_measure("A", 1, 20, 0) + wj_font_measure("V", 1, 20, 0) - 0.5f);
+    assert(wj_font_measure("HH", 2, 20, 0) == 2 * wj_font_measure("H", 1, 20, 0));
     wj_font_stats(&rendered, &resets);
     int before = rendered;
     wj_font_measure("Hello", 5, 20, 0);
@@ -73,7 +80,7 @@ int main(int argc, char **argv) {
 
     float wide;
     wj_font_shutdown();
-    assert(!wj_font_init(latin, latin_size, cjk, cjk_size, 0.75f, 1));
+    assert(!wj_font_init(faces, 3, 0.75f, 1));
     wide = wj_font_measure("Hello", 5, 20, 0);
     assert(wide > hello * 0.95f && wide < hello * 1.05f);
     wj_font_shutdown();

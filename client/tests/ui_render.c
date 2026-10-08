@@ -90,16 +90,20 @@ static long load(const char *path, unsigned char *data, long capacity) {
 }
 
 int main(int argc, char **argv) {
-    assert(argc >= 3);
-    const char *out = argc > 3 ? argv[3] : NULL;
-    static unsigned char latin[1024 * 1024], cjk[2 * 1024 * 1024];
-    long latin_size = load(argv[1], latin, sizeof(latin)), cjk_size = load(argv[2], cjk, sizeof(cjk));
+    assert(argc >= 4);
+    const char *out = argc > 4 ? argv[4] : NULL;
+    static unsigned char latin[1024 * 1024], greek[256 * 1024], cjk[2 * 1024 * 1024];
+    const struct wj_font_face faces[] = {
+        { latin, load(argv[1], latin, sizeof(latin)) },
+        { greek, load(argv[2], greek, sizeof(greek)) },
+        { cjk, load(argv[3], cjk, sizeof(cjk)) },
+    };
     paint_art();
     for (int wide = 0; wide < 2; wide++) {
         gx_soft_set_aspect(wide);
         assert(!wj_gfx_init());
         wj_font_shutdown();
-        assert(!wj_font_init(latin, latin_size, cjk, cjk_size, wj_gfx_scale_x(), wj_gfx_scale_y()));
+        assert(!wj_font_init(faces, 3, wj_gfx_scale_x(), wj_gfx_scale_y()));
         wj_ui_init();
         struct wj_pointer none = { 0, 0, 0 };
 
@@ -158,7 +162,7 @@ int main(int argc, char **argv) {
         s.offset = 0;
         s.selected = 3;
         snprintf(s.message, sizeof(s.message), "%s", "Audio ready");
-        struct wj_pointer pointer = { 1, wide ? 700 : 520, 302 };
+        struct wj_pointer pointer = { 1, wide ? 700 : 520, 308 };
         draw(&s, &pointer, 40);
         clock_ms += 1600;
         draw(&s, &pointer, 20);

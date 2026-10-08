@@ -73,17 +73,20 @@ Source: https://github.com/devkitPro/libogc/blob/v3.1.0/libmad/mp3player.c
 
 ## Interface fonts
 
-`fonts/NotoSans-Medium-WiiJukebox.ttf` (Noto Sans 2.015, Latin, Greek, Cyrillic,
-punctuation and symbols) is the primary face; `fonts/NotoSansCJKjp-Medium-WiiJukebox.otf`
-(Noto Sans CJK JP 2.004: kana, fullwidth forms and the 2,965 JIS level 1 kanji)
-supplies characters the first lacks. Both are by Google and Adobe under the SIL
-Open Font License 1.1 (`fonts/OFL.txt`, with both copyright notices, ships in the
-install archive). `tools/subset-font.py` made them at weight 500 from Fedora's
-`google-noto-sans-vf-fonts` 20251201 and `google-noto-sans-cjk-vf-fonts` 2.004
-files, unmodified packages of <https://github.com/notofonts>; `fonts/FONT.json`
-records source and output SHA-256, ranges and the fontTools version. The subsets
-keep the Noto names; the only Reserved Font Name is Adobe's "Source". Both are
-linked into the DOL.
+`fonts/Nunito-SemiBold-WiiJukebox.ttf` (Nunito, the web UI's typeface: Latin,
+Cyrillic, punctuation and symbols) is the primary face. `fonts/NotoSans-Greek-WiiJukebox.ttf`
+(Noto Sans 2.015: Greek) and `fonts/NotoSansCJKjp-Medium-WiiJukebox.otf` (Noto Sans
+CJK JP 2.004: kana, fullwidth forms and the 2,965 JIS level 1 kanji) supply, in
+that order, characters it lacks. All are under the SIL Open Font License 1.1
+(`fonts/OFL.txt`, with every copyright notice, ships in the install archive).
+`tools/subset-font.py` made them from `ofl/nunito/Nunito[wght].ttf` in
+<https://github.com/google/fonts> at commit 604936664fd6 (weight 600), and Fedora's
+`google-noto-sans-vf-fonts` 20251201 (weight 600) and `google-noto-sans-cjk-vf-fonts`
+2.004 (weight 500), unmodified packages of <https://github.com/notofonts>. It
+flattens Nunito's GPOS kerning into a legacy `kern` table, which FreeType's
+`FT_Get_Kerning` reads. `fonts/FONT.json` records source and output SHA-256,
+ranges and the fontTools version. Nunito and Noto Sans have no Reserved Font
+Name; Noto CJK's is Adobe's "Source". All are linked into the DOL.
 
 FreeType 2.14.1, libpng 1.6.55, zlib 1.3.1, bzip2 and brotli are linked from
 devkitPro's portlibs; the install archive carries their licenses from

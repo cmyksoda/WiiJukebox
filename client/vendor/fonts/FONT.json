@@ -2,16 +2,16 @@
   "fonttools": "4.63.0",
   "fonts": [
     {
-      "output": "NotoSans-Medium-WiiJukebox.ttf",
-      "source_file": "NotoSans[wght].ttf, Fedora google-noto-sans-vf-fonts 20251201 (Noto Sans 2.015)",
-      "source_sha256": "fb53504de62e767a54695416123d68d67f71c9b69722175184ad56e7dd13547b",
-      "upstream": "https://github.com/notofonts/latin-greek-cyrillic (OFL-1.1)",
-      "weight": 500,
+      "output": "Nunito-SemiBold-WiiJukebox.ttf",
+      "source_file": "ofl/nunito/Nunito[wght].ttf from google/fonts at 604936664fd62c14271209b51f98e7f495dd1a3e",
+      "source_sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207",
+      "upstream": "https://github.com/googlefonts/nunito (OFL-1.1)",
+      "weight": 600,
+      "kern_pairs": 10920,
       "ranges": [
         "U+0020-U+007E",
         "U+00A0-U+024F",
         "U+02B0-U+036F",
-        "U+0370-U+03FF",
         "U+0400-U+04FF",
         "U+1E00-U+1EFF",
         "U+2000-U+206F",
@@ -21,8 +21,23 @@
         "U+25A0-U+25FF",
         "U+2600-U+266F"
       ],
-      "glyphs": 1587,
-      "sha256": "06c13368b73679124220f5aeb9e213201d87b2d7834aa40eaaa1ac7114197267",
+      "glyphs": 950,
+      "sha256": "f90c6d856de2821cd45139b416134a0a246c1a1b9fb31617499cd8b1e08734e0",
+      "copyright": "Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)"
+    },
+    {
+      "output": "NotoSans-Greek-WiiJukebox.ttf",
+      "source_file": "NotoSans[wght].ttf, Fedora google-noto-sans-vf-fonts 20251201 (Noto Sans 2.015)",
+      "source_sha256": "fb53504de62e767a54695416123d68d67f71c9b69722175184ad56e7dd13547b",
+      "upstream": "https://github.com/notofonts/latin-greek-cyrillic (OFL-1.1)",
+      "weight": 600,
+      "kern_pairs": 0,
+      "ranges": [
+        "U+0370-U+03FF",
+        "U+1F00-U+1FFF"
+      ],
+      "glyphs": 387,
+      "sha256": "4987699796a64fe3897ab67d538d512c480705cfebe1deb65835c5d43537424a",
       "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)"
     },
     {
@@ -31,6 +46,7 @@
       "source_sha256": "d3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32",
       "upstream": "https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)",
       "weight": 500,
+      "kern_pairs": 0,
       "ranges": [
         "U+0020-U+007E",
         "U+3000-U+30FF",
@@ -39,7 +55,7 @@
         "JIS X 0208 level 1 kanji"
       ],
       "glyphs": 3554,
-      "sha256": "8f3af0c236415303c065bc7d9a9dd0491e1d0a12a87b33975842524b6c40786e",
+      "sha256": "90878913b6d28428e8d1da5ae92b8cd467d14c8898247f0a860a20c526942c1f",
       "copyright": "\u00a9 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
     }
   ]

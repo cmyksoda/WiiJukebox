@@ -13,7 +13,7 @@ licenses = {
     "licenses/projectM-LGPL.txt": root / "client/vendor/projectm/LICENSE.txt",
     "licenses/omptl-LGPL.txt": root / "client/vendor/projectm/omptl/License.txt",
     "licenses/libogc.txt": root / "client/vendor/libogc/LICENSE",
-    "licenses/Noto-fonts-OFL.txt": root / "client/vendor/fonts/OFL.txt",
+    "licenses/fonts-OFL.txt": root / "client/vendor/fonts/OFL.txt",
     "licenses/freetype-FTL.txt": portlibs / "ppc-freetype/FTL.TXT",
     "licenses/libpng.txt": portlibs / "ppc-libpng/LICENSE",
     "licenses/zlib.txt": portlibs / "ppc-zlib/LICENSE",

@@ -4,6 +4,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
+#include <math.h>
 #include <string.h>
 #ifdef GEKKO
 #include <malloc.h>
@@ -16,12 +17,11 @@
 #define SLOTS 4096
 #define PAD 1
 
-struct glyph { unsigned code; short size, bold, x, y, w, h, left, top; float advance; };
+struct glyph { unsigned code, index; short size, bold, face, x, y, w, h, left, top; float advance; };
 
 static FT_Library library;
-/* The primary face covers Latin, Greek and Cyrillic; the second, CJK. */
-static FT_Face faces[2];
-static int face_sizes[2];
+static FT_Face faces[WJ_FONT_FACES];
+static int face_sizes[WJ_FONT_FACES];
 static float scale_x = 1, scale_y = 1;
 static unsigned char *atlas;
 static struct glyph glyphs[GLYPHS];
@@ -36,21 +36,25 @@ static void reset_atlas(void) {
     atlas_changed = 1;
 }
 
-int wj_font_init(const void *data, long size, const void *fallback, long fallback_size, float sx, float sy) {
+int wj_font_init(const struct wj_font_face *list, int count, float sx, float sy) {
     scale_x = sx;
     scale_y = sy;
-    face_sizes[0] = face_sizes[1] = 0;
+    memset(face_sizes, 0, sizeof(face_sizes));
     if (!atlas) atlas = memalign(32, WJ_ATLAS_WIDTH * WJ_ATLAS_HEIGHT);
-    if (!atlas || FT_Init_FreeType(&library)) return -1;
-    if (FT_New_Memory_Face(library, data, size, 0, &faces[0])) return -1;
-    if (fallback && FT_New_Memory_Face(library, fallback, fallback_size, 0, &faces[1])) faces[1] = NULL;
+    if (!atlas || count < 1 || FT_Init_FreeType(&library)) return -1;
+    for (int i = 0; i < count && i < WJ_FONT_FACES; i++) {
+        if (FT_New_Memory_Face(library, list[i].data, list[i].size, 0, &faces[i])) {
+            faces[i] = NULL;
+            if (!i) return -1;
+        }
+    }
     reset_atlas();
     rendered = resets = 0;
     return 0;
 }
 
 void wj_font_shutdown(void) {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < WJ_FONT_FACES; i++) {
         if (faces[i]) FT_Done_Face(faces[i]);
         faces[i] = NULL;
     }
@@ -73,13 +77,12 @@ static void put_pixel(int x, int y, unsigned char value) {
 
 static struct glyph *rasterize(unsigned code, int size, int bold) {
     int which = 0;
-    unsigned index = FT_Get_Char_Index(faces[0], code), other;
-    if (!index && faces[1] && (other = FT_Get_Char_Index(faces[1], code))) {
-        which = 1;
-        index = other;
-    }
+    unsigned index = 0;
+    for (int i = 0; i < WJ_FONT_FACES && !index; i++)
+        if (faces[i] && (index = FT_Get_Char_Index(faces[i], code))) which = i;
     FT_Face face = set_size(which, size);
-    if (FT_Load_Glyph(face, index, FT_LOAD_NO_BITMAP)) return NULL;
+    // Light hinting snaps only vertically, keeping each letter at its designed width.
+    if (FT_Load_Glyph(face, index, FT_LOAD_NO_BITMAP | FT_LOAD_TARGET_LIGHT)) return NULL;
     FT_GlyphSlot slot = face->glyph;
     FT_Pos strength = bold ? FT_MulFix(face->units_per_EM, face->size->metrics.y_scale) / 28 : 0;
     if (bold && slot->format == FT_GLYPH_FORMAT_OUTLINE) FT_Outline_Embolden(&slot->outline, strength);
@@ -92,9 +95,9 @@ static struct glyph *rasterize(unsigned code, int size, int bold) {
         resets++;
     }
     struct glyph *g = &glyphs[glyph_count++];
-    *g = (struct glyph){ code, (short)size, (short)bold, (short)shelf_x, (short)shelf_y, (short)w, (short)h,
-                         (short)slot->bitmap_left, (short)slot->bitmap_top,
-                         (slot->advance.x + strength) / 64.0f / scale_x };
+    *g = (struct glyph){ code, index, (short)size, (short)bold, (short)which, (short)shelf_x, (short)shelf_y,
+                         (short)w, (short)h, (short)slot->bitmap_left, (short)slot->bitmap_top,
+                         (slot->linearHoriAdvance / 65536.0f + strength / 64.0f) / scale_x };
     for (int y = 0; y < h; y++) {
         const unsigned char *row = bitmap->buffer + y * bitmap->pitch;
         for (int x = 0; x < w; x++) put_pixel(shelf_x + x, shelf_y + y, row[x]);
@@ -131,13 +134,22 @@ static unsigned visible(unsigned code) {
 float wj_font_run(const char *text, int bytes, int size, int bold, float x, float baseline,
                   wj_glyph_sink sink, void *context) {
     if (!faces[0]) return x;
+    struct glyph *previous = NULL;
     for (const char *end = text + bytes; text < end;) {
         unsigned code = visible(wj_utf8_next(&text));
         if (!code) continue;
         struct glyph *g = lookup(code, size, bold);
         if (!g) continue;
+        if (previous && previous->face == g->face && FT_HAS_KERNING(faces[g->face])) {
+            FT_Vector kern;
+            FT_Face face = set_size(g->face, size);
+            if (!FT_Get_Kerning(face, previous->index, g->index, FT_KERNING_UNFITTED, &kern))
+                x += kern.x / 64.0f / scale_x;
+        }
+        previous = g;
         if (sink && g->w && g->h) {
-            float x0 = x + g->left / scale_x, y0 = baseline - g->top / scale_y;
+            // The pen keeps fractional advances; each bitmap lands on a whole pixel to stay sharp.
+            float x0 = (roundf(x * scale_x) + g->left) / scale_x, y0 = baseline - g->top / scale_y;
             sink(context, x0, y0, x0 + g->w / scale_x, y0 + g->h / scale_y,
                  (float)g->x / WJ_ATLAS_WIDTH, (float)g->y / WJ_ATLAS_HEIGHT,
                  (float)(g->x + g->w) / WJ_ATLAS_WIDTH, (float)(g->y + g->h) / WJ_ATLAS_HEIGHT);

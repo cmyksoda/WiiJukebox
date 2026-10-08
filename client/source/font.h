@@ -9,11 +9,14 @@
 typedef void (*wj_glyph_sink)(void *context, float x0, float y0, float x1, float y1,
                               float u0, float v0, float u1, float v1);
 
+#define WJ_FONT_FACES 3
+
+struct wj_font_face { const void *data; long size; };
+
 /* scale_x/scale_y are framebuffer pixels per layout unit, so glyphs are
    rasterized at the size they appear on screen (widescreen squeezes x).
-   Code points missing from the primary face come from the fallback face. */
-int wj_font_init(const void *data, long size, const void *fallback, long fallback_size,
-                 float scale_x, float scale_y);
+   Each code point comes from the first face that has it; faces[0] is required. */
+int wj_font_init(const struct wj_font_face *faces, int count, float scale_x, float scale_y);
 void wj_font_shutdown(void);
 float wj_font_measure(const char *text, int bytes, int size, int bold);
 /* Emits quads for `bytes` of `text` from x along `baseline`; returns the pen x. */
