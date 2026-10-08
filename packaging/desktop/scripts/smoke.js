@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// End-to-end check of a packaged app, run hidden. Ports: <port> web, <port>+1 discovery, <port>+10 debugging.
+// End-to-end check of a packaged app, run hidden. Ports: <port> web, <port>+1 discovery, <port>+10 debugging,
+// <port>+11 for the main-process inspector (the Server name and port window is opened through it).
 // Usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login]
 // --login also ticks "start at login", which changes the system's login items; remove them afterwards.
 // --ytdlp also ticks the yt-dlp download, which needs the network.
@@ -23,6 +24,7 @@ if (!target) {
 const PORT = Number(option('--port', 4680));
 const DISCOVERY_PORT = PORT + 1;
 const DEBUG_PORT = PORT + 10;
+const INSPECT_PORT = PORT + 11;
 const ARCH = option('--arch', null);
 const LOGIN = args.includes('--login');
 const YTDLP = args.includes('--ytdlp');
@@ -58,6 +60,7 @@ class App {
     constructor(name, { args: extraArgs = [], settings = null, env = {}, discoveryPort = DISCOVERY_PORT, config = { port: PORT, discoveryPort } } = {}) {
         this.dir = fs.mkdtempSync(path.join(process.env.WIIJUKEBOX_SMOKE_DIR || os.tmpdir(), `wiijukebox-smoke-${name}-`));
         this.config = path.join(this.dir, 'config');
+        this.configFile = path.join(this.config, 'wiijukebox', 'config.json');
         this.userData = path.join(this.dir, 'userdata');
         this.stateFile = path.join(this.dir, 'state.json');
         this.output = [];
@@ -65,7 +68,7 @@ class App {
         this.extraEnv = env;
         fs.mkdirSync(path.join(this.config, 'wiijukebox'), { recursive: true });
         fs.mkdirSync(this.userData, { recursive: true });
-        fs.writeFileSync(path.join(this.config, 'wiijukebox', 'config.json'), JSON.stringify(config));
+        fs.writeFileSync(this.configFile, JSON.stringify(config));
         if (settings) fs.writeFileSync(path.join(this.userData, 'settings.json'), JSON.stringify(settings));
     }
 
@@ -82,10 +85,12 @@ class App {
         };
     }
 
-    command(extra = []) {
+    command(extra = [], { quitting = false } = {}) {
         // SMOKE_SANDBOX=1 runs with Chromium's sandbox, as an installed package does.
         const flags = process.platform === 'linux' && !process.env.SMOKE_SANDBOX ? ['--no-sandbox'] : [];
-        const all = [...flags, ...this.extraArgs, ...extra];
+        // The running copy holds the inspector port, and Node would refuse to start a second one on it.
+        const own = quitting ? this.extraArgs.filter((arg) => !arg.startsWith('--inspect')) : this.extraArgs;
+        const all = [...flags, ...own, ...extra];
         return ARCH ? ['arch', [`-${ARCH}`, executable, ...all]] : [executable, all];
     }
 
@@ -120,7 +125,7 @@ class App {
 
     // The same program started again asks the running one to quit, as scripts and installers do.
     async quit() {
-        const [file, fileArgs] = this.command(['--quit']);
+        const [file, fileArgs] = this.command(['--quit'], { quitting: true });
         const second = spawn(file, fileArgs, { env: this.env, stdio: 'ignore', windowsHide: true });
         const secondExit = new Promise((resolve) => second.once('exit', resolve));
         const result = await Promise.race([this.exited, sleep(30000).then(() => null)]);
@@ -191,11 +196,11 @@ const portOpen = (port) => new Promise((resolve) => {
     socket.once('error', () => resolve(false));
 });
 
-// Minimal Chrome DevTools client: just enough to read and click the app's own setup page.
-async function pageClient() {
-    const target = await until('the setup page target', async () => {
-        const res = await get(`http://127.0.0.1:${DEBUG_PORT}/json/list`).catch(() => null);
-        return res && JSON.parse(res.body).find((page) => page.type === 'page' && page.url.includes('app.html'));
+// Minimal Chrome DevTools client: just enough to read and click the app's own pages, or (type 'node') to reach its main process.
+async function devtoolsClient({ port = DEBUG_PORT, type = 'page', urlPart = 'app.html' } = {}) {
+    const target = await until(`the ${type} target ${urlPart}`, async () => {
+        const res = await get(`http://127.0.0.1:${port}/json/list`).catch(() => null);
+        return res && JSON.parse(res.body).find((page) => page.type === type && page.url.includes(urlPart));
     }, 60000);
     const socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = () => reject(new Error('devtools connection failed')); });
@@ -214,6 +219,19 @@ async function pageClient() {
         }),
         close: () => socket.close(),
     };
+}
+
+const pageClient = (urlPart = 'app.html') => devtoolsClient({ urlPart });
+
+// Presses an application menu item through the main-process inspector, as a click on the real menu would.
+// The inspector is closed again at once: with a debugger still attached the app waits for it before quitting.
+async function clickMenuItem(id) {
+    const main = await devtoolsClient({ port: INSPECT_PORT, type: 'node', urlPart: '' });
+    try {
+        return await main.evaluate(`(() => { const item = process.mainModule.require('electron').Menu.getApplicationMenu().getMenuItemById(${JSON.stringify(id)}); item.click(); return item.enabled; })()`);
+    } finally {
+        main.close();
+    }
 }
 
 async function checkReturningUser() {
@@ -304,6 +322,30 @@ async function checkDefaultPorts() {
     }
 }
 
+const isBundled = (state) => Boolean(state.ffmpeg) && !path.relative(state.resources, state.ffmpeg.path).startsWith('..');
+
+// Reads the welcome page's options before anything is changed: both new ones are ticked, in the agreed order.
+async function checkWelcomeDefaults(client) {
+    const page = JSON.parse(await client.evaluate(`JSON.stringify({
+        order: [...document.querySelectorAll('[data-panel=welcome] .option input')].map((input) => input.id),
+        checked: Object.fromEntries([...document.querySelectorAll('[data-panel=welcome] .option input')].map((input) => [input.id, input.checked])),
+        engineShown: !document.querySelector('#option-engine').hidden,
+        engineText: document.querySelector('#option-engine small').textContent,
+        serverText: document.querySelector('#opt-defaults').closest('.option').querySelector('small').textContent,
+        fieldsShown: !document.querySelector('#welcome-server').hidden,
+        labels: [...document.querySelectorAll('[data-panel=welcome] .option strong')].map((label) => label.textContent),
+    })`));
+    check('the options come in the order audio engine, server settings, yt-dlp, start at login',
+        page.order.join(',') === 'opt-engine,opt-defaults,opt-ytdlp,opt-login', page.order.join(', '));
+    check('the audio engine and server settings options are ticked and say "(recommended)"',
+        page.checked['opt-engine'] && page.checked['opt-defaults'] && page.labels.slice(0, 2).every((label) => label.endsWith('(recommended)')), page.labels.slice(0, 2).join(' | '));
+    check('yt-dlp is still ticked and start at login still unticked', page.checked['opt-ytdlp'] === true && page.checked['opt-login'] === false);
+    check('the included audio engine is offered, with only its version number',
+        page.engineShown && /^FFmpeg \d+(\.\d+)* comes with WiiJukebox\. Untick to use the FFmpeg already on this computer\.$/.test(page.engineText), page.engineText);
+    check('the server settings text shows the real name and port', page.serverText === `Named WiiJukebox, on port ${PORT}. Untick to choose them yourself.`, page.serverText);
+    check('the name and port fields stay hidden while the defaults are ticked', !page.fieldsShown);
+}
+
 async function checkFirstRun() {
     console.log('\n== first run: setup page drives the server ==');
     const app = new App('firstrun', { args: [`--remote-debugging-port=${DEBUG_PORT}`] });
@@ -315,6 +357,7 @@ async function checkFirstRun() {
         client = await pageClient();
         const shown = await until('the welcome panel', () => client.evaluate("document.querySelector('[data-panel=welcome]')?.hidden === false"), 30000);
         check('welcome panel is visible', shown);
+        await checkWelcomeDefaults(client);
         await client.evaluate(`document.querySelector('#opt-ytdlp').checked = ${YTDLP}; document.querySelector('#opt-login').checked = ${LOGIN}; document.querySelector('#begin').click(); true`);
 
         const state = await app.waitState('the connect page', (s) => s.page === 'connect' && s.serverUrl);
@@ -325,7 +368,12 @@ async function checkFirstRun() {
             const own = ytdlp && !path.relative(app.userData, ytdlp.path).startsWith('..');
             check('yt-dlp was downloaded into the app folder and runs', Boolean(own && ytdlp.version), ytdlp ? `${ytdlp.path} -- ${ytdlp.version}` : 'not found');
         }
-        check('settings.json was saved', JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8')).setupDone === true);
+        const saved = JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8'));
+        check('settings.json was saved', saved.setupDone === true);
+        check('the included FFmpeg stayed on and is the one in use', saved.useBundledFfmpeg === true && state.useBundledFfmpeg === true && isBundled(state));
+        const config = JSON.parse(fs.readFileSync(app.configFile, 'utf8'));
+        const name = config.station?.name ?? 'WiiJukebox';
+        check('the default server settings kept the configured name and port', config.port === PORT && name === 'WiiJukebox', `${name}, port ${config.port}`);
         const status = await get(`${state.serverUrl}api/status`);
         check('server answers after setup', status.status === 200);
 
@@ -346,6 +394,113 @@ async function checkFirstRun() {
         check('app quits', Boolean(exit));
     } catch (err) {
         check('first-run flow', false, err.message);
+        app.dump();
+    } finally {
+        client?.close();
+        app.kill();
+    }
+}
+
+// Unticking "Use default server settings" asks for a name and port; bad answers are refused on the page, good ones are written to config.json.
+async function checkCustomServer() {
+    console.log('\n== first run: choosing the server name and port ==');
+    const app = new App('customserver', { args: [`--remote-debugging-port=${DEBUG_PORT}`], config: { discoveryPort: DISCOVERY_PORT } });
+    app.start();
+    let client;
+    let blocker;
+    const fill = (name, port) => client.evaluate(`(() => { document.querySelector('#server-name').value = ${JSON.stringify(name)}; document.querySelector('#server-port').value = ${JSON.stringify(String(port))}; return true; })()`);
+    const begin = async () => {
+        await client.evaluate("document.querySelector('#begin').click(); true");
+        return until('the welcome page to answer', () => client.evaluate("document.querySelector('[data-panel=welcome]').hidden === false && document.querySelector('#begin').disabled === false && document.querySelector('#begin-error').hidden === false ? document.querySelector('#begin-error').textContent : ''"), 30000);
+    };
+    try {
+        await app.waitState('the welcome page', (s) => s.page === 'welcome');
+        client = await pageClient();
+        await until('the welcome panel', () => client.evaluate("document.querySelector('[data-panel=welcome]')?.hidden === false"), 30000);
+        await client.evaluate("document.querySelector('#opt-defaults').click(); true");
+        const shown = JSON.parse(await client.evaluate("JSON.stringify({ shown: !document.querySelector('#welcome-server').hidden, name: document.querySelector('#server-name').value, port: document.querySelector('#server-port').value, max: document.querySelector('#server-name').maxLength, wii: document.querySelector('#welcome-server').textContent.includes('still finds the server by itself') })"));
+        check('unticking shows the name and port fields with the current values', shown.shown && shown.name === 'WiiJukebox' && shown.port === '4005', `${shown.name}, ${shown.port}`);
+        check('the name field is capped at 80 characters and the page says the Wii still finds the server', shown.max === 80 && shown.wii);
+
+        await fill('   ', PORT);
+        check('an empty name is refused', /name/i.test(await begin()));
+        await fill('x'.repeat(81), PORT);
+        check('a name over 80 characters is refused', /80 characters/.test(await begin()));
+        await fill('Smoke Kitchen', 80);
+        check('a port under 1024 is refused', /1024 to 65535/.test(await begin()));
+        await fill('Smoke Kitchen', 'abc');
+        check('a port that is not a number is refused', /1024 to 65535/.test(await begin()));
+        blocker = net.createServer();
+        await new Promise((resolve) => blocker.listen(PORT, '0.0.0.0', resolve));
+        await fill('Smoke Kitchen', PORT);
+        check('a port another program holds is refused', /in use/.test(await begin()));
+        await new Promise((resolve) => blocker.close(resolve));
+        blocker = null;
+        const refused = app.state();
+        check('refused answers start no server and finish no setup', !refused.serverUrl && !refused.setupDone && !(await portOpen(PORT)));
+
+        await fill('  Smoke Kitchen  ', PORT);
+        await client.evaluate("document.querySelector('#opt-ytdlp').checked = false; document.querySelector('#begin').click(); true");
+        const state = await app.waitState('the connect page', (s) => s.page === 'connect' && s.serverUrl);
+        check('a valid choice starts the server on the chosen port', state.serverUrl === `http://127.0.0.1:${PORT}/`, state.serverUrl);
+        const config = JSON.parse(fs.readFileSync(app.configFile, 'utf8'));
+        check('the trimmed name and the port are in config.json', config.station.name === 'Smoke Kitchen' && config.port === PORT, `${config.station.name}, port ${config.port}`);
+        check('the discovery port is untouched', config.discoveryPort === DISCOVERY_PORT);
+        const reply = (await probeDiscovery(DISCOVERY_PORT) || '').trim().split('\t');
+        check('the Wii is told the chosen name and port by discovery', reply[4] === String(PORT) && reply[5] === 'Smoke%20Kitchen', reply.join(' '));
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('custom server flow', false, err.message);
+        app.dump();
+    } finally {
+        client?.close();
+        app.kill();
+        blocker?.close();
+    }
+}
+
+// The menu's "Server name and port…" opens a small window with the same fields; saving restarts the server.
+async function checkServerWindow() {
+    console.log('\n== menu: Server name and port ==');
+    const app = new App('serverwindow', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'background' },
+    });
+    app.start();
+    let client;
+    try {
+        await app.waitState('the server to start', (s) => s.serverUrl);
+        check('the menu item is there and enabled', (await clickMenuItem('server-settings')) === true);
+        client = await pageClient('mode=server');
+        const fields = await until('the server window', () => client.evaluate("document.querySelector('[data-panel=server]')?.hidden === false ? JSON.stringify({ name: document.querySelector('#server-name').value, port: document.querySelector('#server-port').value }) : ''"), 30000);
+        check('the window shows the current name and port', fields === JSON.stringify({ name: 'WiiJukebox', port: String(PORT) }), fields);
+
+        const save = async (name, port) => {
+            await client.evaluate(`document.querySelector('#server-name').value = ${JSON.stringify(name)}; document.querySelector('#server-port').value = ${JSON.stringify(String(port))}; document.querySelector('#save-server').click(); true`);
+        };
+        await save('', PORT);
+        const error = await until('the refusal', () => client.evaluate("document.querySelector('#server-error').hidden ? '' : document.querySelector('#server-error').textContent"), 30000);
+        check('an empty name is refused and the server keeps running', /name/i.test(error) && (await get(`http://127.0.0.1:${PORT}/api/status`)).status === 200);
+
+        // The discovery port number is free for TCP, so the web port can move there.
+        await save('  Smoke Den  ', DISCOVERY_PORT);
+        const moved = await app.waitState('the server on the new port', (s) => s.page === 'player' && s.serverUrl === `http://127.0.0.1:${DISCOVERY_PORT}/`, 60000);
+        check('saving restarts the server on the new port', Boolean(moved));
+        const config = JSON.parse(fs.readFileSync(app.configFile, 'utf8'));
+        check('the new name and port are in config.json', config.station.name === 'Smoke Den' && config.port === DISCOVERY_PORT, `${config.station.name}, port ${config.port}`);
+        check('discovery stayed on its port and now announces the new name and port', await (async () => {
+            const reply = (await probeDiscovery(DISCOVERY_PORT) || '').trim().split('\t');
+            return config.discoveryPort === DISCOVERY_PORT && reply[4] === String(DISCOVERY_PORT) && reply[5] === 'Smoke%20Den';
+        })());
+        check('the old port is closed and the new one answers', !(await portOpen(PORT)) && (await get(`${moved.serverUrl}api/status`)).status === 200);
+        await until('the window to close', async () => {
+            const res = await get(`http://127.0.0.1:${DEBUG_PORT}/json/list`);
+            return !JSON.parse(res.body).some((page) => page.url.includes('mode=server'));
+        }, 30000);
+        check('the window closes once the change is saved', true);
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('server window flow', false, err.message);
         app.dump();
     } finally {
         client?.close();
@@ -398,6 +553,8 @@ async function checkMissingFfmpeg() {
         client = await pageClient();
         const command = await until('the install command', () => client.evaluate("document.querySelector('#command')?.textContent || ''"), 30000);
         check('the page names a way to install FFmpeg', command.length > 5, command.split('\n')[0]);
+        const page = JSON.parse(await client.evaluate("JSON.stringify({ title: document.querySelector('#ffmpeg-title').textContent, why: document.querySelector('#ffmpeg-why').textContent, back: !document.querySelector('#use-bundled').hidden })"));
+        check('with the included FFmpeg in use, the page says the app has none and offers no switch back', page.title === 'FFmpeg is needed' && /This copy of the app has none/.test(page.why) && !page.back, page.why);
         await client.evaluate("document.querySelector('#anyway').click(); true");
         const started = await app.waitState('the server after "Start without it"', (s) => s.serverUrl);
         check('"Start without it" starts the server', (await get(`${started.serverUrl}api/status`)).status === 200);
@@ -411,17 +568,132 @@ async function checkMissingFfmpeg() {
     }
 }
 
+// A stand-in FFmpeg that runs but lists no MP3 encoder (a shell script, so not for Windows).
+function fakeFfmpegWithoutMp3(dir) {
+    const file = path.join(dir, 'ffmpeg');
+    fs.writeFileSync(file, '#!/bin/sh\ncase "$*" in\n  *-encoders*) echo " A....D libopus  libopus Opus (codec opus)";;\n  *) echo "ffmpeg version 7.9.9-smoke";;\nesac\n', { mode: 0o755 });
+    return file;
+}
+
+// The FFmpeg page's text once the page has filled it in.
+const ffmpegPage = (client) => until('the FFmpeg page text', async () => {
+    try {
+        const page = JSON.parse(await client.evaluate(`JSON.stringify({
+            title: document.querySelector('#ffmpeg-title').textContent,
+            why: document.querySelector('#ffmpeg-why').textContent,
+            fix: document.querySelector('#ffmpeg-fix').textContent,
+            back: !document.querySelector('#use-bundled').hidden,
+        })`));
+        return page.why ? page : null;
+    } catch {
+        return null;
+    }
+}, 30000);
+
+// The included FFmpeg unticked: a missing or MP3-less FFmpeg gets a page that names the problem and the way back.
+async function checkSystemFfmpegProblems() {
+    console.log('\n== included FFmpeg unticked: no FFmpeg on the computer, and one without MP3 ==');
+    const off = { setupDone: true, onClose: 'background', useBundledFfmpeg: false };
+    const none = new App('systemnone', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`],
+        settings: off,
+        env: { WIIJUKEBOX_FFMPEG: path.join(os.tmpdir(), 'wiijukebox-missing', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg') },
+    });
+    none.start();
+    let client;
+    try {
+        const state = await none.waitState('the FFmpeg page', (s) => s.page === 'ffmpeg');
+        check('no FFmpeg on the computer shows the FFmpeg page and starts no server', !state.serverUrl && !state.ffmpeg && state.useBundledFfmpeg === false && !(await portOpen(PORT)));
+        client = await pageClient();
+        const page = await ffmpegPage(client);
+        check('the page says none was found on this computer and offers the included FFmpeg',
+            page.title === 'FFmpeg is needed' && /already on this computer, and none was found/.test(page.why) && page.back, page.why);
+        check('app quits', Boolean(await none.quit()));
+    } catch (err) {
+        check('system FFmpeg missing flow', false, err.message);
+        none.dump();
+    } finally {
+        client?.close();
+        none.kill();
+    }
+    if (process.platform === 'win32') return;
+
+    const lame = new App('systemnolame', { args: [`--remote-debugging-port=${DEBUG_PORT}`], settings: off });
+    lame.extraEnv.WIIJUKEBOX_FFMPEG = fakeFfmpegWithoutMp3(lame.dir);
+    lame.start();
+    client = null;
+    try {
+        const state = await lame.waitState('the FFmpeg page', (s) => s.page === 'ffmpeg');
+        check('an FFmpeg that cannot encode MP3 shows the FFmpeg page and starts no server', !state.serverUrl && state.ffmpeg?.mp3 === false && !(await portOpen(PORT)));
+        client = await pageClient();
+        const page = await ffmpegPage(client);
+        check('the page says it cannot make MP3, names the FFmpeg and offers the included one',
+            page.title === 'This FFmpeg cannot make MP3' && page.why.includes('7.9.9') && page.why.includes(lame.extraEnv.WIIJUKEBOX_FFMPEG) && page.back && /switching back fixes this/.test(page.fix), page.why);
+        await client.evaluate("document.querySelector('#anyway').click(); true");
+        const started = await lame.waitState('the server after "Start without it"', (s) => s.serverUrl);
+        check('"Start without it" still starts the server', (await get(`${started.serverUrl}api/status`)).status === 200);
+        check('app quits', Boolean(await lame.quit()));
+    } catch (err) {
+        check('system FFmpeg without MP3 flow', false, err.message);
+        lame.dump();
+    } finally {
+        client?.close();
+        lame.kill();
+    }
+}
+
+// With the included FFmpeg off and no override, whatever this computer has is used (or the page appears); the way back to the included one then works.
+async function checkSystemFfmpeg() {
+    console.log('\n== included FFmpeg unticked: this computer\'s own FFmpeg, then back ==');
+    const app = new App('systemffmpeg', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'background', useBundledFfmpeg: false },
+    });
+    app.start();
+    let client;
+    try {
+        const state = await app.waitState('the server or the FFmpeg page', (s) => s.serverUrl || s.page === 'ffmpeg');
+        check('the setting is read: the included FFmpeg is off', state.useBundledFfmpeg === false);
+        if (state.serverUrl) {
+            check('the computer\'s own FFmpeg runs the server, with MP3', !isBundled(state) && state.ffmpeg.mp3 === true, `${state.ffmpeg.path} -- ${state.ffmpeg.version}`);
+            await clickMenuItem('bundled-ffmpeg');
+        } else {
+            console.log(`  (this computer's FFmpeg cannot be used: ${state.ffmpeg ? 'no MP3 encoder' : 'none found'})`);
+            client = await pageClient();
+            const page = await ffmpegPage(client);
+            check('the FFmpeg page names the problem and offers the included FFmpeg', page.back && (state.ffmpeg ? /cannot make MP3/.test(page.title) : /none was found/.test(page.why)), page.title);
+            await client.evaluate("document.querySelector('#use-bundled').click(); true");
+        }
+        const back = await app.waitState('the server on the included FFmpeg', (s) => s.serverUrl && s.useBundledFfmpeg === true && isBundled(s), 60000);
+        check('switching back restarts the server on the included FFmpeg', Boolean(back), back.ffmpeg.path);
+        check('the choice is saved', JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8')).useBundledFfmpeg === true);
+        const stream = await get(`${back.serverUrl}stream`, { maxBytes: 8192 });
+        check('GET /stream delivers MP3 again', stream.status === 200 && stream.body.length >= 8192);
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('system FFmpeg flow', false, err.message);
+        app.dump();
+    } finally {
+        client?.close();
+        app.kill();
+    }
+}
+
 async function main() {
     console.log(`smoke test of ${executable}${ARCH ? ` as ${ARCH}` : ''} on ${process.platform}-${process.arch}`);
-    for (const port of [PORT, DEBUG_PORT]) {
+    for (const port of [PORT, DEBUG_PORT, INSPECT_PORT]) {
         if (await portOpen(port)) throw new Error(`port ${port} is already in use; pick another with --port`);
     }
     await checkReturningUser();
     await checkSharedPort();
     if (DEFAULT_PORTS) await checkDefaultPorts();
     await checkFirstRun();
+    await checkCustomServer();
+    await checkServerWindow();
     await checkPortInUse();
     await checkMissingFfmpeg();
+    await checkSystemFfmpegProblems();
+    await checkSystemFfmpeg();
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
     process.exit(failures ? 1 : 0);
 }
