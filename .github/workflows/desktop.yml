@@ -157,6 +157,24 @@ jobs:
                   xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x86_64.AppImage --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-linux.log
                   exit "${PIPESTATUS[0]}"
 
+            # Linux: the .deb installed for real, running with Chromium's sandbox and the installed menu entry.
+            - name: Build the .deb
+              if: runner.os == 'Linux'
+              working-directory: packaging/desktop
+              run: npm run dist:linux-deb
+
+            - name: Smoke test the installed .deb
+              if: runner.os == 'Linux'
+              working-directory: packaging/desktop
+              run: |
+                  sudo apt-get install -y ../dist/desktop/WiiJukebox-*-linux-amd64.deb
+                  ls -l /opt/WiiJukebox/chrome-sandbox /usr/share/applications/wiijukebox.desktop
+                  SMOKE_SANDBOX=1 xvfb-run -a node scripts/smoke.js /opt/WiiJukebox/wiijukebox --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-linux-deb.log
+                  status="${PIPESTATUS[0]}"
+                  sudo apt-get remove -y wiijukebox-desktop
+                  test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
+                  exit "$status"
+
             # Windows: the portable zip, then the installer installed and removed again.
             - name: Smoke test the portable zip
               if: runner.os == 'Windows'
@@ -256,6 +274,7 @@ jobs:
                   name: WiiJukebox-${{ matrix.name }}
                   path: |
                       packaging/dist/desktop/*.AppImage
+                      packaging/dist/desktop/*.deb
                       packaging/dist/desktop/*.zip
                       packaging/dist/desktop/*.exe
                       packaging/dist/desktop/*.dmg

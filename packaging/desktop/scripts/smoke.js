@@ -80,7 +80,8 @@ class App {
     }
 
     command(extra = []) {
-        const flags = process.platform === 'linux' ? ['--no-sandbox'] : [];
+        // SMOKE_SANDBOX=1 runs with Chromium's sandbox, as an installed package does.
+        const flags = process.platform === 'linux' && !process.env.SMOKE_SANDBOX ? ['--no-sandbox'] : [];
         const all = [...flags, ...this.extraArgs, ...extra];
         return ARCH ? ['arch', [`-${ARCH}`, executable, ...all]] : [executable, all];
     }
