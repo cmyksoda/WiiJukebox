@@ -12,6 +12,7 @@ const { guidance, windowsCommand, allowWindowsFirewall } = require(path.join(lib
 const { serverConfig } = require(path.join(lib, 'server-config'));
 const { openLog } = require(path.join(lib, 'logfile'));
 const { Discovery } = require('../src/client/discovery');
+const { DEFAULTS } = require('../src/config');
 const { tempDir } = require('./helpers/fake-binary');
 
 test('settings start fresh, persist changes and ignore damaged or mistyped files', () => {
@@ -76,7 +77,7 @@ test('start at login writes a quoted autostart entry on Linux and uses login ite
 });
 
 test('discovery probe talks to the real discovery socket; free-port search skips busy ports', async () => {
-    const discovery = new Discovery({ config: { data: { station: { name: 'Test' }, mount: '/stream' }, save() {} }, port: 4000 });
+    const discovery = new Discovery({ config: { data: { station: { name: 'Test' }, mount: '/stream' }, save() {} }, port: 4005 });
     const { port } = await discovery.start(0, '127.0.0.1');
     try {
         assert.equal(await probeDiscovery(port), true);
@@ -100,10 +101,13 @@ test('discovery probe talks to the real discovery socket; free-port search skips
 });
 
 test('firewall guidance names the ports and only Windows offers the automatic fix', async () => {
-    const ports = { port: 4000, discoveryPort: 4001 };
+    // The default is one number for both; separate numbers must work too.
+    const ports = { port: 4005, discoveryPort: 4005 };
     const linux = guidance({ platform: 'linux', ...ports });
     assert.equal(linux.canAllow, false);
-    assert.ok(linux.commands.every((command) => command.text.includes('4000') && command.text.includes('4001')));
+    assert.ok(linux.commands.every((command) => command.text.includes('4005/tcp') && command.text.includes('4005/udp')));
+    const split = guidance({ platform: 'linux', port: 4100, discoveryPort: 4101 });
+    assert.ok(split.commands.every((command) => command.text.includes('4100/tcp') && command.text.includes('4101/udp')));
     assert.equal(guidance({ platform: 'win32', ...ports }).canAllow, true);
     assert.equal(guidance({ platform: 'darwin', ...ports }).commands.length, 0);
 
@@ -123,7 +127,7 @@ test('the server config helper reads defaults, keeps other keys when changing th
     process.env.XDG_CONFIG_HOME = tempDir();
     try {
         const config = serverConfig(path.join(__dirname, '..'));
-        assert.equal(config.read().port, 4000);
+        assert.equal(config.read().port, DEFAULTS.port, 'the helper reads the server default instead of hardcoding one');
         config.setPort(4123);
         assert.equal(config.read().port, 4123);
         const saved = JSON.parse(fs.readFileSync(config.file, 'utf8'));
