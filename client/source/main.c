@@ -11,6 +11,11 @@
 #include <string.h>
 #include "net.h"
 #include "wire.h"
+#include "discovery_port.h"
+
+#if WJ_DISCOVERY_PORT < 1 || WJ_DISCOVERY_PORT > 65535
+#error "DISCOVERY_PORT must be between 1 and 65535"
+#endif
 
 #define PAGE_SIZE 12
 #define DEPTH 16
@@ -65,7 +70,7 @@ static void *run_job(void *unused) {
     if (job == JOB_DISCOVER) {
         char ip[16];
         result = if_config(ip, NULL, NULL, true, 3);
-        if (result >= 0) result = wj_discover(servers, WJ_SERVERS, "255.255.255.255", 4001);
+        if (result >= 0) result = wj_discover(servers, WJ_SERVERS, "255.255.255.255", WJ_DISCOVERY_PORT);
     } else if (job == JOB_STREAM) {
         int status = 0;
         result = wj_open(&server, "GET", server.mount, &status);
@@ -153,8 +158,9 @@ static void finish_job(void) {
                 return;
             }
         }
-        copy(message, sizeof(message), count ? "A: choose server   1: scan again" :
-            "No server. Start npm start; allow UDP 4001. 1: retry");
+        if (count) copy(message, sizeof(message), "A: choose server   1: scan again");
+        else snprintf(message, sizeof(message),
+            "No server. Allow UDP %d. 1: retry", WJ_DISCOVERY_PORT);
         return;
     }
     if (job == JOB_STREAM) {

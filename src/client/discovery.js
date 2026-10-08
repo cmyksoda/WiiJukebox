@@ -20,7 +20,7 @@ class Discovery {
         this.socket = null;
     }
 
-    async start(port = DISCOVERY_PORT, host = '0.0.0.0') {
+    async start(port = this.config.data.discoveryPort ?? DISCOVERY_PORT, host = '0.0.0.0') {
         const socket = dgram.createSocket('udp4');
         this.socket = socket;
         let budget = 20;

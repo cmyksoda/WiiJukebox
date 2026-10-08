@@ -20,6 +20,12 @@ Allow UDP 4001 and the configured HTTP port (default TCP 4000) on the host's LAN
 interface. Guest Wi-Fi/client isolation or different subnets can block discovery.
 The prototype supports IPv4; it does not have a manual-address entry fallback.
 
+For alternate ports, set `port` and `discoveryPort` in the server's `config.json`
+and rebuild with the matching discovery port, for example
+`make -C client package DISCOVERY_PORT=4281` for `discoveryPort: 4281`.
+The build automatically recompiles when this port changes. The HTTP port is
+advertised by discovery and does not need to be compiled into the client.
+
 Select the server name and match its eight-character ID prefix to the web UI.
 The complete UUID is saved in `sd:/apps/wiijukebox/server.id`. On future launches
 only that remembered server is auto-selected. Failed stream connections trigger

@@ -6,13 +6,18 @@ include $(DEVKITPPC)/wii_rules
 endif
 .DEFAULT_GOAL := all
 CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
-CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -MMD -MP
+CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -Ibuild -MMD -MP
+DISCOVERY_PORT ?= 4001
 LIBS := -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
 OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c))
-.PHONY: all clean host-test package
+.PHONY: all clean host-test package FORCE
 all: dist/apps/wiijukebox/boot.dol
 build:
 	mkdir -p $@
+build/discovery_port.h: FORCE | build
+	@printf '#define WJ_DISCOVERY_PORT %s\n' '$(DISCOVERY_PORT)' > $@.tmp
+	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
+build/main.o: build/discovery_port.h
 build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 build/wiijukebox.elf: $(OBJECTS)
