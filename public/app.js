@@ -163,8 +163,8 @@ function renderHome() {
         h('div', { class: 'grid' }, tiles),
         h('div', { class: 'panel', style: 'margin-top:18px' },
             h('h3', { text: 'Your Wii' }),
-            h('p', { class: 'hint', text: 'Open WiiJukebox on your Wii and choose this server on the same network.' }),
-            h('p', { class: 'hint', text: $('#server-id').textContent }),
+            h('p', { class: 'hint', text: 'Open WiiJukebox on your Wii and it connects to this server by itself.' }),
+            h('p', { class: 'hint', text: $('#wii-address').textContent }),
             h('p', { class: 'hint', text: $('#stream-addr').textContent }),
             window.WiiJukeboxApp
                 ? h('div', { class: 'buttons' }, h('button', { class: 'pill small', text: 'Choose another server',
@@ -1223,8 +1223,8 @@ $('#search').oninput = (e) => {
     try {
         const settings = await api('/settings');
         state.mount = settings.mount;
-        $('#stream-addr').textContent = `Stream address: http://${settings.hostIp}:${settings.port}${settings.mount}`;
-        $('#server-id').textContent = `Server ID: ${settings.serverId?.slice(0, 8) || 'unknown'}`;
+        $('#wii-address').textContent = `If it can't find the server, give it this address: ${settings.hostIp}:${settings.port}`;
+        $('#stream-addr').textContent = `Other music players can open http://${settings.hostIp}:${settings.port}${settings.mount}`;
     } catch {
         /* non-fatal; the setup panel just shows less */
     }
