@@ -14,6 +14,8 @@ if (location.protocol === 'file:') {
         continueAnyway: call('desktop:continue'),
         restart: call('desktop:restart'),
         setPort: call('desktop:set-port'),
+        useBundledFfmpeg: call('desktop:use-bundled'),
+        saveServer: call('desktop:save-server'),
         allowFirewall: call('desktop:allow-firewall'),
         copy: call('desktop:copy'),
         onStep: (callback) => ipcRenderer.on('desktop:step', (event, text) => callback(text)),

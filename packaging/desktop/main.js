@@ -5,12 +5,12 @@
 const { app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, shell, dialog, clipboard, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-const { detect, searchPath } = require('./lib/tools');
+const { detect, searchPath, findTool, ffmpegProblem, ffmpegVersionNumber } = require('./lib/tools');
 const { ServerProcess } = require('./lib/server');
 const { installYtdlp } = require('./lib/ytdlp-install');
 const { Settings, closeAction } = require('./lib/settings');
 const { createAutostart, HIDDEN_ARG } = require('./lib/autostart');
-const { serverConfig } = require('./lib/server-config');
+const { serverConfig, checkServerChoice, validatePort, MAX_NAME_LENGTH } = require('./lib/server-config');
 const { wiiAddress, probeDiscovery, findFreePort, portIsFree } = require('./lib/network');
 const { guidance, allowWindowsFirewall } = require('./lib/firewall');
 const { openLog } = require('./lib/logfile');
@@ -47,6 +47,7 @@ const startedQuietly = process.argv.includes(HIDDEN_ARG) ||
 
 let win = null;
 let guideWin = null;
+let serverWin = null;
 let tray = null;
 let server = null;
 let log = null;
@@ -62,8 +63,18 @@ const notes = [];
 const bg = () => (nativeTheme.shouldUseDarkColors ? '#0d141c' : '#f3f6f9');
 const trayName = TRAY_NAMES[process.platform] || 'system tray';
 
+// A development run has no bundled FFmpeg, so the option to choose between the two does not exist there.
+const bundledFfmpeg = () => findTool('ffmpeg', [bundledBin]);
+const useBundled = () => Boolean(bundledFfmpeg()) && settings.get('useBundledFfmpeg');
+
+let bundledVersion = null;
+const bundledFfmpegVersion = () => {
+    bundledVersion ??= detect([bundledBin]).then(({ ffmpeg }) => ffmpegVersionNumber(ffmpeg?.version));
+    return bundledVersion;
+};
+
 function toolDirs() {
-    return searchPath({ bundledDir: bundledBin, userBinDir: userBin, overrides });
+    return searchPath({ bundledDir: bundledBin, userBinDir: userBin, overrides, useBundled: useBundled() });
 }
 
 // Tests read this to learn where the server is and which tools were found.
@@ -79,6 +90,7 @@ function writeState() {
         page: currentPage,
         setupDone: settings.get('setupDone'),
         openAtLogin: autostart.isEnabled(),
+        useBundledFfmpeg: useBundled(),
         tray: Boolean(tray),
         serverUrl,
         ffmpeg: tools?.ffmpeg || null,
@@ -181,6 +193,18 @@ function openGuide() {
     loadPage(guideWin, 'connect', { help: '1' }).then(() => { if (!neverShow) guideWin?.show(); });
 }
 
+function openServerSettings() {
+    if (serverWin) {
+        serverWin.show();
+        serverWin.focus();
+        return;
+    }
+    serverWin = new BrowserWindow(windowOptions({ width: 560, height: 640, minWidth: 380, minHeight: 520, title: 'Server name and port' }));
+    serverWin.removeMenu();
+    serverWin.on('closed', () => { serverWin = null; });
+    loadPage(serverWin, 'server').then(() => { if (!neverShow) serverWin?.show(); });
+}
+
 function step(text) {
     win?.webContents.send('desktop:step', text);
 }
@@ -198,7 +222,8 @@ async function describeServer() {
         streamUrl: `http://${address}:${config.port}${config.mount}`,
         serverRunning: running,
         discovery: running ? await probeDiscovery(config.discoveryPort) : false,
-        tools: { ffmpeg: tools?.ffmpeg?.version || null, ytdlp: tools?.ytdlp?.version || null },
+        server: { name: config.station.name, port: config.port, maxNameLength: MAX_NAME_LENGTH },
+        engine: { bundled: Boolean(bundledFfmpeg()), useBundled: useBundled(), bundledVersion: await bundledFfmpegVersion() },
         firewall: guidance({ platform: process.platform, port: config.port, discoveryPort: config.discoveryPort }),
         notes,
     };
@@ -255,12 +280,25 @@ function serialized(task) {
 
 const launch = () => serialized(launchNow);
 
+// The page names the problem and, when the user turned the included FFmpeg off, offers the way back.
+function ffmpegPageParams(problem) {
+    const found = tools.ffmpeg;
+    return {
+        platform: process.platform,
+        problem,
+        system: bundledFfmpeg() && !useBundled() ? '1' : '',
+        path: found?.path || '',
+        version: ffmpegVersionNumber(found?.version) || '',
+    };
+}
+
 // Finds the tools, then starts the server and shows whatever comes next: setup, errors or the player.
 async function launchNow() {
     tools = await detect(toolDirs(), overrides);
-    if (!tools.ffmpeg && !withoutFfmpeg) {
+    const problem = ffmpegProblem(tools.ffmpeg);
+    if (problem && !withoutFfmpeg) {
         showMainWindow();
-        await showPage('ffmpeg', { platform: process.platform });
+        await showPage('ffmpeg', ffmpegPageParams(problem));
         return;
     }
     if (!settings.get('setupDone') && !setupChosen) {
@@ -274,6 +312,7 @@ async function launchNow() {
         return;
     }
     settings.set('setupDone', true);
+    buildMenus();
     showMainWindow();
     await showPage('connect');
 }
@@ -296,9 +335,43 @@ const restartServer = () => serialized(async () => {
     await launchNow();
 });
 
-async function beginSetup({ ytdlp, login }) {
+function setBundledFfmpeg(enabled) {
+    settings.set('useBundledFfmpeg', enabled);
+    withoutFfmpeg = false;
+    buildMenus();
+    return restartServer();
+}
+
+// The port the running server holds, which is not "in use" when the user keeps it.
+const runningPort = () => (server?.child && serverUrl ? serverSettings.read().port : null);
+
+async function changeServer(choice) {
+    const checked = await checkServerChoice(choice, runningPort());
+    if (!checked.ok) return checked;
+    const current = serverSettings.read();
+    if (checked.name !== current.station.name || checked.port !== current.port) {
+        // Stopped first so the server cannot write its old values over the new ones as it exits.
+        await serialized(async () => {
+            await server?.stop();
+            serverUrl = null;
+            serverSettings.setServer(checked);
+            await launchNow();
+        });
+    }
+    serverWin?.close();
+    return { ok: true };
+}
+
+async function beginSetup({ ytdlp, login, bundled, server: serverChoice } = {}) {
     try {
+        let chosen = null;
+        if (serverChoice) {
+            chosen = await checkServerChoice(serverChoice);
+            if (!chosen.ok) return chosen;
+        }
         step('Saving your choices');
+        if (bundledFfmpeg() && typeof bundled === 'boolean') settings.set('useBundledFfmpeg', bundled);
+        if (chosen) serverSettings.setServer(chosen);
         autostart.set(Boolean(login));
         if (ytdlp) {
             step('Downloading yt-dlp');
@@ -357,7 +430,11 @@ function commonItems() {
         { label: 'Open in browser', enabled: Boolean(serverUrl), click: () => shell.openExternal(serverUrl) },
         { type: 'separator' },
         { label: 'Restart server', click: () => restartServer() },
+        { id: 'server-settings', label: 'Server name and port…', enabled: Boolean(settings.get('setupDone')), click: openServerSettings },
         { label: 'Install or update yt-dlp…', click: () => runYtdlpInstall() },
+        ...(bundledFfmpeg()
+            ? [{ id: 'bundled-ffmpeg', label: 'Use included FFmpeg', type: 'checkbox', checked: useBundled(), click: (item) => setBundledFfmpeg(item.checked) }]
+            : []),
         { type: 'separator' },
         { label: 'Start at login', type: 'checkbox', checked: autostart.isEnabled(), click: (item) => setOpenAtLogin(item.checked) },
         {
@@ -419,6 +496,8 @@ function handle(channel, fn) {
 
 handle('desktop:info', () => describeServer());
 handle('desktop:begin-setup', (options) => beginSetup(options));
+handle('desktop:use-bundled', () => setBundledFfmpeg(true));
+handle('desktop:save-server', (choice) => changeServer(choice));
 handle('desktop:open-player', () => openPlayer());
 handle('desktop:recheck', () => launch());
 handle('desktop:continue', () => {
@@ -430,7 +509,8 @@ handle('desktop:copy', (text) => {
     if (typeof text === 'string' && text.length < 2000) clipboard.writeText(text);
 });
 handle('desktop:set-port', async (port) => {
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) return { ok: false, error: 'Choose a number from 1024 to 65535.' };
+    const checked = validatePort(port);
+    if (!checked.ok) return checked;
     if (!(await portIsFree(port))) return { ok: false, error: `Port ${port} is in use as well. Try another.` };
     serverSettings.setPort(port);
     await restartServer();

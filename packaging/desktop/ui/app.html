@@ -21,10 +21,17 @@
     <section data-panel="welcome" hidden>
         <h1>Welcome to WiiJukebox</h1>
         <p>This computer will play your music to your Wii. Pick what you would like, and you'll be set up in just a moment.</p>
-        <ul class="checks">
-            <li>Audio engine (FFmpeg) is included <span class="dim" id="ffmpeg-version"></span></li>
-            <li>Music server is set up for you</li>
-        </ul>
+        <label class="option" id="option-engine" hidden>
+            <input type="checkbox" id="opt-engine" checked>
+            <span><strong>Use the included audio engine (recommended)</strong>
+                <small>FFmpeg<span id="engine-version"></span> comes with WiiJukebox. Untick to use the FFmpeg already on this computer.</small></span>
+        </label>
+        <label class="option">
+            <input type="checkbox" id="opt-defaults" checked>
+            <span><strong>Use default server settings (recommended)</strong>
+                <small>Named <span id="default-name"></span>, on port <span id="default-port"></span>. Untick to choose them yourself.</small></span>
+        </label>
+        <div class="reveal" id="welcome-server" hidden></div>
         <label class="option">
             <input type="checkbox" id="opt-ytdlp" checked>
             <span><strong>YouTube, SoundCloud and Bandcamp links</strong>
@@ -73,14 +80,26 @@
     </section>
 
     <section data-panel="ffmpeg" hidden>
-        <h1>FFmpeg is needed</h1>
-        <p>WiiJukebox uses FFmpeg to decode music and build the stream the Wii plays. This copy of the app has none, and none was found on this computer.</p>
-        <p class="dim">Reinstalling WiiJukebox from its download page brings FFmpeg back. To use your own, install it, then press Check again:</p>
+        <h1 id="ffmpeg-title">FFmpeg is needed</h1>
+        <p id="ffmpeg-why"></p>
+        <p class="dim" id="ffmpeg-fix"></p>
         <pre id="command"></pre>
         <div class="buttons">
-            <button class="primary" id="recheck">Check again</button>
+            <button class="primary" id="use-bundled" hidden>Use the included FFmpeg</button>
+            <button id="recheck">Check again</button>
             <button id="anyway">Start without it</button>
         </div>
+    </section>
+
+    <section data-panel="server" hidden>
+        <h1>Server name and port</h1>
+        <p>Saving restarts the music server, so playback pauses for a moment.</p>
+        <div id="server-form"></div>
+        <div class="buttons">
+            <button class="primary" id="save-server">Save and restart</button>
+            <button id="cancel-server">Cancel</button>
+        </div>
+        <p class="error" id="server-error" hidden></p>
     </section>
 
     <section data-panel="crashed" hidden>
@@ -103,6 +122,16 @@
         <p class="error" id="port-error" hidden></p>
     </section>
 </main>
+<template id="server-fields">
+    <label class="field">Server name
+        <input type="text" id="server-name" autocomplete="off" spellcheck="false">
+        <small>Shown on the Wii's list of servers.</small>
+    </label>
+    <label class="field">Port
+        <input type="number" id="server-port" min="1024" max="65535" inputmode="numeric">
+    </label>
+    <p class="dim">The Wii still finds the server by itself, whatever you choose here.</p>
+</template>
 <script src="app.js"></script>
 </body>
 </html>
