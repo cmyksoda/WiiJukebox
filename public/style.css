@@ -383,9 +383,18 @@ body.viz #app { opacity: 0; pointer-events: none; }
 }
 .card .art { aspect-ratio: 1; border-radius: var(--radius-sm); }
 .card .art img, .row .art img, .show-head .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 26px; background: var(--tile); isolation: isolate; }
-.ph::before, #np-art-frame::before { content: ""; position: absolute; inset: 0; z-index: -1; background: url("images/tile.webp") center / 150px; opacity: .2; }
-.ph b { background: var(--tile); border-radius: 50%; width: 46px; height: 46px; display: grid; place-items: center; font-weight: 700; }
+.ph { position: absolute; inset: 0; background: var(--tile); isolation: isolate; }
+/* Missing artwork shows the jukebox mark, tinted like the rest of the theme. */
+.ph::before, #np-art-frame::before, #mini-placeholder::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--accent);
+    opacity: .3;
+    -webkit-mask: url("images/jukebox.svg") center / auto 58% no-repeat;
+    mask: url("images/jukebox.svg") center / auto 58% no-repeat;
+}
 .card:hover .art, .card:focus-visible .art { border-color: var(--accent); }
 .card:focus-visible { box-shadow: none; }
 .card:focus-visible .art { box-shadow: var(--focus); }
@@ -441,8 +450,6 @@ body.viz #app { opacity: 0; pointer-events: none; }
 .row:hover { background: var(--tile); }
 .row:focus-visible { border-color: var(--accent); }
 .row .art { width: 44px; height: 44px; border-radius: 7px; flex: none; }
-.row .art .ph { font-size: 16px; background-size: 90px; }
-.row .art .ph b { width: 26px; height: 26px; }
 .row .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .row .t { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .s { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -459,7 +466,6 @@ body.viz #app { opacity: 0; pointer-events: none; }
 
 .show-head { display: flex; gap: 14px; align-items: flex-start; padding: 2px 0 6px; }
 .show-head .art { width: 104px; height: 104px; flex: none; border-radius: var(--radius-sm); }
-.show-head .ph { font-size: 32px; }
 .show-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .show-info h3 { font-size: 19px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
 .show-info .by { margin: 0; font-size: 14px; color: var(--dim); }
@@ -562,11 +568,9 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     isolation: isolate;
     box-shadow: var(--highlight);
 }
-#np-art-frame::before { background-size: 190px; }
 #np-art-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 #np-placeholder, #mini-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 52px; }
-#np-placeholder::before { content: ""; position: absolute; left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; background: var(--surface); border: 1px solid var(--edge); z-index: -1; }
-#np-placeholder { isolation: isolate; }
+#mini-placeholder { isolation: isolate; }
 
 #np-text { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 #np-title { font-size: 22px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }

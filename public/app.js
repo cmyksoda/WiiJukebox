@@ -274,7 +274,7 @@ function artwork(item, extraClass = '') {
         frame.append(h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }));
         return frame;
     }
-    frame.append(h('span', { class: 'ph', 'aria-hidden': 'true' }, h('b', { text: (item.title || '♪').trim().charAt(0).toUpperCase() || '♪' })));
+    frame.append(h('span', { class: 'ph', 'aria-hidden': 'true' }));
     return frame;
 }
 
