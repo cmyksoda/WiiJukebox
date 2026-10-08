@@ -24,6 +24,7 @@
 const { spawn } = require('child_process');
 const { Source } = require('./base');
 const { splitTitle } = require('./radio');
+const { queueStart } = require('./queue');
 
 // How many results a search asks for. Enough to be useful, small enough that
 // the flat listing comes back in a couple of seconds.
@@ -308,11 +309,13 @@ class YtdlpSource extends Source {
         }
 
         const entries = (info.entries || []).filter(Boolean);
-        const page = entries.slice(offset, offset + limit);
-        return {
-            items: page.map((entry) => this._itemFor(entry, entryUrl(entry))),
-            total: entries.length,
-        };
+        const items = this._decoratePlaylist(info, entries.map((entry) => this._itemFor(entry, entryUrl(entry))));
+        return { items: items.slice(offset, offset + limit), total: entries.length };
+    }
+
+    /** Hook for subclasses to enrich a playlist's tracks (shared cover, album name). */
+    _decoratePlaylist(_info, items) {
+        return items;
     }
 
     async search(query, { limit = SEARCH_LIMIT } = {}) {
@@ -422,10 +425,11 @@ class YtdlpSource extends Source {
                 );
             }
 
-            this._queue = entries
+            this._queue = this._decoratePlaylist(info, entries
                 .slice(0, MAX_QUEUE)
-                .map((entry) => this._itemFor(entry, entryUrl(entry)));
-            this._queueIndex = 0;
+                .map((entry) => this._itemFor(entry, entryUrl(entry))));
+            // A track picked inside a list (e.g. from the Wii) starts there.
+            this._queueIndex = typeof item === 'object' ? queueStart(this._queue, item) : 0;
             return this._openQueueItem();
         }
 
