@@ -69,6 +69,19 @@ drive the visualizer. `libogc/LICENSE` is retained.
 
 Source: https://github.com/devkitPro/libogc/blob/v3.1.0/libmad/mp3player.c
 
+## Interface font
+
+`fonts/NotoSansCJKjp-Medium-WiiJukebox.otf` is Noto Sans CJK JP 2.004 by Adobe
+and Google, under the SIL Open Font License 1.1 (`fonts/OFL.txt`, which ships in
+the install archive). `tools/subset-font.py` made it from Fedora's
+`google-noto-sans-cjk-vf-fonts` 2.004 file `NotoSansCJK-VF.ttc`, an unmodified
+package of <https://github.com/notofonts/noto-cjk>: weight 500, Latin, Greek,
+Cyrillic, punctuation, symbols, kana, fullwidth forms and the 2,965 JIS level 1
+kanji. `fonts/FONT.json` records the source and output SHA-256, ranges and
+fontTools version. The subset keeps the Noto name; the license's only Reserved
+Font Name is "Source". It is linked into the DOL, so no SD files are needed;
+FreeType and its compression libraries come from devkitPro's portlibs.
+
 ## Original project and asset credits
 
 Built on the work of Scanff, Knarrff and everyone else who worked on

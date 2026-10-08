@@ -1,0 +1,27 @@
+{
+  "upstream": "https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)",
+  "source_file": "NotoSansCJK-VF.ttc, face 0 (Noto Sans CJK JP), Fedora google-noto-sans-cjk-vf-fonts 2.004",
+  "source_sha256": "d3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32",
+  "weight": 500,
+  "ranges": [
+    "U+0020-U+007E",
+    "U+00A0-U+024F",
+    "U+0370-U+03FF",
+    "U+0400-U+04FF",
+    "U+1E00-U+1EFF",
+    "U+2000-U+206F",
+    "U+20A0-U+20BF",
+    "U+2100-U+214F",
+    "U+2190-U+21FF",
+    "U+25A0-U+25FF",
+    "U+2600-U+266F",
+    "U+3000-U+30FF",
+    "U+31F0-U+31FF",
+    "U+FF00-U+FFEF",
+    "JIS X 0208 level 1 kanji"
+  ],
+  "fonttools": "4.63.0",
+  "glyphs": 4055,
+  "sha256": "2c093429de099f4e6dc226c9076fa9e784dcd465466b816ea18826026b880585",
+  "copyright": "\u00a9 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+}

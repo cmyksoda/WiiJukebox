@@ -11,6 +11,7 @@ licenses = {
     "licenses/projectM-LGPL.txt": root / "client/vendor/projectm/LICENSE.txt",
     "licenses/omptl-LGPL.txt": root / "client/vendor/projectm/omptl/License.txt",
     "licenses/libogc.txt": root / "client/vendor/libogc/LICENSE",
+    "licenses/NotoSansCJK-OFL.txt": root / "client/vendor/fonts/OFL.txt",
     "THIRD_PARTY.txt": root / "client/vendor/README.md",
 }
 for name, source in licenses.items():
