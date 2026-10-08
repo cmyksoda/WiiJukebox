@@ -14,6 +14,7 @@
     "icons": "python3 scripts/make-icons.py",
     "dist:linux": "node scripts/stage.js linux && electron-builder --linux AppImage --x64 --publish never",
     "dist:linux-deb": "node scripts/stage.js linux && electron-builder --linux deb --x64 --publish never",
+    "dist:linux-rpm": "node scripts/stage.js linux && electron-builder --linux rpm --x64 --publish never",
     "dist:win": "node scripts/stage.js win && electron-builder --win zip nsis --x64 --publish never",
     "dist:mac-arm64": "node scripts/stage.js mac-arm64 && electron-builder --mac dmg zip --arm64 --publish never",
     "dist:mac-x64": "node scripts/stage.js mac-x64 && electron-builder --mac dmg zip --x64 --publish never",
@@ -66,7 +67,10 @@
       "executableName": "wiijukebox",
       "artifactName": "WiiJukebox-${version}-linux-${arch}.${ext}",
       "syncDesktopName": true,
-      "maintainer": "WiiJukebox contributors"
+      "maintainer": "WiiJukebox contributors",
+      "vendor": "WiiJukebox contributors",
+      "synopsis": "Plays your music to the Wii",
+      "description": "WiiJukebox runs a music server on this computer and plays your library, radio, podcasts and streaming links to a Wii over the local network. This package includes FFmpeg."
     },
     "win": {
       "target": [

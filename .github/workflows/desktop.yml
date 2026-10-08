@@ -115,7 +115,7 @@ jobs:
               if: runner.os == 'Linux'
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends ffmpeg xvfb pkg-config libfreetype-dev libgbm1 libnss3 libgtk-3-0t64 libasound2t64 libxss1 libxtst6
+                  sudo apt-get install -y --no-install-recommends ffmpeg xvfb rpm pkg-config libfreetype-dev libgbm1 libnss3 libgtk-3-0t64 libasound2t64 libxss1 libxtst6
 
             - name: Install server dependencies
               run: npm ci
@@ -174,6 +174,25 @@ jobs:
                   sudo apt-get remove -y wiijukebox-desktop
                   test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
                   exit "$status"
+
+            # Linux: the .rpm installed on a real Fedora, so its dependencies must resolve there.
+            - name: Build the .rpm
+              if: runner.os == 'Linux'
+              working-directory: packaging/desktop
+              run: npm run dist:linux-rpm
+
+            - name: Smoke test the .rpm installed on Fedora
+              if: runner.os == 'Linux'
+              run: |
+                  docker run --rm --shm-size=1g -v "$PWD:/work:ro" -w /work fedora:latest bash -euo pipefail -c '
+                      dnf install -y -q ./packaging/dist/desktop/WiiJukebox-*-linux-x86_64.rpm nodejs xorg-x11-server-Xvfb xorg-x11-xauth
+                      rpm -qi wiijukebox-desktop
+                      rpm -ql wiijukebox-desktop | grep -E "applications|hicolor|/opt/WiiJukebox/(wiijukebox|chrome-sandbox)$"
+                      xvfb-run -a node packaging/desktop/scripts/smoke.js /opt/WiiJukebox/wiijukebox --port 4680 --login
+                      dnf remove -y -q wiijukebox-desktop
+                      test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
+                  ' 2>&1 | tee packaging/dist/smoke-linux-rpm.log
+                  exit "${PIPESTATUS[0]}"
 
             # Windows: the portable zip, then the installer installed and removed again.
             - name: Smoke test the portable zip
@@ -285,6 +304,7 @@ jobs:
                   path: |
                       packaging/dist/desktop/*.AppImage
                       packaging/dist/desktop/*.deb
+                      packaging/dist/desktop/*.rpm
                       packaging/dist/desktop/*.zip
                       packaging/dist/desktop/*.exe
                       packaging/dist/desktop/*.dmg
