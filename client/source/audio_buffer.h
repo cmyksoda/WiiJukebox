@@ -8,7 +8,7 @@
 /* The server's burst-on-connect; a longer queue only adds control latency. */
 #define WJ_AUDIO_TARGET_MS 4000
 #define WJ_AUDIO_RESYNC_MS 9000
-#define WJ_AUDIO_STALL_MS 5000
+#define WJ_AUDIO_STALL_MS 3000
 
 /* Opens the mount with `query` ("" or "?epoch=E&from=B") appended. Returns a
    socket positioned at the first audio byte and fills in its clock. */

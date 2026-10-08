@@ -54,7 +54,8 @@ different server. Source settings and favorites remain on the host.
 The audio thread owns the stream connection and a 384 KiB compressed buffer.
 Sizes are durations at the advertised bitrate: decoding starts after two seconds
 of audio, and the server's four-second burst is the normal buffer depth. If the
-connection drops or stalls for five seconds, the thread reconnects (0.25, 0.5,
+connection drops or stalls for three seconds, before the buffer runs dry, the
+thread reconnects (0.25, 0.5,
 1, 2, 2, then 3 seconds apart) and asks for the exact byte it stopped at, so a
 short Wi-Fi gap continues without skipping or repeating audio. A gap the server
 no longer holds, or a server restart, starts a fresh decoder run. After an
