@@ -41,7 +41,7 @@ permissions:
     contents: read
 
 env:
-    # The smoke test runs the packaged app on these instead of the usual 4000 and 4001.
+    # The smoke test runs the packaged app on these instead of the default 4005.
     SMOKE_PORT: 4680
 
 jobs:
@@ -154,7 +154,7 @@ jobs:
               if: runner.os == 'Linux'
               working-directory: packaging/desktop
               run: |
-                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x64.AppImage --port "$SMOKE_PORT" --login --ytdlp 2>&1 | tee ../dist/smoke-linux.log
+                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x64.AppImage --port "$SMOKE_PORT" --login --ytdlp --default-ports 2>&1 | tee ../dist/smoke-linux.log
                   exit "${PIPESTATUS[0]}"
 
             # Linux: the .deb installed for real, running with Chromium's sandbox and the installed menu entry.
@@ -206,7 +206,7 @@ jobs:
               run: |
                   $zip = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-x64-portable.zip | Select-Object -First 1
                   Expand-Archive $zip.FullName -DestinationPath "$env:RUNNER_TEMP\portable"
-                  node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT --login --ytdlp *>&1 | Tee-Object ../dist/smoke-windows-zip.log
+                  node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT --login --ytdlp --default-ports *>&1 | Tee-Object ../dist/smoke-windows-zip.log
                   $smoke = $LASTEXITCODE
                   $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
                   foreach ($name in (Get-Item $run).Property) {
@@ -283,7 +283,7 @@ jobs:
               if: runner.os == 'macOS'
               working-directory: packaging/desktop
               run: |
-                  node scripts/smoke.js "$RUNNER_TEMP/mac-arm64/WiiJukebox.app" --port "$SMOKE_PORT" --login --ytdlp 2>&1 | tee ../dist/smoke-macos-arm64.log
+                  node scripts/smoke.js "$RUNNER_TEMP/mac-arm64/WiiJukebox.app" --port "$SMOKE_PORT" --login --ytdlp --default-ports 2>&1 | tee ../dist/smoke-macos-arm64.log
                   exit "${PIPESTATUS[0]}"
 
             - name: Smoke test the Intel app under Rosetta

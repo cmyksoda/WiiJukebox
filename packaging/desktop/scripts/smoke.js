@@ -3,6 +3,7 @@
 // Usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login]
 // --login also ticks "start at login", which changes the system's login items; remove them afterwards.
 // --ytdlp also ticks the yt-dlp download, which needs the network.
+// --default-ports also runs the app with the server's own default ports; do not use it next to a real server.
 
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const dgram = require('node:dgram');
@@ -16,7 +17,7 @@ const args = process.argv.slice(2);
 const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const target = args.find((arg, index) => !arg.startsWith('--') && !args[index - 1]?.startsWith('--'));
 if (!target) {
-    console.error('usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login] [--ytdlp]');
+    console.error('usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login] [--ytdlp] [--default-ports]');
     process.exit(2);
 }
 const PORT = Number(option('--port', 4680));
@@ -25,6 +26,7 @@ const DEBUG_PORT = PORT + 10;
 const ARCH = option('--arch', null);
 const LOGIN = args.includes('--login');
 const YTDLP = args.includes('--ytdlp');
+const DEFAULT_PORTS = args.includes('--default-ports');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let failures = 0;
@@ -52,8 +54,8 @@ function executableOf(file) {
 const executable = executableOf(target);
 
 class App {
-    /** @param {{args?: string[], settings?: object, env?: object}} options `settings` is the app's saved state; none means a first run. */
-    constructor(name, { args: extraArgs = [], settings = null, env = {} } = {}) {
+    /** @param {{args?: string[], settings?: object, env?: object, discoveryPort?: number, config?: object}} options `settings` is the app's saved state (none means a first run); `config` is the server's config.json. */
+    constructor(name, { args: extraArgs = [], settings = null, env = {}, discoveryPort = DISCOVERY_PORT, config = { port: PORT, discoveryPort } } = {}) {
         this.dir = fs.mkdtempSync(path.join(process.env.WIIJUKEBOX_SMOKE_DIR || os.tmpdir(), `wiijukebox-smoke-${name}-`));
         this.config = path.join(this.dir, 'config');
         this.userData = path.join(this.dir, 'userdata');
@@ -63,7 +65,7 @@ class App {
         this.extraEnv = env;
         fs.mkdirSync(path.join(this.config, 'wiijukebox'), { recursive: true });
         fs.mkdirSync(this.userData, { recursive: true });
-        fs.writeFileSync(path.join(this.config, 'wiijukebox', 'config.json'), JSON.stringify({ port: PORT, discoveryPort: DISCOVERY_PORT }));
+        fs.writeFileSync(path.join(this.config, 'wiijukebox', 'config.json'), JSON.stringify(config));
         if (settings) fs.writeFileSync(path.join(this.userData, 'settings.json'), JSON.stringify(settings));
     }
 
@@ -221,7 +223,7 @@ async function checkReturningUser() {
     try {
         const state = await app.waitState('the server to start', (s) => s.serverUrl);
         check('app started and reported its server', true, `${state.platform}-${state.arch}, version ${state.version}, ${state.serverUrl}`);
-        check('server runs on the test port, not 4000', state.serverUrl === `http://127.0.0.1:${PORT}/`);
+        check('server runs on the test port, not the default one', state.serverUrl === `http://127.0.0.1:${PORT}/`);
         check('the tray icon was created', state.tray === true);
 
         const ffmpeg = state.ffmpeg;
@@ -256,6 +258,46 @@ async function checkReturningUser() {
         check('the discovery socket is closed', (await probeDiscovery(DISCOVERY_PORT)) === null);
     } catch (err) {
         check('returning-user flow', false, err.message);
+        app.dump();
+    } finally {
+        app.kill();
+    }
+}
+
+// The default config uses one number for the web port (TCP) and discovery (UDP).
+async function checkSharedPort() {
+    console.log('\n== web and discovery on the same port number ==');
+    const app = new App('sameport', { settings: { setupDone: true, onClose: 'background' }, discoveryPort: PORT });
+    app.start();
+    try {
+        const state = await app.waitState('the server to start', (s) => s.serverUrl);
+        check('server starts with TCP and UDP on one port', state.serverUrl === `http://127.0.0.1:${PORT}/`);
+        check('GET /api/status', (await get(`${state.serverUrl}api/status`)).status === 200);
+        const reply = await probeDiscovery(PORT);
+        check('discovery answers on the same number', Boolean(reply && reply.startsWith('WIIJUKEBOX\t1\t')), reply ? reply.trim().replace(/\t/g, ' ') : 'no reply');
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('shared-port flow', false, err.message);
+        app.dump();
+    } finally {
+        app.kill();
+    }
+}
+
+async function checkDefaultPorts() {
+    console.log('\n== the server\'s default ports ==');
+    const app = new App('defaults', { settings: { setupDone: true, onClose: 'background' }, config: {} });
+    app.start();
+    try {
+        const state = await app.waitState('the server to start', (s) => s.serverUrl);
+        const port = Number(new URL(state.serverUrl).port);
+        check('the app runs the server on its default port', port === 4005, state.serverUrl);
+        check('GET /api/status', (await get(`${state.serverUrl}api/status`)).status === 200);
+        const reply = await probeDiscovery(port);
+        check('discovery answers on that same number', Boolean(reply && reply.split('\t')[4] === String(port)), reply ? reply.trim().replace(/\t/g, ' ') : 'no reply');
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('default-ports flow', false, err.message);
         app.dump();
     } finally {
         app.kill();
@@ -375,6 +417,8 @@ async function main() {
         if (await portOpen(port)) throw new Error(`port ${port} is already in use; pick another with --port`);
     }
     await checkReturningUser();
+    await checkSharedPort();
+    if (DEFAULT_PORTS) await checkDefaultPorts();
     await checkFirstRun();
     await checkPortInUse();
     await checkMissingFfmpeg();
