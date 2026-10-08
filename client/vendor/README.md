@@ -25,7 +25,7 @@ domain. Preset names preserve the original creator credits.
 
 ## Added projectM 2.0.1 presets
 
-`projectm/presets-extra/` holds 61 more MilkDrop 1.x presets, byte-identical to
+`projectm/presets-extra/` holds 111 more MilkDrop 1.x presets, byte-identical to
 `projectM-complete-2.0.1-Source.tar.gz` from
 <https://sourceforge.net/projects/projectm/files/2.0.1/>. The archive's SHA-256
 (`c7e474002d718a9ef440e5eb99a2f84792e9bf0ceab3715aaa438e94c9a45fff`) matches

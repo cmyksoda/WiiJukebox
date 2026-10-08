@@ -8,9 +8,25 @@
   "checksum_listing_url": "https://sourceforge.net/projects/projectm/files/2.0.1/",
   "selection": "MilkDrop 1.x presets from presets_milkdrop, presets_milkdrop_104, presets_projectM and presets_yin; not already embedded by content or name; no MilkDrop 2 shader code, user textures or textured shapes; fully parsed by the 2.0.1 engine; 600 host frames without NaN/Inf; median frame cost and load heap within the embedded set's p90 and p95.",
   "files": {
+    "Aderrasi - Airs.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Aderrasi - Airs.milk",
+      "sha256": "7af484de8fa0c1673f23ce7984ae9b6db77d34bc100f6d0ff2f2d8fbe730f540"
+    },
     "Aderrasi - Chromatic Abyss (Refined Abyss Mix).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Aderrasi - Chromatic Abyss (Refined Abyss Mix).milk",
       "sha256": "b1ee23e37b2924c5ee9b7862a6eea9bb1c5b562cb8921483fc1f301e1c1e7136"
+    },
+    "Aderrasi - Multiviola.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Aderrasi - Multiviola.milk",
+      "sha256": "b495a5299e380ae055f9f130ceffec443c51eee19e85d0bef57aae8630f38cd0"
+    },
+    "Aderrasi - Negative Sun III.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Aderrasi - Negative Sun III.milk",
+      "sha256": "4a17b78f11387eb735fef6dfd2d05ae26c371de765fd947047d68ffea018689c"
+    },
+    "Aderrasi - Pyrokinesis.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Aderrasi - Pyrokinesis.milk",
+      "sha256": "b62d3e96737e91af0d0b099b8c4e3c18fb54c92b07385dd73d11903766ed947d"
     },
     "Bmelgren & Krash - Rainbow Orb Peacock (Centred Journey Mix 2).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren & Krash - Rainbow Orb Peacock (Centred Journey Mix 2).milk",
@@ -31,6 +47,14 @@
     "Bmelgren - Hmmm.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Bmelgren - Hmmm.milk",
       "sha256": "5544334167d0cdfeda49e52ec7eaba9985fa9854946e51db3930c98e2208df0a"
+    },
+    "CatalystTheElder - Geometric_Entertainment_Freaky_Geometry_phat_frame_rate_edit.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/CatalystTheElder - Geometric_Entertainment_Freaky_Geometry_phat_frame_rate_edit.milk",
+      "sha256": "b6fbcc8e2a855bb7f357adf0515d0ee871c53043292d34f6c8038c75a67fe2d3"
+    },
+    "Fvese - Multi Circle.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Fvese - Multi Circle.milk",
+      "sha256": "ceb0a40610f898f47471d84412e0afdc43aacf0f88bcc55db8486c6b166e3bfa"
     },
     "Fvese - Snowflake Like 2.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Fvese - Snowflake Like 2.milk",
@@ -68,6 +92,10 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Many Colors 2.milk",
       "sha256": "db41fbc5e6f6afc932fea4393861887c5976a028b87b9377c26446fde0b8d0e5"
     },
+    "Idiot & Rovastar - Rainpainting (Cave Remix (Remix)).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Idiot & Rovastar - Rainpainting (Cave Remix (Remix)).milk",
+      "sha256": "40777ce993f0edf9dfcbd2210e2dafc1273147362ca740bd8dbd8107fda8932e"
+    },
     "Idiot24-7 - Just plain cool 3.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Idiot24-7 - Just plain cool 3.milk",
       "sha256": "5d017967c8637f010943c1a243f98bb75c7f254bde8cb7e2df98883b0a2dee26"
@@ -75,6 +103,10 @@
     "Krash & Rovastar - Rainbow Orb.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Krash & Rovastar - Rainbow Orb.milk",
       "sha256": "84e3ee27766dcd854c552ba13851012d56be8455cdb26810807dd7604214ed49"
+    },
+    "Krash - Interwoven (Nightmare Weft Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - Interwoven (Nightmare Weft Mix).milk",
+      "sha256": "3320c5783ab6e0d11f5de41300de00890ae22449a01f5a47923f03aa474d376e"
     },
     "Krash - Molten Indecision (Rozzor Hot Fast tweak).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - Molten Indecision (Rozzor Hot Fast tweak).milk",
@@ -92,6 +124,14 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - cardiac rhythm.milk",
       "sha256": "11a0bf9467f8f25316c0d4c7a9b79fff8c82ee145fa90f8104be7dd6ff3bdf52"
     },
+    "Krash - interwoven (nightmare weft).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Krash - interwoven (nightmare weft).milk",
+      "sha256": "99432ddfd5ea5966b04d0b48c48cd7442f22ee6855aca2363f8f167ee1795d69"
+    },
+    "Krash - interwoven.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - interwoven.milk",
+      "sha256": "d44f4c237449ceb88fdbc93d0e082f5654ff16ae78205df4f642f4615220ab77"
+    },
     "Krash - molten indecision.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - molten indecision.milk",
       "sha256": "9785633ab52f9d3e1dbec34c916f84b565904b8b7d84e301143295a357524aad"
@@ -99,6 +139,14 @@
     "Krash - systolic pressure.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - systolic pressure.milk",
       "sha256": "7e7e04b12979e2ee684b1f39c58e3b8ae2ce15cb492fbe2e54e0c8d5b392843b"
+    },
+    "Mstress - Acid Universes (Big Bang Interferences Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Mstress - Acid Universes (Big Bang Interferences Mix).milk",
+      "sha256": "dc98c655e5e4479334c90815d8a2c4b70a4d9dffd1557b7ae0b6be3279303aa5"
+    },
+    "Mstress - Acid Universes.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Mstress - Acid Universes.milk",
+      "sha256": "3783a3f0a226b4943a0edde770aa0f8682e2346cd02392c3951cca97fee46018"
     },
     "Mstress - Aurora Boreale.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Mstress - Aurora Boreale.milk",
@@ -108,6 +156,34 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Mstress - Super nova self control.milk",
       "sha256": "7beb4ed39da6cfba492a63964331dcf631baa8fb75398f09b3081f075b755403"
     },
+    "Redi Jedi - atomic reaction.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - atomic reaction.milk",
+      "sha256": "6d69a0dc5a1a278082b3bda036ff243a8bd47d59c57d5dc04d015cd682aacb48"
+    },
+    "Redi Jedi - atoms in hell.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - atoms in hell.milk",
+      "sha256": "c0e19a1760f0ddddbfbe2ad47367bfafceee45e09e35528cdce616a029bde97b"
+    },
+    "Redi Jedi - i dont think those were portabello mushrooms.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - i dont think those were portabello mushrooms.milk",
+      "sha256": "67b29da1b1d219ace0d1b5b9a3a364026ebe35e7893bab2953d10a662162220b"
+    },
+    "Redi Jedi - off the fadar.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - off the fadar.milk",
+      "sha256": "1396fde1a3c139168a4e1bf6110ec8ecab1f56d2d29ebc15493cb62ed62cf941"
+    },
+    "Redi Jedi - quit smoking my water,you dick.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - quit smoking my water,you dick.milk",
+      "sha256": "773c8ced89468fb6106d2c80318c5ec6b76c58e09619f314112ea613945da645"
+    },
+    "Redi Jedi - static fusion.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - static fusion.milk",
+      "sha256": "85b033ecbdb7a11fd49d054569f57c2ff14ab656bb6dd4fb4a0fdeaab7a014e3"
+    },
+    "Redi Jedi - your radar may have a few kinks in it.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Redi Jedi - your radar may have a few kinks in it.milk",
+      "sha256": "fb5e02fea4f13a693dd8f595cd17e88e4d039b3911acebc9f02141d0782f459c"
+    },
     "Rocke - Answer.42.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rocke - Answer.42.milk",
       "sha256": "809c4d466ba7a3cf578921e6c8a1d42eda44150e555f93fe6dcd9568b64ed3bd"
@@ -116,9 +192,21 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rocke - Answer42.milk",
       "sha256": "2a621d90d52bcee877e0ef5306de04a64175c260752c5750c83831a988cd8ac1"
     },
+    "Rovastar & Aderrasi - Clockwork Organism.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar & Aderrasi - Clockwork Organism.milk",
+      "sha256": "e7327550416fe1ddff7ff45b8b30285ae910f77db4523e136f83d4ce8857138e"
+    },
     "Rovastar & EvilJim - Bass Tube of Light.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar & EvilJim - Bass Tube of Light.milk",
       "sha256": "7fbf6ff66699d242cfb66e2b2e60991c902832ccc444ad4cb3dd03612168f562"
+    },
+    "Rovastar & Geiss - Dynamic Swirls 3 (Twisted Truth Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar & Geiss - Dynamic Swirls 3 (Twisted Truth Mix).milk",
+      "sha256": "fdebf237b519651c5606bffd8fdb45e1bbd471796241011b09bbb5c955b6c640"
+    },
+    "Rovastar & Geiss - Hurricane Nightmare.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar & Geiss - Hurricane Nightmare.milk",
+      "sha256": "10330361a8a7f1a7ac544d943dfa9bee095d56ed1120287fc64bab5ec61afe4b"
     },
     "Rovastar & Geiss - Surface (Vectrip Mix).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar & Geiss - Surface (Vectrip Mix).milk",
@@ -156,6 +244,10 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Ritual Of Life.milk",
       "sha256": "a92040f4c0cae3a54ed9b80026714773d30343532ca972733f1e70c6aeff1b86"
     },
+    "Rovastar - Sea Life (Evoluation Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Sea Life (Evoluation Mix).milk",
+      "sha256": "6bff1e25b62c288396f6c14d0b7b3dccce33b8a3be851d74700f70c3851c8a2b"
+    },
     "Rovastar - Sea Life.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - Sea Life.milk",
       "sha256": "3902febe3e10a070afb42e6cc3873a495f4fa26c8fa088ea5fc8cdc268589fdd"
@@ -163,6 +255,18 @@
     "Rovastar - Shadows Portal.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Shadows Portal.milk",
       "sha256": "0b38157b1d8d1223cf06d1e55dc6d8691d044f63354080c4627708173777e925"
+    },
+    "Rovastar - Sunflower Passion (Enlightment Mix)_Phat_edit.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/Rovastar - Sunflower Passion (Enlightment Mix)_Phat_edit.milk",
+      "sha256": "3e20c2cf08d76fdcffbea66f02cb10c24146431defad0adb42dc6f574bb56945"
+    },
+    "Rovastar - Sunflower Passion (Simple Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/Rovastar - Sunflower Passion (Simple Mix).milk",
+      "sha256": "6cf3525a4ba55fd3767bfb7925f276ac182aafc93f8c4e5a0a1d7568525b4950"
+    },
+    "Rovastar - Sunflower Passion.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/Rovastar - Sunflower Passion.milk",
+      "sha256": "85cfba658f29793ad1eeed851cdcdcfcb2c7d54978a568a907d5e04aae3d6e0b"
     },
     "Rovastar - Torrid Tales.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/Rovastar - Torrid Tales.milk",
@@ -204,6 +308,10 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar and Krash - Rainbow Deflection.milk",
       "sha256": "415f205db8287d7e74012f36427475d67cd527fc7a0f784e5ba3523030f52eff"
     },
+    "Rozzor & Rovastar - Altars Of Madness 3 (ooze tweak with custom wave).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rozzor & Rovastar - Altars Of Madness 3 (ooze tweak with custom wave).milk",
+      "sha256": "64e16557f98a011cf17a9584132b3ec3626cd77115a0ab92d5c0879a306c5a7a"
+    },
     "Rozzor & StudioMusic - Vertigyny (Geiss shape mod).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rozzor & StudioMusic - Vertigyny (Geiss shape mod).milk",
       "sha256": "3cd1dc0f1c5433b346a7656cb131797f00a4030aac918dbca8e9f8ea7e20e7a0"
@@ -224,13 +332,37 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/TEcHNO & SandStorm - Psychodelic Highway.milk",
       "sha256": "d377c081671cd5d0375c9a190ec373115708ded2143476e0e70e3758b1f13235"
     },
+    "Telek - Directive Swagger (Spectral Inferno) (fix...) maybe.. YES.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Telek - Directive Swagger (Spectral Inferno) (fix...) maybe.. YES.milk",
+      "sha256": "7b8f4a7fe22dd5acd3f224ae15fdcac6524440b52d88e34675ab0ca3d9fc218f"
+    },
+    "Telek EMPR - Scanner - Trust me, I've got a Melways.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Telek EMPR - Scanner - Trust me, I've got a Melways.milk",
+      "sha256": "a716f7507ec65977c17d13f4d04dcc7e5bce980d6536b43d64f2c4a88c427f9b"
+    },
     "Unchained - Proper Identification (Breaks Remix).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Unchained - Proper Identification (Breaks Remix).milk",
       "sha256": "4dd519023d6ff005cb1a8bb057edcb5e610aad11db68c7a2a7dd8be2734fcda9"
     },
+    "idiot - Dwarf of Annon (before the star).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Dwarf of Annon (before the star).milk",
+      "sha256": "a271464e2ba6f49925b74a05f22039f65895a7f25b18144311d9529218c53a7e"
+    },
     "idiot - Nothing Yet - 02 - Shifting Squares of idiot.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Nothing Yet - 02 - Shifting Squares of idiot.milk",
       "sha256": "10dc8a265b067618dfc15422f3d764f993f3f5a1e4829d0df3d2b2cc05cd41bf"
+    },
+    "idiot - Random Water Colours.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/idiot - Random Water Colours.milk",
+      "sha256": "3a8170a2a04b8b68f4ab7c8940a810589c723254a215d764f2da539f9cd60617"
+    },
+    "idiot - Shadows of Annon.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Shadows of Annon.milk",
+      "sha256": "ff42fca2d6c2eb9f692cac0ce59aa0c8fea93b19465919a1fc81abea0aecd806"
+    },
+    "idiot - Waterfalls (remix2).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Waterfalls (remix2).milk",
+      "sha256": "c427c3e88f5ec180dc25d8fab6e07817f7079bed40493feae3288e76951e37f0"
     },
     "idiot - Waterfalls.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Waterfalls.milk",
@@ -240,6 +372,10 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/illusion & techno - double highway.milk",
       "sha256": "5926b6092e0979388308d961bf0253d14d27b258a3d94643b259c5286f0fd6ee"
     },
+    "nil - Did You Speak with the Orb.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/nil - Did You Speak with the Orb.milk",
+      "sha256": "d67ee525dfd3c42f0b35ae9d3fb48cf04cb7dbcb76bd1b500441d878d027855e"
+    },
     "nil - Tim Leary's Amazing Waterslide.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/nil - Tim Leary's Amazing Waterslide.milk",
       "sha256": "2fe7899300926ef0cca85a4d3a84dbf9aaa5a5078092044d79385d8cc0f1bc42"
@@ -248,9 +384,73 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/nil - Wyrm.milk",
       "sha256": "743eb28d4dc72ea1203093d355e38e01f1330f030b2841c4cc77752937818fc7"
     },
+    "shifter - flashburn.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/shifter - flashburn.milk",
+      "sha256": "0a3a092a3326fc567179baab8d647fc6eb85b67ed40b27443dfbc022c413ec5e"
+    },
+    "yin - 020 - I have no feet and I must dance.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 020 - I have no feet and I must dance.milk",
+      "sha256": "777dd77eb4b677d592a6ab681bec377e8189664e10694aefa10426f1a39174c0"
+    },
+    "yin - 040 - Myopic infected 3d VU meters.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 040 - Myopic infected 3d VU meters.milk",
+      "sha256": "42fbd8c42ea23230ce65ed64af67210bf9d259fece9d1b41b130609b7eaf55a6"
+    },
     "yin - 090 - Exit eternity.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 090 - Exit eternity.milk",
       "sha256": "3b15a98d9a1e4d74aa58c26046947913b102ba96fe6369593c4af09efeadd268"
+    },
+    "yin - 110 - Survival of the fastest.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 110 - Survival of the fastest.milk",
+      "sha256": "2e60acaac9c337d645c1218099bc2f25c35d13d55360d0c56d3dd43f689da9eb"
+    },
+    "yin - 111 - Survival of the fastest (Volume gravity).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 111 - Survival of the fastest (Volume gravity).milk",
+      "sha256": "8d3c4fb28d8b1e10cf6e6693d3966441d14703b7c6064949dcde5a1cab330936"
+    },
+    "yin - 112 - Survival of the fastest (Sudden death).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 112 - Survival of the fastest (Sudden death).milk",
+      "sha256": "c31067e75ba4cd69150c6a4a39ac06899fb150c715b522dc59b31ed4141dd868"
+    },
+    "yin - 113 - Survival of the fastest (The Grand Arena).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 113 - Survival of the fastest (The Grand Arena).milk",
+      "sha256": "c01e146b5aa1a3862c00227d94ba7dd2af178cc1dc812fd1b00e8edb43f50d9b"
+    },
+    "yin - 114 - Survival of the fastest (feat. Guest Star).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 114 - Survival of the fastest (feat. Guest Star).milk",
+      "sha256": "b2fb3a23c0ac53d4a25ee5a9e8c341572e4d7ad0f3e174466f5130b65fbe28c6"
+    },
+    "yin - 115 - Survival of the fastest (feat. Collapsing Guest Star).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 115 - Survival of the fastest (feat. Collapsing Guest Star).milk",
+      "sha256": "02d641cfb94c3fcfdff4d93513f20ca341c0bcce635f4aaaf3f597f72da41cd4"
+    },
+    "yin - 116 - Survival of the fastest (is watched!).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 116 - Survival of the fastest (is watched!).milk",
+      "sha256": "f68a1c2ee58271a6658b8d3f5e03862172a88f32e100791baad32b01c49ab9ba"
+    },
+    "yin - 120 - Resonant consciousness.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 120 - Resonant consciousness.milk",
+      "sha256": "c9e8214028f766953bf4d95cc1eb66acf89d530e22436c37cbfa7be3b1e131fa"
+    },
+    "yin - 180 - Pyrotechnics.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 180 - Pyrotechnics.milk",
+      "sha256": "94c246bbf5166e5c780369b7ed5d6e87d8f04afcba215f502908f7954c68ca17"
+    },
+    "yin - 190 - Temporal fluctuations.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 190 - Temporal fluctuations.milk",
+      "sha256": "f142df2ab5cc42fede891dd7272e82227353add793b368d4fe4e4aa5bd97579d"
+    },
+    "yin - 200 - The all seeing eye.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 200 - The all seeing eye.milk",
+      "sha256": "3a56298b27115047b671324ee2c95263670d8811747121f8144bf559bfaaafb8"
+    },
+    "yin - 230 - First impression.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 230 - First impression.milk",
+      "sha256": "1e4bf9fe5a6105b1a0219a3aaf49e8ba4efb9b8c0d6690678afcb91c8e359fd0"
+    },
+    "yin - Beat Detective 007 demo.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - Beat Detective 007 demo.milk",
+      "sha256": "16951620cd4dbf5540e4e383dac7923a5c9712df47bb8c6f200933b9826a7085"
     }
   }
 }
