@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 const { detect, searchPath, findTool } = require('../packaging/desktop/lib/tools');
 const { ServerProcess } = require('../packaging/desktop/lib/server');
 const { installYtdlp, assetName } = require('../packaging/desktop/lib/ytdlp-install');
@@ -26,6 +27,12 @@ test('tool detection finds bundled programs, prefers explicit overrides and trea
     assert.equal(missing.ffmpeg, null);
     assert.equal(missing.ytdlp.path, ytdlp);
     assert.equal(searchPath({ bundledDir: bundled, overrides: { ytdlp } })[0], path.dirname(ytdlp));
+
+    // The app's own copies win over whatever the system has on PATH.
+    assert.equal(searchPath({ bundledDir: bundled, userBinDir: path.join(bundled, 'user') })[0], bundled);
+    const system = tempDir();
+    fakeBinary(system, 'ffmpeg', "console.log('ffmpeg version system');");
+    assert.equal((await detect([bundled, system])).ffmpeg.path, ffmpeg);
 
     // A file that exists but is not a working program is also "not installed".
     const broken = fakeBinary(bundled, 'broken-ffmpeg', 'process.exit(3);');
@@ -62,6 +69,20 @@ test('server process reports its URL, stops cleanly and reports a crash it did n
     await assert.rejects(dying.start(), /server exited.*boom/s);
     await waitFor(() => reasons.length);
     assert.match(reasons[0], /code 2/);
+});
+
+test('the server wrapper shuts the server down when its parent closes stdin', async () => {
+    const dir = tempDir();
+    const entry = path.join(dir, 'server.js');
+    fs.writeFileSync(entry, FAKE_SERVER(4392));
+    const child = spawn(process.execPath, [path.join(__dirname, '..', 'packaging', 'desktop', 'lib', 'server-entry.js'), entry], { stdio: ['pipe', 'pipe', 'inherit'] });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk; });
+    await waitFor(() => /WebUI/.test(output));
+    const exited = new Promise((resolve) => child.once('exit', (code) => resolve(code)));
+    child.stdin.end();
+    assert.equal(await exited, 0);
+    assert.match(output, /bye/);
 });
 
 test('yt-dlp installer writes an executable only for a plausible download', async () => {

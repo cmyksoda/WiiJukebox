@@ -2,10 +2,13 @@
 // Runs the WiiJukebox server as a child process and reports where it is listening.
 
 const { EventEmitter } = require('node:events');
+const path = require('node:path');
 const { spawn, execFile } = require('node:child_process');
 
 const LOG_LINES = 400;
 const START_TIMEOUT_MS = 20000;
+// Wraps the server so it exits on its own if this app dies without stopping it.
+const LAUNCHER = path.join(__dirname, 'server-entry.js');
 
 class ServerProcess extends EventEmitter {
     /** @param {{entry: string, cwd: string, env: object, nodePath: string}} options */
@@ -33,12 +36,13 @@ class ServerProcess extends EventEmitter {
     start() {
         this.stopping = false;
         return new Promise((resolve, reject) => {
-            const child = spawn(this.nodePath, [this.entry], {
+            const child = spawn(this.nodePath, [LAUNCHER, this.entry], {
                 cwd: this.cwd,
                 env: { ...process.env, ...this.env, ELECTRON_RUN_AS_NODE: '1' },
-                stdio: ['ignore', 'pipe', 'pipe'],
+                stdio: ['pipe', 'pipe', 'pipe'],
                 windowsHide: true,
             });
+            child.stdin.on('error', () => {});
             this.child = child;
             let settled = false;
             const timer = setTimeout(() => finish(new Error('the server did not start in time')), START_TIMEOUT_MS);
@@ -77,12 +81,13 @@ class ServerProcess extends EventEmitter {
                 clearTimeout(force);
                 resolve();
             });
-            if (process.platform === 'win32') this._kill(child);
+            // Windows has no SIGTERM, so closing the child's stdin is the polite request there.
+            if (process.platform === 'win32') child.stdin.end();
             else child.kill('SIGTERM');
         });
     }
 
-    // Windows has no SIGTERM; take the whole tree so the server's ffmpeg goes too.
+    // Windows has no SIGKILL either; take the whole tree so the server's ffmpeg goes too.
     _kill(child) {
         if (process.platform === 'win32') execFile('taskkill', ['/pid', String(child.pid), '/t', '/f'], () => {});
         else child.kill('SIGKILL');

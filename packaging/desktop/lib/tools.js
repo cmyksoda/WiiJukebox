@@ -36,13 +36,15 @@ function isExecutable(file) {
 }
 
 /**
- * Directories searched, in order: folders of any explicit overrides, the user's PATH,
- * common locations, then bundled copies.
+ * Directories searched, in order: folders of any explicit overrides, the app's own copies,
+ * the user's PATH, then common locations. The bundled FFmpeg comes first because a system
+ * build can lack the MP3 encoder the stream needs, and the app-managed yt-dlp first so that
+ * updating it takes effect.
  */
 function searchPath({ bundledDir, userBinDir, overrides = {} }) {
     const forced = [overrides.ffmpeg, overrides.ytdlp].filter(Boolean).map((file) => path.dirname(file));
     const fromEnv = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
-    return [...new Set([...forced, ...fromEnv, ...extraDirectories(), bundledDir, userBinDir].filter(Boolean))];
+    return [...new Set([...forced, bundledDir, userBinDir, ...fromEnv, ...extraDirectories()].filter(Boolean))];
 }
 
 function findTool(name, dirs) {
