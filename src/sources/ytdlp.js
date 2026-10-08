@@ -496,7 +496,7 @@ class YtdlpSource extends QueueSource {
 
     /**
      * One dead video should not end the album. Skip past what will not
-     * resolve, in whichever direction we were already travelling, trying each
+     * resolve, in whichever direction we were already traveling, trying each
      * track at most once so a queue of dead links under repeat-all cannot spin.
      */
     async _move(step) {
