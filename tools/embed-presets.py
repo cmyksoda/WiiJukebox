@@ -3,14 +3,21 @@
 """Embed the projectM preset collection so wiiload needs no companion SD files."""
 from pathlib import Path
 import json
+import os
 root = Path(__file__).resolve().parents[1]
-files = sorted([*(root / 'client/vendor/projectm/presets').glob('*.milk'),
-                *(root / 'client/vendor/projectm/presets-extra').glob('*.milk')], key=lambda p: p.name)
+# A preset tour can embed just one folder, e.g. the presets a curation pass would remove.
+custom = os.environ.get('WJ_PRESET_DIR')
+if custom:
+    files = sorted(Path(custom).glob('*.milk'), key=lambda p: p.name)
+    assert files, f'no presets in {custom}'
+else:
+    files = sorted([*(root / 'client/vendor/projectm/presets').glob('*.milk'),
+                    *(root / 'client/vendor/projectm/presets-extra').glob('*.milk')], key=lambda p: p.name)
+    excluded = {line.strip() for line in (root / 'client/vendor/projectm/excluded-presets.txt').read_text().splitlines()
+                if line.strip() and not line.startswith('#')}
+    assert excluded <= {p.name for p in files}, excluded - {p.name for p in files}
+    files = [p for p in files if p.name not in excluded]
 assert len({p.name for p in files}) == len(files)
-excluded = {line.strip() for line in (root / 'client/vendor/projectm/excluded-presets.txt').read_text().splitlines()
-            if line.strip() and not line.startswith('#')}
-assert excluded <= {p.name for p in files}, excluded - {p.name for p in files}
-files = [p for p in files if p.name not in excluded]
 out = root / 'client/build/presets.cpp'
 with out.open('w') as f:
     f.write('#include "presets.h"\n#include <cstring>\n')

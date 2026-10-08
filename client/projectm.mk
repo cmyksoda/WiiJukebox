@@ -15,7 +15,7 @@ build/projectm/%.o: $(PM)/%.c
 build/libprojectM.a: $(PM_OBJECTS)
 	$(DEVKITPPC)/bin/powerpc-eabi-ar rcs $@ $^
 build/presets.cpp: FORCE ../tools/embed-presets.py | build
-	python3 ../tools/embed-presets.py
+	WJ_PRESET_DIR='$(PRESET_DIR)' python3 ../tools/embed-presets.py
 build/presets.o: build/presets.cpp source/presets.h
 	$(CXX) -std=gnu++11 -O2 $(MACHDEP) -Isource -c $< -o $@
 build/visualizer.o: source/visualizer.cpp build/tour.h

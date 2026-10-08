@@ -21,7 +21,7 @@ static long long next_preset;
 extern "C" const char *wj_visualizer_error(void) { return error; }
 
 #if WJ_PRESET_TOUR
-static const char flag_file[] = "sd:/apps/wiijukebox/flagged-presets.txt";
+static const char flag_file[] = WJ_PRESET_TOUR_FILE;
 static int tour_index;
 static unsigned char flagged[2048];
 static bool flags_loaded;
@@ -75,7 +75,7 @@ static void tour_overlay(void) {
     const char *name = wj_presets[tour_index].name;
     int length = (int)std::strlen(name) - 5;
     int bytes = std::snprintf(text, sizeof(text), "%d/%u  %.*s%s", tour_index + 1, wj_preset_count, length, name,
-                              tour_index < (int)sizeof(flagged) && flagged[tour_index] ? "  \xc2\xb7  flagged" : "");
+                              tour_index < (int)sizeof(flagged) && flagged[tour_index] ? "  \xc2\xb7  " WJ_PRESET_TOUR_LABEL : "");
     const int size = 16;
     float limit = wj_gfx_width() - 48;
     while (bytes > 0 && wj_font_measure(text, bytes, size, 1) > limit) bytes--;
@@ -118,8 +118,10 @@ extern "C" int wj_visualizer_enter(void) {
         settings.easterEgg = 0;
         settings.softCutRatingsEnabled = false;
         settings.presetDIR = "builtin:";
-        // The engine boots on WiiRadio's first preset; it is replaced before anything is shown.
-        settings.presetURL = "Aderrasi - Agitator.milk";
+        // The engine boots on WiiRadio's first preset, or any embedded one in a custom tour set;
+        // it is replaced before anything is shown.
+        const char *boot = "Aderrasi - Agitator.milk";
+        settings.presetURL = wj_preset_index(boot) >= 0 ? boot : wj_presets[0].name;
         engine = new projectM(settings, projectM::FLAG_DISABLE_PLAYLIST_LOAD);
         RatingList ratings(2, 3);
         for (unsigned i = 0; i < wj_preset_count; i++) {
