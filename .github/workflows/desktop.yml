@@ -1,0 +1,274 @@
+name: Desktop app
+
+# Pushes and pull requests build and test Linux only. macOS minutes cost 10x and Windows 2x on a private
+# repository, so those run when a commit message contains [ci all], [ci windows] or [ci macos], from
+# "Run workflow", or for a v* tag.
+on:
+    push:
+        branches: [main, desktop-app]
+        tags: ['v*']
+        paths:
+            - 'packaging/desktop/**'
+            - 'src/**'
+            - 'public/**'
+            - 'test/**'
+            - 'tools/vendor.js'
+            - 'package*.json'
+            - '.github/workflows/desktop.yml'
+    pull_request:
+        paths:
+            - 'packaging/desktop/**'
+            - 'src/**'
+            - 'public/**'
+            - 'test/**'
+            - 'tools/vendor.js'
+            - 'package*.json'
+            - '.github/workflows/desktop.yml'
+    workflow_dispatch:
+        inputs:
+            platforms:
+                description: Which systems to build
+                type: choice
+                options: [all, linux, windows, macos]
+                default: all
+
+# A newer push replaces a run that is still going.
+concurrency:
+    group: desktop-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+env:
+    # The smoke test runs the packaged app on these instead of the usual 4000 and 4001.
+    SMOKE_PORT: 4680
+
+jobs:
+    plan:
+        runs-on: ubuntu-latest
+        outputs:
+            matrix: ${{ steps.pick.outputs.matrix }}
+        steps:
+            - name: Choose the systems to build
+              id: pick
+              env:
+                  EVENT: ${{ github.event_name }}
+                  REF: ${{ github.ref }}
+                  CHOICE: ${{ inputs.platforms }}
+                  MESSAGE: ${{ github.event.head_commit.message }}
+              run: |
+                  want=linux
+                  if [ "$EVENT" = workflow_dispatch ]; then want="$CHOICE"; fi
+                  case "$REF" in refs/tags/v*) want=all ;; esac
+                  case "$MESSAGE" in
+                      *'[ci all]'*) want=all ;;
+                      *'[ci windows]'*) want=windows ;;
+                      *'[ci macos]'*) want=macos ;;
+                  esac
+                  matrix=$(jq -cn --arg want "$want" '
+                      [{name: "linux", os: "ubuntu-latest", script: "dist:linux"},
+                       {name: "windows", os: "windows-latest", script: "dist:win"},
+                       {name: "macos", os: "macos-latest", script: "dist:mac"}]
+                      | map(select($want == "all" or .name == $want)) | {include: .}')
+                  echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+                  echo "building: $matrix"
+
+    build:
+        needs: plan
+        name: ${{ matrix.name }}
+        runs-on: ${{ matrix.os }}
+        timeout-minutes: 45
+        strategy:
+            fail-fast: false
+            matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+        env:
+            NODE_OPTIONS: --max-old-space-size=4096
+
+        steps:
+            - name: Check out the repository
+              uses: actions/checkout@v7
+
+            - name: Install Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 22
+                  cache: npm
+                  cache-dependency-path: |
+                      package-lock.json
+                      packaging/desktop/package-lock.json
+
+            - name: Cache downloaded FFmpeg and Electron
+              uses: actions/cache@v6
+              with:
+                  path: |
+                      ~/.cache/wiijukebox-desktop
+                      ~/.cache/electron
+                      ~/.cache/electron-builder
+                      ~/Library/Caches/electron
+                      ~/Library/Caches/electron-builder
+                      ~/AppData/Local/electron/Cache
+                      ~/AppData/Local/electron-builder/Cache
+                  key: desktop-${{ runner.os }}-${{ hashFiles('packaging/desktop/scripts/stage.js', 'packaging/desktop/package-lock.json') }}
+
+            - name: Install system packages
+              if: runner.os == 'Linux'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends ffmpeg xvfb libgbm1 libnss3 libgtk-3-0t64 libasound2t64 libxss1 libxtst6
+
+            - name: Install server dependencies
+              run: npm ci
+
+            - name: Server tests
+              if: runner.os == 'Linux'
+              run: |
+                  npm test
+                  npm run smoke
+
+            - name: Desktop unit tests
+              if: runner.os != 'Linux'
+              run: node --test test/desktop-app.test.js test/desktop-shell.test.js
+
+            - name: Install desktop dependencies
+              working-directory: packaging/desktop
+              run: npm ci
+
+            - name: Build the app
+              working-directory: packaging/desktop
+              shell: bash
+              run: |
+                  for attempt in 1 2 3; do
+                      npm run ${{ matrix.script }} && exit 0
+                      echo "build failed (attempt $attempt)"
+                      sleep 15
+                  done
+                  exit 1
+
+            - name: List what was built
+              shell: bash
+              run: ls -lh packaging/dist/desktop
+
+            # Linux: run the real AppImage under a virtual display.
+            - name: Smoke test the AppImage
+              if: runner.os == 'Linux'
+              working-directory: packaging/desktop
+              run: |
+                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x86_64.AppImage --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-linux.log
+                  exit "${PIPESTATUS[0]}"
+
+            # Windows: the portable zip, then the installer installed and removed again.
+            - name: Smoke test the portable zip
+              if: runner.os == 'Windows'
+              working-directory: packaging/desktop
+              shell: pwsh
+              run: |
+                  $zip = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-x64.zip | Select-Object -First 1
+                  Expand-Archive $zip.FullName -DestinationPath "$env:RUNNER_TEMP\portable"
+                  node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT *>&1 | Tee-Object ../dist/smoke-windows-zip.log
+                  if ($LASTEXITCODE -ne 0) { exit 1 }
+
+            - name: Check the executable's icon and version resources
+              if: runner.os == 'Windows'
+              shell: powershell
+              run: |
+                  $exe = "$env:RUNNER_TEMP\portable\WiiJukebox.exe"
+                  $info = (Get-Item $exe).VersionInfo
+                  "ProductName=$($info.ProductName) FileDescription=$($info.FileDescription) FileVersion=$($info.FileVersion)"
+                  if ($info.ProductName -ne 'WiiJukebox') { throw 'the executable still has Electron''s resources' }
+                  Add-Type -AssemblyName System.Drawing
+                  [System.Drawing.Icon]::ExtractAssociatedIcon($exe).ToBitmap().Save("$PWD\packaging\dist\exe-icon.png")
+
+            - name: Install, smoke test and uninstall with the installer
+              if: runner.os == 'Windows'
+              working-directory: packaging/desktop
+              shell: pwsh
+              run: |
+                  $setup = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-setup-x64.exe | Select-Object -First 1
+                  $dir = "$env:RUNNER_TEMP\WiiJukeboxInstalled"
+                  Start-Process -FilePath $setup.FullName -ArgumentList '/S', "/D=$dir" -Wait
+                  $start = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\WiiJukebox.lnk"
+                  $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'WiiJukebox.lnk'
+                  "installed: $(Test-Path "$dir\WiiJukebox.exe"), start menu shortcut: $(Test-Path $start), desktop shortcut: $(Test-Path $desktop)"
+                  if (-not (Test-Path "$dir\WiiJukebox.exe") -or -not (Test-Path $start)) { throw 'the installer did not install the app and its shortcut' }
+                  node scripts/smoke.js "$dir\WiiJukebox.exe" --port $env:SMOKE_PORT *>&1 | Tee-Object ../dist/smoke-windows-installed.log
+                  $smoke = $LASTEXITCODE
+                  Start-Process -FilePath "$dir\Uninstall WiiJukebox.exe" -ArgumentList '/S', "_?=$dir" -Wait
+                  "uninstalled: $(-not (Test-Path "$dir\WiiJukebox.exe")), start menu shortcut gone: $(-not (Test-Path $start))"
+                  if ($smoke -ne 0) { exit 1 }
+
+            - name: Windows Firewall helper
+              if: runner.os == 'Windows'
+              continue-on-error: true
+              shell: pwsh
+              run: |
+                  node -e "require('./packaging/desktop/lib/firewall').allowWindowsFirewall(process.env.RUNNER_TEMP + '\\WiiJukeboxInstalled\\WiiJukebox.exe').then(() => console.log('rule added'), (e) => { console.error(e.message); process.exit(1); })"
+                  if ($LASTEXITCODE -ne 0) { exit 1 }
+                  Get-NetFirewallRule -DisplayName WiiJukebox | Format-List DisplayName, Direction, Action, Profile, Enabled
+
+            # macOS: the zips (each architecture), the disk images, and the signature the build left on the apps.
+            - name: Unpack the macOS builds
+              if: runner.os == 'macOS'
+              working-directory: packaging/dist/desktop
+              run: |
+                  for arch in arm64 x64; do
+                      mkdir -p "$RUNNER_TEMP/mac-$arch"
+                      ditto -x -k WiiJukebox-*-mac-$arch.zip "$RUNNER_TEMP/mac-$arch"
+                      echo "== $arch"
+                      codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/mac-$arch/WiiJukebox.app"
+                      codesign -dv "$RUNNER_TEMP/mac-$arch/WiiJukebox.app" 2>&1 | grep -E 'Identifier|Signature|Format' || true
+                      echo "Gatekeeper (an unsigned download is expected to be rejected):"
+                      spctl --assess --type execute --verbose "$RUNNER_TEMP/mac-$arch/WiiJukebox.app" 2>&1 || true
+                      file "$RUNNER_TEMP/mac-$arch/WiiJukebox.app/Contents/Resources/bin/ffmpeg"
+                  done
+                  for dmg in WiiJukebox-*-mac-*.dmg; do
+                      hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/dmg" "$dmg"
+                      ls "$RUNNER_TEMP/dmg"
+                      codesign --verify --deep --strict "$RUNNER_TEMP/dmg/WiiJukebox.app" && echo "$dmg: app inside verifies"
+                      hdiutil detach "$RUNNER_TEMP/dmg"
+                  done
+
+            - name: Smoke test the Apple silicon app
+              if: runner.os == 'macOS'
+              working-directory: packaging/desktop
+              run: |
+                  node scripts/smoke.js "$RUNNER_TEMP/mac-arm64/WiiJukebox.app" --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-macos-arm64.log
+                  exit "${PIPESTATUS[0]}"
+
+            - name: Smoke test the Intel app under Rosetta
+              if: runner.os == 'macOS'
+              working-directory: packaging/desktop
+              run: |
+                  if ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+                      sudo softwareupdate --install-rosetta --agree-to-license || true
+                  fi
+                  if ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+                      echo "::warning::Rosetta is not available on this runner, so the Intel app was built but not run"
+                      exit 0
+                  fi
+                  node scripts/smoke.js "$RUNNER_TEMP/mac-x64/WiiJukebox.app" --arch x86_64 --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-macos-x64.log
+                  exit "${PIPESTATUS[0]}"
+
+            - name: Upload the installers
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: WiiJukebox-${{ matrix.name }}
+                  path: |
+                      packaging/dist/desktop/*.AppImage
+                      packaging/dist/desktop/*.zip
+                      packaging/dist/desktop/*.exe
+                      packaging/dist/desktop/*.dmg
+                  if-no-files-found: warn
+                  retention-days: 14
+
+            - name: Upload the smoke test logs
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: smoke-logs-${{ matrix.name }}
+                  path: |
+                      packaging/dist/*.log
+                      packaging/dist/*.png
+                  if-no-files-found: ignore
+                  retention-days: 14
