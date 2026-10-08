@@ -19,4 +19,5 @@ int net_recv(int, void *, int, int);
 int net_sendto(int, const void *, int, int, const struct sockaddr *, socklen_t);
 int net_recvfrom(int, void *, int, int, struct sockaddr *, socklen_t *);
 int net_close(int);
+unsigned net_gethostip(void);
 #endif

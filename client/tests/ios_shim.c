@@ -55,3 +55,5 @@ int net_recvfrom(int fd, void *buffer, int size, int flags, struct sockaddr *add
     return result(recvfrom(fd, buffer, size, flags, address, length));
 }
 int net_close(int fd) { return result(close(fd)); }
+/* No IOS interface here, so discovery skips its subnet-broadcast fallback. */
+unsigned net_gethostip(void) { return 0; }

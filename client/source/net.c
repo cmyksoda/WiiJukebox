@@ -310,11 +310,21 @@ int wj_discover(struct wj_server *servers, int capacity, const char *target, int
     struct sockaddr_in local;
     memset(&local, 0, sizeof(local));
     local.sin_family = AF_INET;
-    int result = net_bind(fd, (struct sockaddr *)&local, ADDRESS_SIZE);
-    if (result < 0) { wj_close(fd); return result; }
+    // Some Wii networks refuse the bind or SO_BROADCAST (-22); sendto binds by itself,
+    // and the subnet's own broadcast address below is tried before giving up.
+    net_bind(fd, (struct sockaddr *)&local, ADDRESS_SIZE);
     int yes = 1;
-    result = net_setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
-    if (result < 0) { wj_close(fd); return result; }
+    net_setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
+    struct sockaddr_in subnet;
+    memset(&subnet, 0, sizeof(subnet));
+#ifdef GEKKO
+    unsigned host = net_gethostip();
+    if (host && addr.sin_addr.s_addr == INADDR_BROADCAST) {
+        subnet = addr;
+        subnet.sin_addr.s_addr = (host & 0xffffff00u) | 0xffu;
+    }
+#endif
+    int result;
     char nonce[17], query[80];
     snprintf(nonce, sizeof(nonce), "%016llx", (unsigned long long)wj_milliseconds());
     int size = snprintf(query, sizeof(query), "WIIJUKEBOX_DISCOVER\t1\t%s\n", nonce);
@@ -324,6 +334,8 @@ int wj_discover(struct wj_server *servers, int capacity, const char *target, int
     while (wj_milliseconds() < deadline) {
         if (wj_milliseconds() >= next_send) {
             result = net_sendto(fd, query, size, 0, (struct sockaddr *)&addr, ADDRESS_SIZE);
+            if (result < 0 && subnet.sin_family)
+                result = net_sendto(fd, query, size, 0, (struct sockaddr *)&subnet, ADDRESS_SIZE);
             if (result < 0) { wj_close(fd); return result; }
             next_send = wj_milliseconds() + 500;
         }
