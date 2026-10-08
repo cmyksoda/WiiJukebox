@@ -81,8 +81,13 @@ install archive). `tools/subset-font.py` made them at weight 500 from Fedora's
 files, unmodified packages of <https://github.com/notofonts>; `fonts/FONT.json`
 records source and output SHA-256, ranges and the fontTools version. The subsets
 keep the Noto names; the only Reserved Font Name is Adobe's "Source". Both are
-linked into the DOL; FreeType and its compression libraries come from devkitPro's
-portlibs.
+linked into the DOL.
+
+FreeType 2.14.1, libpng 1.6.55, zlib 1.3.1, bzip2 and brotli are linked from
+devkitPro's portlibs; the install archive carries their licenses from
+`$DEVKITPRO/portlibs/ppc/licenses`. FreeType is used under the FreeType License:
+Portions of this software are copyright © 2025 The FreeType Project
+(https://freetype.org). All rights reserved.
 
 ## Original project and asset credits
 
