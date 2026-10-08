@@ -11,7 +11,7 @@
     "start": "node src/main.js",
     "smoke": "node test/smoke-pipeline.js",
     "test:ytdlp": "node test/ytdlp-live.js",
-    "vendor": "mkdir -p public/vendor && cp node_modules/butterchurn/dist/butterchurn.min.js node_modules/butterchurn-presets/dist/base.min.js node_modules/butterchurn-presets/dist/extra.min.js node_modules/butterchurn-presets/dist/md1.min.js public/vendor/",
+    "vendor": "node tools/vendor.js",
     "postinstall": "npm run vendor",
     "test": "make -C client host-test && node --test test/*.test.js",
     "build:client": "make -C client",
