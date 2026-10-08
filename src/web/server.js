@@ -182,7 +182,7 @@ class WebServer {
             const id = rest[0];
             const action = rest[1];
 
-            if (action === 'favorites' && ['radio', 'ytdlp'].includes(id)) {
+            if (action === 'favorites' && ['radio', 'ytdlp', 'ytmusic'].includes(id)) {
                 const key = id === 'radio' ? 'stations' : 'links';
                 const cfg = this.config.sourceConfig(id);
                 if (req.method === 'GET') return this._json(res, 200, { items: cfg[key] || [] });

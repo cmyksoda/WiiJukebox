@@ -53,6 +53,8 @@ const DEFAULTS = {
         // not on PATH.
         spotify: { binary: '', deviceName: 'WiiJukebox', bitrate: 320, normalise: false, extraArgs: [] },
         airplay: { binary: '', deviceName: 'WiiJukebox', port: 0, password: '', extraArgs: [] },
+        // Same knobs as ytdlp; add --cookies-from-browser to extraArgs for Premium.
+        ytmusic: { binary: '', format: '', extraArgs: [], links: [] },
     },
 
     // Last source/item, restored at boot so the stream comes back by itself
