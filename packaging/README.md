@@ -69,7 +69,7 @@ WebKit packages.
   closed" in the menu changes it). Quit from the tray or application menu stops the
   server and its FFmpeg. If the app is killed without quitting, the server notices
   and stops by itself.
-- **Start at login** (menu item, offered on first run). The app then opens quietly in
+- **Start at login** (menu item, offered unticked on first run). The app then opens quietly in
   the tray, so the Wii can connect after a restart. Windows and macOS use their login
   items; Linux writes `~/.config/autostart/wiijukebox.desktop`.
 - **One copy.** Starting the app again brings the window forward. Starting it with
