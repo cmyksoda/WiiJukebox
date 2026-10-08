@@ -725,7 +725,7 @@ seekbar.addEventListener('input', () => {
 });
 seekbar.addEventListener('change', async () => {
     const seconds = (Number(seekbar.value) / 1000) * clock.duration;
-    await control('seek', { seconds: Math.round(seconds) });
+    await control('seek', { position: Math.round(seconds) });
     clock.dragging = false;
 });
 
