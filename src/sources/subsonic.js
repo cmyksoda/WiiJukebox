@@ -69,8 +69,8 @@ class SubsonicSource extends Source {
         return params;
     }
 
-    _url(endpoint, extra = {}) {
-        const base = String(this.config.url || '').replace(/\/+$/, '');
+    _url(endpoint, extra = {}, url = this.config.url) {
+        const base = String(url || '').replace(/\/+$/, '');
         if (!/^https?:\/\//i.test(base)) throw new Error('use an HTTP(S) Navidrome server URL');
         const params = this._authParams();
         for (const [k, v] of Object.entries(extra)) {
@@ -79,8 +79,14 @@ class SubsonicSource extends Source {
         return `${base}/rest/${endpoint}?${params}`;
     }
 
+    // Requests made by this server can use a faster address, such as Navidrome on the
+    // same machine; artwork links go to browsers, so they keep the public URL.
+    _serverUrl(endpoint, extra = {}) {
+        return this._url(endpoint, extra, this.config.serverUrl || this.config.url);
+    }
+
     async _call(endpoint, extra) {
-        const res = await fetch(this._url(endpoint, extra), {
+        const res = await fetch(this._serverUrl(endpoint, extra), {
             signal: AbortSignal.timeout(15000),
         });
         if (!res.ok) throw new Error(`${endpoint}: HTTP ${res.status}`);
@@ -327,7 +333,7 @@ class SubsonicSource extends Source {
         // quality for no benefit, since the pipeline re-encodes to MP3 anyway.
         return {
             type: 'uri',
-            uri: this._url('stream.view', {
+            uri: this._serverUrl('stream.view', {
                 id: track.id,
                 format: 'raw',
                 estimateContentLength: 'true',

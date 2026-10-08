@@ -49,7 +49,7 @@ const DEFAULTS = {
         // `country` is the two-letter Apple store used for search and the chart.
         podcasts: { subscriptions: [], country: 'us' },
         desktop: {},
-        subsonic: { url: '', username: '', password: '' },
+        subsonic: { url: '', serverUrl: '', username: '', password: '' },
         jellyfin: { url: '', username: '', password: '', token: null, userId: null, deviceId: null },
         plex: { url: '', token: '' },
         // Needs no setup when yt-dlp is on PATH. `binary` points at it

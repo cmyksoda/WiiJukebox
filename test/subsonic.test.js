@@ -64,3 +64,27 @@ test('Navidrome auth preserves password whitespace, pages libraries and queues c
         assert.equal(source.queue.items.length, 0);
     } finally { await source.disconnect(); server.close(); }
 });
+
+test('Navidrome requests use the server-side address while artwork keeps the public URL', async () => {
+    const password = 'fixture';
+    const server = http.createServer((req, res) => {
+        const q = new URL(req.url, 'http://fixture').searchParams;
+        const token = crypto.createHash('md5').update(password + q.get('s')).digest('hex');
+        const response = q.get('t') === token
+            ? { status: 'ok', version: '1.16.1', album: { song: [{ id: 's1', title: 'One', coverArt: 'c1', duration: 2 }] } }
+            : { status: 'failed', error: { code: 40, message: 'Wrong credentials' } };
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ 'subsonic-response': response }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const local = `http://127.0.0.1:${server.address().port}`;
+    // The public URL is unreachable here, so every request that works went to serverUrl.
+    const source = new SubsonicSource({ url: 'https://music.example.invalid', serverUrl: local, username: 'u', password });
+    try {
+        await source.connect();
+        const page = await source.browse({ path: 'album/a1', offset: 0, limit: 12 });
+        assert.ok(page.items[0].artwork.startsWith('https://music.example.invalid/rest/getCoverArt.view?'));
+        const handle = await source.open({ id: 's1', type: 'track' });
+        assert.ok(handle.uri.startsWith(`${local}/rest/stream.view?`));
+    } finally { await source.disconnect(); server.close(); }
+});
