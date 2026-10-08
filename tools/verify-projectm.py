@@ -15,4 +15,6 @@ assert on_disk == set(extra['files']), on_disk ^ set(extra['files'])
 for name, evidence in extra['files'].items():
     assert name.lower() not in embedded, name
     assert hashlib.sha256((root/'presets-extra'/name).read_bytes()).hexdigest() == evidence['sha256'], name
-print(f"Verified {len(extra['files'])} added presets from {extra['archive_name']} ({extra['archive_sha256']})")
+others = len(extra.get('additional_archives', {}))
+print(f"Verified {len(extra['files'])} added presets from {extra['archive_name']} ({extra['archive_sha256']})"
+      + (f" and {others} other projectM archives" if others else ""))

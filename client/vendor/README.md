@@ -25,13 +25,15 @@ domain. Preset names preserve the original creator credits.
 
 ## Added projectM 2.0.1 presets
 
-`projectm/presets-extra/` holds 111 more MilkDrop 1.x presets, byte-identical to
-`projectM-complete-2.0.1-Source.tar.gz` from
-<https://sourceforge.net/projects/projectm/files/2.0.1/>. The archive's SHA-256
-(`c7e474002d718a9ef440e5eb99a2f84792e9bf0ceab3715aaa438e94c9a45fff`) matches
-SourceForge's published checksum, and its preset folders also matched the local
-WiiRadio-era copy byte for byte. `projectm/EXTRA.json` records each file's path
-in the archive and its SHA-256; `tools/verify-projectm.py` checks both manifests.
+`projectm/presets-extra/` holds 132 more presets, byte-identical to the official
+projectM releases on <https://sourceforge.net/projects/projectm/files/>. Most come from
+`projectM-complete-2.0.1-Source.tar.gz` (SHA-256
+`c7e474002d718a9ef440e5eb99a2f84792e9bf0ceab3715aaa438e94c9a45fff`, matching SourceForge's
+published checksum and the local WiiRadio-era copy). The rest come from libprojectM 0.99
+and 1.0 and the 2.0.0 MilkDrop 2 preset pack, each archive also checked against
+SourceForge's SHA-256. MilkDrop 2-format files qualify only without shader code.
+`projectm/EXTRA.json` records each file's archive, path and SHA-256;
+`tools/verify-projectm.py` checks both manifests.
 
 They were chosen from the archive's MilkDrop 1.x folders after removing anything
 already embedded (by content or name), MilkDrop 2 shader presets, user textures

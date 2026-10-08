@@ -6,7 +6,7 @@
   "archive_md5": "9d32fa1357622c7a945a2e10620ee945",
   "archive_size": 31833234,
   "checksum_listing_url": "https://sourceforge.net/projects/projectm/files/2.0.1/",
-  "selection": "MilkDrop 1.x presets from presets_milkdrop, presets_milkdrop_104, presets_projectM and presets_yin; not already embedded by content or name; no MilkDrop 2 shader code, user textures or textured shapes; fully parsed by the 2.0.1 engine; 600 host frames without NaN/Inf; median frame cost and load heap within the embedded set's p90 and p95.",
+  "selection": "MilkDrop 1.x presets from presets_milkdrop, presets_milkdrop_104, presets_projectM and presets_yin; not already embedded by content or name; no MilkDrop 2 shader code, user textures or textured shapes; fully parsed by the 2.0.1 engine; 600 host frames without NaN/Inf; median frame cost and load heap within the embedded set's p90 and p95. A second round (2026-10-09) added presets from presets_milkdrop_200 and the older and newer projectM archives listed in additional_archives under the same rules, except that MilkDrop 2 version and blur settings are allowed when a preset has no shader code; each passed 3 host runs and soft cuts to and from 6 partners.",
   "files": {
     "Aderrasi - Airs.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Aderrasi - Airs.milk",
@@ -39,6 +39,10 @@
     "Bmelgren & Krash - Rainbow Orb Peacock (Unknowable Mix 5).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren & Krash - Rainbow Orb Peacock (Unknowable Mix 5).milk",
       "sha256": "7ad13e865ed75b11b691aa5eab321483d5aa450784e8b79fe6a5a19356be8a13"
+    },
+    "Bmelgren + Krash - Rainbow Orb Peacock (Centred Journey Mix 2).milk": {
+      "sha256": "7be42347e4e3b1d64975f3545a4279ee4f4f2174542707fae4e92c74d6cd9f63",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Bmelgren + Krash - Rainbow Orb Peacock (Centred Journey Mix 2).milk"
     },
     "Bmelgren - Acid Iris.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren - Acid Iris.milk",
@@ -104,6 +108,10 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Krash & Rovastar - Rainbow Orb.milk",
       "sha256": "84e3ee27766dcd854c552ba13851012d56be8455cdb26810807dd7604214ed49"
     },
+    "Krash + Rovastar - Rainbow Orb.milk": {
+      "sha256": "611ac9acab9bff99c6bc953fb71a798dd78eee9bfdfdde9a99fdf199c83c1b1a",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Krash + Rovastar - Rainbow Orb.milk"
+    },
     "Krash - Interwoven (Nightmare Weft Mix).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - Interwoven (Nightmare Weft Mix).milk",
       "sha256": "3320c5783ab6e0d11f5de41300de00890ae22449a01f5a47923f03aa474d376e"
@@ -115,6 +123,10 @@
     "Krash - Snowflake Halo.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - Snowflake Halo.milk",
       "sha256": "c06cbe46034e1c1411e41d73b856516d47353f00c63dd236c0b725c7584e397f"
+    },
+    "Krash - Swelling Spiral 2.milk": {
+      "sha256": "e8e5265b6fb64b35b29cc713f59f99654a0ceacd4876d5a0ef5b3df0f5df36ec",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Krash - Swelling Spiral 2.milk"
     },
     "Krash - Vinyl Disk.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Krash - Vinyl Disk.milk",
@@ -215,6 +227,36 @@
     "Rovastar & Krash - Rainbow Deflection.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar & Krash - Rainbow Deflection.milk",
       "sha256": "07e2684fb31a39e15a8f1f24216f1e9b5113b00a8a766cccbe1dae740bb6a03e"
+    },
+    "Rovastar + Fvese - Paranormal Static.milk": {
+      "sha256": "ca56f257362930bb514af9fd9a21b71e46a8f8f83356b9e22b126849d7a38abd",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Rovastar + Fvese - Paranormal Static.milk"
+    },
+    "Rovastar + Geiss - Bipolar 2 (Vectrip Mix).milk": {
+      "sha256": "115cfbe2e7e9bf6a621701adfde1e4f731251b38baff48ea72eb5da5eedbedd5",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Rovastar + Geiss - Bipolar 2 (Vectrip Mix).milk"
+    },
+    "Rovastar + Idiot24-7 - Balk Acid.milk": {
+      "sha256": "b2dea8f4851e5c1b76eec2fd7ab2b83cf586838a1a6567f83fb6f82dfd42cd34",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Rovastar + Idiot24-7 - Balk Acid.milk"
+    },
+    "Rovastar + Krash - Rainbow Deflection.milk": {
+      "sha256": "7880695fbfb37defcbed66f3b8a7e06eb2ad2247db3cb572620ed0995ce25a15",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Rovastar + Krash - Rainbow Deflection.milk"
+    },
+    "Rovastar + Rocke - Sugar Spun Sister.milk": {
+      "sha256": "eccb80ab279dc1fe279cf03fe53c6a94e1bd566a041bc640c9eff1c056aaf3ea",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/Rovastar + Rocke - Sugar Spun Sister.milk"
+    },
+    "Rovastar + Zylot - Narell's Fever.milk": {
+      "sha256": "c44cf220ba4b2720071daae5af3807c9f3dbe25a87e21a9b6a37b7ecefa931fb",
+      "archive": "presets-milkdrop_200-2.0.0-Source.tar.gz",
+      "upstream_path": "presets_milkdrop_200-2.0.0-Source/Rovastar + Zylot - Narell's Fever.milk"
+    },
+    "Rovastar + Zylot - Urza's Revenge.milk": {
+      "sha256": "1d8c5ce1ce2433a5a18fcc62a0585dde0adbb07826543fc67a8c4fbf0968ece8",
+      "archive": "presets-milkdrop_200-2.0.0-Source.tar.gz",
+      "upstream_path": "presets_milkdrop_200-2.0.0-Source/Rovastar + Zylot - Urza's Revenge.milk"
     },
     "Rovastar - A Million Miles From Earth (Drift Mix).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - A Million Miles From Earth (Drift Mix).milk",
@@ -332,6 +374,10 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/TEcHNO & SandStorm - Psychodelic Highway.milk",
       "sha256": "d377c081671cd5d0375c9a190ec373115708ded2143476e0e70e3758b1f13235"
     },
+    "TEcHNO + SandStorm - Psychodelic Highway.milk": {
+      "sha256": "511ca96958ca782fe8e12fad15f20a40a89c92b2ab910b05308f20a514d8de00",
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_200/TEcHNO + SandStorm - Psychodelic Highway.milk"
+    },
     "Telek - Directive Swagger (Spectral Inferno) (fix...) maybe.. YES.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Telek - Directive Swagger (Spectral Inferno) (fix...) maybe.. YES.milk",
       "sha256": "7b8f4a7fe22dd5acd3f224ae15fdcac6524440b52d88e34675ab0ca3d9fc218f"
@@ -343,6 +389,56 @@
     "Unchained - Proper Identification (Breaks Remix).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Unchained - Proper Identification (Breaks Remix).milk",
       "sha256": "4dd519023d6ff005cb1a8bb057edcb5e610aad11db68c7a2a7dd8be2734fcda9"
+    },
+    "Zylot & Aderrasi - Oceanic Bassograph (New Jersey Shore Mix).milk": {
+      "sha256": "856a67f3e7cf86c9f609eea2fa8f5d4b461c316185fc34035f4985752050feaa",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot & Aderrasi - Oceanic Bassograph (New Jersey Shore Mix).milk"
+    },
+    "Zylot & Boz - Spirit Energy (Angry Soul's reMix).milk": {
+      "sha256": "4640ad1be421733e7cd713de6172fd64b97f7ae6a8200155e387900d1aee25d0",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot & Boz - Spirit Energy (Angry Soul's reMix).milk"
+    },
+    "Zylot & Rovastar - Iouo Stone Morphic Fusion.milk": {
+      "sha256": "334dc0c433b924db22035aa69648da7145a0ab11e3e94b7e13ffcd1081d092a1",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot & Rovastar - Iouo Stone Morphic Fusion.milk"
+    },
+    "Zylot - Burning Passion.milk": {
+      "sha256": "44971d27d0faee8bd677e8511c206616a3b8597cb4fbc67c35949000eb38e95c",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot - Burning Passion.milk"
+    },
+    "Zylot - Magma Crawl.milk": {
+      "sha256": "da8ab652d5f5a09e6ee55af9ad433952535a68df65f32c5258104c132d93ad65",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot - Magma Crawl.milk"
+    },
+    "Zylot - Present For Saddam.milk": {
+      "sha256": "dbc4bfa64422353dabae3413fd04fc718ae6200335209703e6db389561f5ffe5",
+      "archive": "libprojectM-0.99.tar.bz2",
+      "upstream_path": "libprojectM/src/share/presets/Zylot - Present For Saddam.milk"
+    },
+    "Zylot - Riding The Sound Waves.milk": {
+      "sha256": "20e7c978c80f1ad7e0130f45a96e21d5c1750a19ce4997c015f1f293f625efc2",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot - Riding The Sound Waves.milk"
+    },
+    "Zylot - S. Pulse Virus.milk": {
+      "sha256": "862a773c4f7898b572702e11b4edd42efd1d154ff7c309bf5e5d201cd4e941dc",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot - S. Pulse Virus.milk"
+    },
+    "Zylot - Tunnel Of Illusion.milk": {
+      "sha256": "1e421f4f65ed08412dc63ec6523843bd07d371b9aee7cf95403efcd85724bfb5",
+      "archive": "libprojectM-1.0.tar.bz2",
+      "upstream_path": "libprojectM-1.0/presets/Zylot - Tunnel Of Illusion.milk"
+    },
+    "Zylot - Visionarie.milk": {
+      "sha256": "5d3fb359c7d1213df483725083555c0e5cab3040fbcc9c0f9fad8c41b46ab1db",
+      "archive": "libprojectM-0.99.tar.bz2",
+      "upstream_path": "libprojectM/src/share/presets/Zylot - Visionarie.milk"
     },
     "idiot - Dwarf of Annon (before the star).milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Dwarf of Annon (before the star).milk",
@@ -451,6 +547,20 @@
     "yin - Beat Detective 007 demo.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - Beat Detective 007 demo.milk",
       "sha256": "16951620cd4dbf5540e4e383dac7923a5c9712df47bb8c6f200933b9826a7085"
+    }
+  },
+  "additional_archives": {
+    "libprojectM-0.99.tar.bz2": {
+      "url": "https://sourceforge.net/projects/projectm/files/libprojectM/libprojectM-0.99/libprojectM-0.99.tar.bz2",
+      "sha256": "cd359df2bb89e89a9c4cc4a1f5bf44ac3ec4776fb9834a5aa2e3ca297a7dcc06"
+    },
+    "libprojectM-1.0.tar.bz2": {
+      "url": "https://sourceforge.net/projects/projectm/files/libprojectM/libprojectM-1.0/libprojectM-1.0.tar.bz2",
+      "sha256": "244851a55c822134a0bbb20eaf45a930dbbe0049de8c4905c100e7f12486c865"
+    },
+    "presets-milkdrop_200-2.0.0-Source.tar.gz": {
+      "url": "https://sourceforge.net/projects/projectm/files/presets-samples/presets-milkdrop_200-2.0.0-Source.tar.gz",
+      "sha256": "d1afaf55fc4ae9349f5a67bf2d7e3c18eec5431f233abd97dca98c5fb75f9034"
     }
   }
 }
