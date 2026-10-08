@@ -21,6 +21,9 @@ const MIME = {
     '.gif': 'image/gif',
 };
 
+// Never sent back to the browser; the settings form only learns whether each is set.
+const SECRET_KEYS = new Set(['password', 'token', 'salt', 'accessToken', 'refreshToken', 'clientSecret']);
+
 class WebServer {
     /**
      * @param {object} deps
@@ -214,6 +217,20 @@ class WebServer {
                 return this._json(res, 200, { ok: true });
             }
 
+            // Current settings for the edit form; secrets are reported as set/unset only.
+            if (req.method === 'GET' && action === 'settings') {
+                const values = {};
+                const secrets = {};
+                for (const [key, value] of Object.entries(this.config.sourceConfig(id))) {
+                    if (SECRET_KEYS.has(key)) secrets[key] = Boolean(value);
+                    else if (['string', 'number', 'boolean'].includes(typeof value) || Array.isArray(value)) {
+                        // Saved stations and links have their own endpoints.
+                        if (!['stations', 'links'].includes(key)) values[key] = value;
+                    }
+                }
+                return this._json(res, 200, { values, secrets });
+            }
+
             // Source-specific panels: current state (GET) and one-off steps such as
             // signing in (POST), implemented by sources that define info()/action().
             if (req.method === 'GET' && action === 'info') {
@@ -274,7 +291,9 @@ class WebServer {
         }
 
         if (section === 'control' && req.method === 'POST') {
-            const result = await control(this.pipeline, this.config, rest[0]);
+            // Actions such as seek carry their argument in the body.
+            const body = await this._readBody(req).catch(() => ({}));
+            const result = await control(this.pipeline, this.config, rest[0], body);
             return this._json(res, result.code || 200, result);
         }
 
