@@ -39,7 +39,7 @@ final class ServerStore {
         prefs.edit().remove("last").apply();
     }
 
-    /** Extra discovery ports, for servers that moved off 4001 (comma separated). */
+    /** Extra discovery ports, for servers that moved off 4005 (comma separated). */
     List<Integer> discoveryPorts() {
         List<Integer> ports = new ArrayList<>();
         ports.add(Discovery.DEFAULT_PORT);

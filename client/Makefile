@@ -9,7 +9,15 @@ CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
 PORTLIBS_PPC := $(DEVKITPRO)/portlibs/ppc
 CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -I$(PORTLIBS_PPC)/include/freetype2 -Ibuild -MMD -MP
-DISCOVERY_PORT ?= 4001
+# Like the Wii's MX23L4005 Macronix chip,
+# this server also never sleeps <3
+DISCOVERY_PORT ?= 4005
+# 1 builds the preset tour: presets in order with a counter, for checking them all on hardware.
+# PRESET_DIR embeds only that folder; the label and file name suit a pass that marks keepers.
+PRESET_TOUR ?= 0
+PRESET_DIR ?=
+PRESET_TOUR_LABEL ?= flagged
+PRESET_TOUR_FILE ?= flagged-presets.txt
 LIBS := -L$(PORTLIBS_PPC)/lib -lfreetype -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
 FONT_LATIN := vendor/fonts/Nunito-SemiBold-WiiJukebox.ttf
 FONT_GREEK := vendor/fonts/NotoSans-Greek-WiiJukebox.ttf
@@ -25,6 +33,11 @@ build/discovery_port.h: FORCE | build
 	@printf '#define WJ_DISCOVERY_PORT %s\n' '$(DISCOVERY_PORT)' > $@.tmp
 	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
 build/session.o: build/discovery_port.h
+build/tour.h: FORCE | build
+	@printf '#define WJ_PRESET_TOUR %s\n#define WJ_PRESET_TOUR_LABEL "%s"\n#define WJ_PRESET_TOUR_FILE "sd:/apps/wiijukebox/%s"\n' \
+		'$(PRESET_TOUR)' '$(PRESET_TOUR_LABEL)' '$(PRESET_TOUR_FILE)' > $@.tmp
+	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
+build/main.o: build/tour.h
 build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 build/logo_data.o: source/logo_data.S $(LOGO_MARK) | build

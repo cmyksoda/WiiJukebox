@@ -11,6 +11,10 @@ int wj_visualizer_render(void);
 void wj_visualizer_leave(void);
 void wj_visualizer_shutdown(void);
 const char *wj_visualizer_error(void);
+/* Preset tour builds only: move through the presets in order, and note the
+   current one in sd:/apps/wiijukebox/flagged-presets.txt. */
+void wj_visualizer_step(int delta);
+void wj_visualizer_flag(void);
 #ifdef __cplusplus
 }
 #endif

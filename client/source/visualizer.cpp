@@ -2,12 +2,16 @@
 #include "visualizer.h"
 #include "pcm_snapshot.h"
 #include "presets.h"
+#include "tour.h"
 extern "C" {
 #include "gfx.h"
+#include "font.h"
 #include "net.h"
 }
 #include <projectM.hpp>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <exception>
 
 static projectM *engine;
@@ -16,9 +20,79 @@ static long long next_preset;
 
 extern "C" const char *wj_visualizer_error(void) { return error; }
 
+#if WJ_PRESET_TOUR
+static const char flag_file[] = WJ_PRESET_TOUR_FILE;
+static int tour_index;
+static unsigned char flagged[2048];
+static bool flags_loaded;
+
+// Earlier flags show again on a later tour of the same set, so a second pass can see and undo
+// them; lines from a different set (another count after the slash) are ignored.
+static void load_flags(void) {
+    flags_loaded = true;
+    FILE *file = std::fopen(flag_file, "r");
+    if (!file) return;
+    char line[512];
+    while (std::fgets(line, sizeof(line), file)) {
+        char *slash = std::strchr(line, '/'), *name = std::strchr(line, '\t');
+        if (!slash || !name || std::strtoul(slash + 1, NULL, 10) != wj_preset_count) continue;
+        name++;
+        name[std::strcspn(name, "\r\n")] = 0;
+        int index = wj_preset_index(name);
+        if (index >= 0 && index < (int)sizeof(flagged)) flagged[index] = 1;
+    }
+    std::fclose(file);
+}
+
+static void save_flags(void) {
+    FILE *file = std::fopen(flag_file, "w");
+    if (!file) return;
+    for (unsigned i = 0; i < wj_preset_count && i < sizeof(flagged); i++)
+        if (flagged[i]) std::fprintf(file, "%u/%u\t%s\n", i + 1, wj_preset_count, wj_presets[i].name);
+    std::fclose(file);
+}
+
+static void tour_show(void) {
+    if (!flags_loaded) load_flags();
+    engine->selectPreset((unsigned)tour_index, true);
+}
+
+extern "C" void wj_visualizer_step(int delta) {
+    if (!engine) return;
+    int count = (int)wj_preset_count;
+    tour_index = ((tour_index + delta) % count + count) % count;
+    tour_show();
+}
+
+extern "C" void wj_visualizer_flag(void) {
+    if (!engine || tour_index >= (int)sizeof(flagged)) return;
+    flagged[tour_index] ^= 1;
+    save_flags();
+}
+
+static void tour_overlay(void) {
+    char text[200];
+    const char *name = wj_presets[tour_index].name;
+    int length = (int)std::strlen(name) - 5;
+    int bytes = std::snprintf(text, sizeof(text), "%d/%u  %.*s%s", tour_index + 1, wj_preset_count, length, name,
+                              tour_index < (int)sizeof(flagged) && flagged[tour_index] ? "  \xc2\xb7  " WJ_PRESET_TOUR_LABEL : "");
+    const int size = 16;
+    float limit = wj_gfx_width() - 48;
+    while (bytes > 0 && wj_font_measure(text, bytes, size, 1) > limit) bytes--;
+    float w = wj_font_measure(text, bytes, size, 1) + 28, x = (wj_gfx_width() - w) / 2, y = WJ_GFX_HEIGHT - 52;
+    wj_gfx_begin_overlay();
+    wj_gfx_round(x, y, w, 30, 15, WJ_RGBA(0, 0, 0, 0xb0), WJ_RGBA(0, 0, 0, 0xb0));
+    wj_gfx_text(text, bytes, x + 14, y + 21, size, 1, WJ_RGBA(0xff, 0xff, 0xff, 0xff));
+}
+#endif
+
 /* Every entry cuts straight to a random preset, then the rotation continues. */
 static void start_rotation(void) {
+#if WJ_PRESET_TOUR
+    tour_show();
+#else
     engine->selectRandom(true);
+#endif
     next_preset = wj_milliseconds() + 25000;
     wj_pcm_enable(1);
 }
@@ -44,8 +118,10 @@ extern "C" int wj_visualizer_enter(void) {
         settings.easterEgg = 0;
         settings.softCutRatingsEnabled = false;
         settings.presetDIR = "builtin:";
-        // The engine boots on WiiRadio's first preset; it is replaced before anything is shown.
-        settings.presetURL = "Aderrasi - Agitator.milk";
+        // The engine boots on WiiRadio's first preset, or any embedded one in a custom tour set;
+        // it is replaced before anything is shown.
+        const char *boot = "Aderrasi - Agitator.milk";
+        settings.presetURL = wj_preset_index(boot) >= 0 ? boot : wj_presets[0].name;
         engine = new projectM(settings, projectM::FLAG_DISABLE_PLAYLIST_LOAD);
         RatingList ratings(2, 3);
         for (unsigned i = 0; i < wj_preset_count; i++) {
@@ -65,14 +141,22 @@ extern "C" int wj_visualizer_enter(void) {
 extern "C" int wj_visualizer_render(void) {
     if (!engine) return -1;
     try {
+#if WJ_PRESET_TOUR
+        // The overlay leaves UI state behind, so projectM gets its own back each frame.
+        wj_gfx_prepare_visualizer();
+#else
         if (wj_milliseconds() >= next_preset) {
             engine->selectRandom(false);
             next_preset = wj_milliseconds() + 25000;
         }
+#endif
         short samples[1024];
         wj_pcm_snapshot(samples);
         engine->pcm()->addPCM16Data(samples, 512);
         engine->renderFrame();
+#if WJ_PRESET_TOUR
+        tour_overlay();
+#endif
         GX_SetCopyClear((GXColor){0, 0, 0, 255}, 0x00ffffff);
         GX_SetAlphaUpdate(GX_TRUE);
         GX_SetColorUpdate(GX_TRUE);

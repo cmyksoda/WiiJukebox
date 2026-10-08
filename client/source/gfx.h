@@ -16,6 +16,9 @@ float wj_gfx_scale_x(void);
 float wj_gfx_scale_y(void);
 /* Reapplies all UI GX state, so it is safe after projectM has drawn. */
 void wj_gfx_begin(void);
+/* UI drawing state over a finished visualizer frame; keeps its EFB pixel format,
+   since switching formats would scramble the frame underneath. */
+void wj_gfx_begin_overlay(void);
 /* Copies the EFB to the hidden framebuffer and shows it at the next retrace. */
 void wj_gfx_present(void);
 u32 wj_gfx_fade(u32 color, float alpha);

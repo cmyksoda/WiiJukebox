@@ -12,9 +12,10 @@ initial exploratory copy from the locally modified WiiRadio workspace.
 
 `projectm/UPSTREAM.json` records the original path and SHA-256 of every imported
 file. `python3 tools/verify-projectm.py` checks that the vendored source and 565
-Milkdrop presets remain byte-identical. The build skips the 13 listed in
-`projectm/excluded-presets.txt`, which produce NaN or Inf on a host run of the
-engine; the files themselves stay vendored unchanged. The engine subset includes original
+Milkdrop presets remain byte-identical. The build skips the 111 listed in
+`projectm/excluded-presets.txt`: 13 that produce NaN or Inf on a host run of the
+engine, and 98 left out after a preset tour on a real Wii (duplicates, low quality,
+broken or too laggy). The files themselves stay vendored unchanged. The engine subset includes original
 headers/source in libprojectM, Renderer, MilkdropPresetFactory and omptl, plus
 stb_image_aug and the original LGPL license. No local WiiRadio patches or
 precompiled libraries are used.
@@ -25,7 +26,7 @@ domain. Preset names preserve the original creator credits.
 
 ## Added projectM 2.0.1 presets
 
-`projectm/presets-extra/` holds 132 more presets, byte-identical to the official
+`projectm/presets-extra/` holds 93 more presets, byte-identical to the official
 projectM releases on <https://sourceforge.net/projects/projectm/files/>. Most come from
 `projectM-complete-2.0.1-Source.tar.gz` (SHA-256
 `c7e474002d718a9ef440e5eb99a2f84792e9bf0ceab3715aaa438e94c9a45fff`, matching SourceForge's
@@ -41,14 +42,16 @@ and textured shapes. Every candidate was then loaded alone in the host engine
 for 600 frames: presets whose equations the 2.0.1 parser dropped, that produced
 NaN or infinity, or whose median frame cost or load heap exceeded the embedded
 set's 90th/95th percentile were rejected. Host timings are x86 measurements
-used only for comparison with the existing set, not Broadway performance.
+used only for comparison with the existing set, not Broadway performance. A preset
+tour on a real Wii then removed the duplicates, low-quality, broken and too-laggy
+presets from both sets.
 
 WiiJukebox-specific integration:
 
 - `client/source/visualizer.cpp`: GX/VI setup, toggle/back lifecycle, PCM feed,
-  and random 25-second changes with 5-second blends. Like WiiRadio, it starts on
-  "Aderrasi - Agitator.milk", now on every entry. This replaces the WiiRadio
-  application/SDL wrapper, not the renderer.
+  and random 25-second changes with 5-second blends. Like WiiRadio, the engine
+  boots on "Aderrasi - Agitator.milk"; every entry then opens on a random preset.
+  This replaces the WiiRadio application/SDL wrapper, not the renderer.
 - `tools/embed-presets.py`: embeds the original and added preset files for wiiload.
 - `tools/projectm-embedded-loader.py`: adds an in-memory alternative to
   `MilkdropPreset::loadPresetFile` in a generated build copy. The pristine

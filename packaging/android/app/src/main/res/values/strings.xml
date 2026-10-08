@@ -8,11 +8,11 @@
     <string name="scan_again">Scan again</string>
     <string name="enter_address">Enter address</string>
     <string name="address_title">Server address</string>
-    <string name="address_hint">192.168.0.3:4000</string>
+    <string name="address_hint">192.168.0.3:4005</string>
     <string name="connect">Connect</string>
     <string name="cancel">Cancel</string>
     <string name="unreachable">Could not reach %1$s.</string>
     <string name="switch_server">Choose another server</string>
     <string name="retry">Try again</string>
-    <string name="invalid_address">Enter an address such as 192.168.0.3:4000.</string>
+    <string name="invalid_address">Enter an address such as 192.168.0.3:4005.</string>
 </resources>

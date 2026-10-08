@@ -5,5 +5,5 @@
   <version>0.1.0 prototype</version>
   <release_date>20261008</release_date>
   <short_description>Music from your WiiJukebox server</short_description>
-  <long_description>Native LAN client prototype. Discovers WiiJukebox servers, browses configured music sources with the D-pad or pointer, shows album art and seeks within tracks, and plays their persistent MP3 stream. Press 2 for the projectM visualizer; B returns to browsing. Set up services in the server web UI first. Same LAN required; allow UDP 4001 and the server HTTP port. GPLv3; fonts OFL. The graphical interface is new and experimental.</long_description>
+  <long_description>Native LAN client prototype. Discovers WiiJukebox servers, browses configured music sources with the D-pad or pointer, shows album art and seeks within tracks, and plays their persistent MP3 stream. Press 2 for the projectM visualizer; B returns to browsing. Set up services in the server web UI first. Same LAN required; allow TCP and UDP port 4005. GPLv3; fonts OFL. The graphical interface is new and experimental.</long_description>
 </app>

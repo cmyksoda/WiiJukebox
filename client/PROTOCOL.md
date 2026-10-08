@@ -7,7 +7,7 @@ bounded parser. This is an initial protocol and not a public compatibility promi
 ## Discovery
 
 Client sends `WIIJUKEBOX_DISCOVER\t1\t<16 lowercase hex nonce>\n` to IPv4 UDP
-broadcast port 4001. Server unicasts back to the sender's port:
+broadcast port 4005. Server unicasts back to the sender's port:
 
 ```text
 WIIJUKEBOX<TAB>1<TAB>nonce<TAB>server UUID<TAB>HTTP port<TAB>encoded name<TAB>encoded mount<LF>

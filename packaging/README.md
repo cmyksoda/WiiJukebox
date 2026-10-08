@@ -22,9 +22,9 @@ these in Actions; see [Continuous integration](#continuous-integration).
 A native shell around the controller web page. It:
 
 - finds servers on the Wi-Fi network with the same UDP discovery the Wii client
-  uses (`src/client/discovery.js`), on port 4001 plus any extra ports you enter;
+  uses (`src/client/discovery.js`), on port 4005 plus any extra ports you enter;
 - remembers the chosen server by its ID, so a changed IP address is found again;
-- lets you type an address (`192.168.0.3:4000`) when discovery is blocked;
+- lets you type an address (`192.168.0.3:4005`) when discovery is blocked;
 - shows the controller page in a WebView that follows the system light/dark
   setting, and sends its Back button to the page first (close a sheet, go up a
   folder) before leaving the app.
