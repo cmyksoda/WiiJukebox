@@ -1117,7 +1117,10 @@ function setNowPlayingOpen(open) {
 $('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
 $('#sources-close').onclick = () => setSourcesOpen(false);
 $('#sidebar-shade').onclick = () => setSourcesOpen(false);
-$('#mini-open').onclick = () => setNowPlayingOpen(true);
+$('#mini-open').onclick = async () => {
+    if (document.body.classList.contains('viz')) await toggleVisualizer();
+    setNowPlayingOpen(true);
+};
 $('#np-close').onclick = () => setNowPlayingOpen(false);
 PHONE.addEventListener('change', () => {
     setSourcesOpen(false);

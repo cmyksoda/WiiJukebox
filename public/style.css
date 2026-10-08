@@ -80,6 +80,8 @@ body {
 
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
+/* Phones flash a square over rounded controls; each control shows its own pressed state instead. */
+html { -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 :focus-visible { outline: none; box-shadow: var(--focus); }
 
@@ -314,8 +316,10 @@ body.viz #app { opacity: 0; pointer-events: none; }
     background: var(--tile);
     box-shadow: var(--highlight);
     text-align: left;
-    transition: border-color .12s ease, background .12s ease;
+    transition: border-color .12s ease, background .12s ease, transform .12s ease;
 }
+.channel:active, .card:active { transform: scale(.97); }
+.row:active { background: var(--tile); }
 .channel:hover, .channel:focus-visible { border-color: var(--accent); background: var(--tile-hover); }
 .channel .kind { padding-bottom: 4px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .channel .name { font-size: 18px; font-weight: 800; line-height: 1.15; }
