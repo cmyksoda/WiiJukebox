@@ -9,6 +9,7 @@ decrypts DRM (Widevine, FairPlay, PlayReady) or shares accounts.
 | Spotify | Spotify Connect receiver (librespot) | Premium, `librespot` binary | Start entry; the Spotify app controls playback | Built. Receiver starts and advertises over zeroconf; no real Spotify session was tested |
 | Apple Music | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac, `shairport-sync` binary | Start entry; the sender controls playback | Built. Receiver, metadata pipe and cover art parsed against the real program; no Apple sender was tested |
 | YouTube Music | music.youtube.com search plus yt-dlp | `yt-dlp` (and your browser cookies for Premium or your library) | Saved links, Liked Music with cookies | Built. Search, albums and playback were run live |
+| Podcasts | Apple's iTunes search and chart, then each show's own RSS feed | Nothing | Subscriptions, Top shows | Built. Search, the chart, a feed and one episode with seeking were run live |
 | Tidal | none | | | Not offered. See below |
 | Amazon Music | none | | | Not possible. See below |
 | Deezer | none | | | Not possible. See below |
@@ -94,6 +95,35 @@ yt-dlp, so everything the YouTube / SoundCloud source supports applies.
 - If the search endpoint changes, the source falls back to titles from yt-dlp's
   own search.
 
+## Podcasts
+
+Show search and the "Top shows" chart use Apple's keyless iTunes Search API and
+top-podcasts chart (the lookup API turns the chart's ids into feed addresses),
+so no account or key is needed. Episodes come straight from each show's RSS feed.
+
+- Subscribe and unsubscribe in the web UI. Subscriptions are saved in
+  `sources.podcasts.subscriptions` and shared with the Wii, which browses
+  Subscriptions, then a show, then its episodes (newest first, 12 per page).
+  Top shows is browsable on both.
+- Pasting a feed address into the search box finds that one show, for feeds Apple
+  does not list. `sources.podcasts.country` (default `us`) picks Apple's store
+  for search and the chart.
+- Feeds are fetched with a 15 second timeout and an 8 MiB cap (episodes read
+  before the cap are kept), follow redirects, identify as `WiiJukebox/0.1` and
+  are cached for ten minutes. An unreachable host falls back to the cached copy.
+- Only audio enclosures are used: `audio/*` types, or untyped links ending in
+  `.mp3`, `.m4a` and similar. Video-only items are skipped. Addresses with a
+  user name or password are refused; tokens in the query string work.
+- An episode plays on its own and the stream stops when it ends. Neighbors in a
+  newest-first list are the wrong "next" for serials and for news shows alike,
+  so there is no queue and no skip.
+- Seeking needs `itunes:duration` in the feed and a host that honors byte
+  ranges (most do). Episode artwork is used when the feed has it, else the
+  show's.
+- After a server restart the last episode starts again from the beginning, as
+  every source does.
+- The Wii shows the Podcasts channel with its generic note icon.
+
 ## Why not Tidal, Amazon Music and Deezer
 
 **Tidal.** Its public developer API gives metadata only. Streaming needs the
@@ -124,12 +154,13 @@ send the audio.
 |---|---|---|
 | [librespot](https://github.com/librespot-org/librespot) | Spawned as a separate program, not bundled | MIT |
 | [shairport-sync](https://github.com/mikebrady/shairport-sync) | Spawned as a separate program, not bundled | MIT and BSD-style (see its LICENSES folder) |
+| [iTunes Search API](https://performance-partners.apple.com/search-api) and Apple's top-podcasts chart | Show search, feed lookup and the chart; keyless web requests, no Apple code or artwork bundled | Apple's API terms |
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Search request format followed; no code copied | MIT |
 | [Nunito](https://github.com/googlefonts/nunito) (`public/fonts/`) | Web UI typeface, latin subset | SIL OFL 1.1 (`public/fonts/OFL.txt`) |
 | `public/images/*` | WiiRadio logo and tile, kept from the original project | See `client/vendor/README.md` |
 
 ## Testing without the real programs
 
-`test/spotify.test.js`, `test/airplay.test.js` and `test/ytmusic.test.js` use small fake programs and fixture HTTP servers, so
+`test/spotify.test.js`, `test/airplay.test.js`, `test/ytmusic.test.js` and `test/podcasts.test.js` use small fake programs and fixture HTTP servers, so
 `npm test` never contacts a streaming service. `test/helpers/fake-binary.js`
 writes the fakes.

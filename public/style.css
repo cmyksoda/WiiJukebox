@@ -336,7 +336,7 @@ body.viz #app { opacity: 0; pointer-events: none; }
     background: transparent;
     text-align: left;
 }
-.card .art, .row .art {
+.card .art, .row .art, .show-head .art {
     position: relative;
     display: block;
     overflow: hidden;
@@ -344,7 +344,7 @@ body.viz #app { opacity: 0; pointer-events: none; }
     border: 1px solid var(--edge-soft);
 }
 .card .art { aspect-ratio: 1; border-radius: var(--radius-sm); }
-.card .art img, .row .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card .art img, .row .art img, .show-head .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 26px; background: var(--tile); isolation: isolate; }
 .ph::before, #np-art-frame::before { content: ""; position: absolute; inset: 0; z-index: -1; background: url("images/tile.webp") center / 150px; opacity: .2; }
 .ph b { background: var(--tile); border-radius: 50%; width: 46px; height: 46px; display: grid; place-items: center; font-weight: 700; }
@@ -409,6 +409,27 @@ body.viz #app { opacity: 0; pointer-events: none; }
 .row .dur { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
 .row.unavailable { opacity: .5; }
 
+/* --- podcasts ------------------------------------------------------------------------- */
+
+.show-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 6px; }
+.show-row { display: flex; align-items: center; gap: 6px; padding-right: 10px; border: 1px solid var(--edge-soft); border-radius: var(--radius-sm); background: var(--surface); }
+.show-row .row { flex: 1; width: auto; min-width: 0; min-height: 64px; }
+.show-row .pill { flex: none; }
+.show-row .row .t { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.show-head { display: flex; gap: 14px; align-items: flex-start; padding: 2px 0 6px; }
+.show-head .art { width: 104px; height: 104px; flex: none; border-radius: var(--radius-sm); }
+.show-head .ph { font-size: 32px; }
+.show-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.show-info h3 { font-size: 19px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.show-info .by { margin: 0; font-size: 14px; color: var(--dim); }
+.show-info .about { margin: 0; font-size: 13px; line-height: 1.4; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.row.episode { align-items: flex-start; }
+.row.episode .t { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.row.episode .ep-play { margin-top: 3px; }
+.row.episode .dur { margin-top: 5px; }
+
 .group-title { margin: 24px 0 10px; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .group-title:first-child { margin-top: 4px; }
 
@@ -466,7 +487,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 .favorite-row { display: flex; align-items: center; gap: 6px; border: 1px solid var(--edge-soft); border-radius: var(--radius-sm); background: var(--surface); }
 .favorite-play { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 10px; border: 0; background: transparent; text-align: left; border-radius: var(--radius-sm); }
 .favorite-play:hover { background: var(--tile); }
-.favorite-symbol { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; }
+.favorite-symbol, .ep-play { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; }
 .favorite-details { display: flex; flex-direction: column; min-width: 0; }
 .favorite-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .favorite-host { font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

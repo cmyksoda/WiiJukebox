@@ -5,6 +5,7 @@
 // up the next thing from Navidrome while AirPlay is still feeding the stream.
 
 const { RadioSource } = require('./radio');
+const { PodcastsSource } = require('./podcasts');
 const { SubsonicSource } = require('./subsonic');
 const { JellyfinSource } = require('./jellyfin');
 const { YtdlpSource } = require('./ytdlp');
@@ -17,7 +18,7 @@ const { YtMusicSource } = require('./ytmusic');
 const { findExecutable } = require('./receiver');
 
 const REGISTRY = [
-    RadioSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
+    RadioSource, PodcastsSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
     SpotifySource, AirplaySource, YtMusicSource, DesktopSource,
 ];
 
@@ -47,6 +48,7 @@ class SourceRegistry {
         const cfg = this.config.sourceConfig(id);
         if (id === 'desktop') return process.platform === 'linux';
         if (id === 'radio') return true; // always usable; stations are optional
+        if (id === 'podcasts') return true; // subscriptions are optional too
         // Nothing to set up: either yt-dlp is installed or connect() explains
         // how to install it, which is a better message than an empty form.
         if (id === 'ytdlp') return true;
@@ -76,6 +78,11 @@ class SourceRegistry {
         // is not asked for a password on every restart.
         instance.on('credentials', (creds) => {
             this.config.updateSource(id, creds);
+        });
+
+        // Sources that edit their own saved settings (podcast subscriptions) report them here.
+        instance.on('config', (patch) => {
+            this.config.updateSource(id, patch);
         });
 
         this._instances.set(id, instance);

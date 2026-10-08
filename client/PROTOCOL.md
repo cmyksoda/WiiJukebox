@@ -66,8 +66,8 @@ This does not add bytes to the MP3 body or change ICY framing.
 Clients ignore status rows they do not know, so later rows can be added
 without a version change; the `art` row and `seek` control are such additions.
 `seek` appears in the controls list only for finite tracks whose source marked
-its stream seekable (Navidrome/Subsonic, Jellyfin, Plex and finite yt-dlp
-videos). The server restarts that track's decoder at the offset and keeps the
+its stream seekable (Navidrome/Subsonic, Jellyfin, Plex, podcast episodes and
+finite yt-dlp videos). The server restarts that track's decoder at the offset and keeps the
 pause state; radio, live and desktop sources cannot seek.
 
 The artwork key is an opaque hash of the heard track's artwork URL, which

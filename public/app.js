@@ -19,7 +19,7 @@ const state = {
 // What each channel is, for the label on its tile.
 const KINDS = {
     subsonic: 'Library', jellyfin: 'Library', plex: 'Library',
-    radio: 'Live', ytdlp: 'Streaming', ytmusic: 'Streaming',
+    radio: 'Live', podcasts: 'Shows', ytdlp: 'Streaming', ytmusic: 'Streaming',
     spotify: 'Receiver', airplay: 'Receiver', desktop: 'Capture',
 };
 const NO_SEARCH = new Set(['radio', 'desktop', 'spotify', 'airplay']);
@@ -92,11 +92,12 @@ function stopPanelTimer() {
     state.panelTimer = null;
 }
 
-function setToolbar({ title, back = false, search = false, settings = null, pages = false }) {
+function setToolbar({ title, back = false, search = false, settings = null, pages = false, placeholder = 'Search' }) {
     stopPanelTimer();
     $('#crumb').textContent = title;
     $('#back').hidden = !back;
     $('#search').hidden = !search;
+    $('#search').placeholder = placeholder;
     $('#search').value = '';
     $('#settings-btn').hidden = !settings;
     $('#settings-btn').onclick = settings;
@@ -190,6 +191,7 @@ async function openSource(src) {
     };
 
     if (src.id === 'radio') return renderRadio(src);
+    if (src.id === 'podcasts') return renderPodcasts();
 
     if (src.family === 'push') {
         const problem = await connect();
@@ -240,20 +242,24 @@ async function browse(path, label, offset = 0) {
         );
         if (state.activeSource !== id) return;
         const items = result.items.length > 100 ? result.items.slice(offset, offset + 100) : result.items;
-        $('#pagination').hidden = result.total <= 100 && offset === 0;
-        $('#library-prev').disabled = offset === 0;
-        $('#library-next').disabled = offset + items.length >= result.total || !items.length;
-        const page = Math.floor(offset / 100) + 1;
-        const pages = Math.max(page, Math.ceil(result.total / 100));
-        $('#library-page').textContent = `${page} / ${pages}`;
-        $('#library-page').setAttribute('aria-label', `Page ${page} of ${pages}`);
-        $('#library-prev').onclick = () => browse(path, label, Math.max(0, offset - 100));
-        $('#library-next').onclick = () => browse(path, label, offset + 100);
+        setPager(result.total, offset, items.length, (to) => browse(path, label, to));
         renderItems(items, path, label, offset);
     } catch (err) {
         content.replaceChildren();
         toast(err.message, true);
     }
+}
+
+function setPager(total, offset, count, goTo) {
+    $('#pagination').hidden = total <= 100 && offset === 0;
+    $('#library-prev').disabled = offset === 0;
+    $('#library-next').disabled = offset + count >= total || !count;
+    const page = Math.floor(offset / 100) + 1;
+    const pages = Math.max(page, Math.ceil(total / 100));
+    $('#library-page').textContent = `${page} / ${pages}`;
+    $('#library-page').setAttribute('aria-label', `Page ${page} of ${pages}`);
+    $('#library-prev').onclick = () => goTo(Math.max(0, offset - 100));
+    $('#library-next').onclick = () => goTo(offset + 100);
 }
 
 function artwork(item, extraClass = '') {
@@ -364,6 +370,164 @@ function renderRadio() {
         if (!url) return toast('Enter a stream URL', true);
         play({ url, title: $('#radio-name').value.trim() || url, type: 'station' });
     };
+}
+
+// --- podcasts ------------------------------------------------------------
+
+// Pills and the saved-shows list redraw from here, so subscribing in one place
+// updates every other place it is showing.
+const podcasts = { shows: [], feeds: new Set(), redraws: new Set(), view: 0, back: null };
+
+const podcastLive = (view) => view === podcasts.view && state.activeSource === 'podcasts';
+
+function startPodcastView() {
+    podcasts.redraws.clear();
+    $('#pagination').hidden = true;
+    $('#content').className = '';
+    return ++podcasts.view;
+}
+
+function rememberShows(shows) {
+    podcasts.shows = shows;
+    podcasts.feeds = new Set(shows.map((show) => show.feedUrl));
+}
+
+async function toggleSubscription(show) {
+    const subscribing = !podcasts.feeds.has(show.feedUrl);
+    try {
+        const { subscriptions } = await api(`/sources/podcasts/action/${subscribing ? 'subscribe' : 'unsubscribe'}`, {
+            method: 'POST',
+            body: { feedUrl: show.feedUrl, title: show.title, author: show.subtitle ?? show.author, artwork: show.artwork },
+        });
+        rememberShows(subscriptions);
+        toast(`${subscribing ? 'Subscribed to' : 'Unsubscribed from'} ${show.title}`);
+        for (const redraw of podcasts.redraws) redraw();
+    } catch (err) {
+        toast(err.message, true);
+    }
+}
+
+function subscribeButton(show) {
+    const button = h('button', { class: 'pill small' });
+    const paint = () => {
+        const subscribed = podcasts.feeds.has(show.feedUrl);
+        button.textContent = subscribed ? 'Unsubscribe' : 'Subscribe';
+        button.classList.toggle('primary', !subscribed);
+        button.setAttribute('aria-label', `${subscribed ? 'Unsubscribe from' : 'Subscribe to'} ${show.title}`);
+        button.disabled = false;
+    };
+    const redraw = () => (button.isConnected ? paint() : podcasts.redraws.delete(redraw));
+    button.onclick = () => {
+        button.disabled = true;
+        toggleSubscription(show).finally(paint);
+    };
+    podcasts.redraws.add(redraw);
+    paint();
+    return button;
+}
+
+function showRow(show) {
+    return h('div', { class: 'show-row' },
+        h('button', { class: 'row', onclick: () => {
+            state.stack.push({ render: podcasts.back });
+            podcastShow(show.feedUrl);
+        } }, artwork(show),
+        h('span', { class: 'meta' },
+            h('span', { class: 't', text: show.title }),
+            h('span', { class: 's', text: show.subtitle || '' }))),
+        subscribeButton(show));
+}
+
+function renderPodcasts(query = '') {
+    setToolbar({ title: 'Podcasts', search: true, placeholder: 'Search shows or feed URL' });
+    $('#search').value = query;
+    $('#content').dataset.view = 'podcasts';
+    return query ? podcastResults(query) : podcastHome();
+}
+
+async function podcastHome() {
+    const view = startPodcastView();
+    podcasts.back = () => renderPodcasts();
+    const mine = h('div', { class: 'show-list' });
+    const popular = h('div', { class: 'show-list' }, h('p', { class: 'empty', text: 'Loading…' }));
+    $('#content').replaceChildren(
+        h('h3', { class: 'group-title', text: 'Your shows' }), mine,
+        h('h3', { class: 'group-title', text: 'Popular right now' }), popular);
+
+    try {
+        rememberShows((await api('/sources/podcasts/browse?path=subscriptions&limit=500')).items);
+    } catch (err) {
+        toast(err.message, true);
+    }
+    if (!podcastLive(view)) return;
+    const drawMine = () => mine.replaceChildren(...(podcasts.shows.length
+        ? podcasts.shows.map(showRow)
+        : [h('p', { class: 'hint', text: 'No shows yet. Search above, or subscribe to one below.' })]));
+    podcasts.redraws.add(drawMine);
+    drawMine();
+
+    try {
+        const { items } = await api('/sources/podcasts/browse?path=top&limit=100');
+        if (podcastLive(view)) popular.replaceChildren(...items.map(showRow));
+    } catch (err) {
+        if (podcastLive(view)) popular.replaceChildren(h('p', { class: 'hint', text: `The chart is unavailable: ${err.message}` }));
+    }
+}
+
+async function podcastResults(query) {
+    const view = startPodcastView();
+    podcasts.back = () => renderPodcasts(query);
+    $('#content').replaceChildren(h('p', { class: 'empty', text: 'Searching…' }));
+    try {
+        if (!podcasts.shows.length) rememberShows((await api('/sources/podcasts/browse?path=subscriptions&limit=500')).items);
+        const { items } = await api(`/sources/podcasts/search?q=${encodeURIComponent(query)}`);
+        if (!podcastLive(view)) return;
+        $('#content').replaceChildren(h('h3', { class: 'group-title', text: `Results for “${query}”` }),
+            items.length ? h('div', { class: 'show-list' }, items.map(showRow))
+                : h('p', { class: 'empty', text: 'No shows found.' }));
+    } catch (err) {
+        if (!podcastLive(view)) return;
+        $('#content').replaceChildren(h('p', { class: 'empty', text: err.message }));
+    }
+}
+
+function episodeRow(episode) {
+    const when = episode.published
+        ? new Date(episode.published).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '';
+    return h('button', { class: 'row episode', onclick: () => play(episode) },
+        h('span', { class: 'ep-play', 'aria-hidden': 'true' }, h('i', { class: 'g g-right' })),
+        h('span', { class: 'meta' },
+            h('span', { class: 't', text: episode.title }),
+            h('span', { class: 's', text: when })),
+        h('span', { class: 'dur', text: fmtDuration(episode.duration) }));
+}
+
+async function podcastShow(feedUrl, offset = 0) {
+    const view = startPodcastView();
+    setToolbar({ title: 'Show', back: true, pages: true });
+    $('#content').replaceChildren(h('p', { class: 'empty', text: 'Loading…' }));
+    try {
+        const { items, total, show } = await api(
+            `/sources/podcasts/browse?path=${encodeURIComponent(`show/${feedUrl}`)}&offset=${offset}&limit=100`);
+        if (!podcastLive(view)) return;
+        $('#crumb').textContent = show.title;
+        setPager(total, offset, items.length, (to) => podcastShow(feedUrl, to));
+        $('#content').replaceChildren(
+            h('div', { class: 'show-head' }, artwork(show),
+                h('div', { class: 'show-info' },
+                    h('h3', { text: show.title }),
+                    show.author ? h('p', { class: 'by', text: show.author }) : null,
+                    show.description ? h('p', { class: 'about', text: show.description }) : null,
+                    subscribeButton({ ...show, subtitle: show.author }))),
+            h('h3', { class: 'group-title', text: `Episodes · ${total}` }),
+            items.length ? h('div', { class: 'list' }, items.map(episodeRow))
+                : h('p', { class: 'empty', text: 'No episodes in this feed.' }));
+        $('#main').scrollTop = 0;
+    } catch (err) {
+        if (!podcastLive(view)) return;
+        $('#content').replaceChildren(h('p', { class: 'empty', text: err.message }));
+    }
 }
 
 // --- yt-dlp and YouTube Music -----------------------------------------------
@@ -978,7 +1142,8 @@ document.addEventListener('keydown', (event) => {
 
 $('#back').onclick = () => {
     const prev = state.stack.pop();
-    if (prev) browse(prev.path, prev.label, prev.offset);
+    if (prev?.render) prev.render();
+    else if (prev) browse(prev.path, prev.label, prev.offset);
 };
 
 // The Android app asks this on its back button; true means the page used it.
@@ -1024,8 +1189,13 @@ $('#search').oninput = (e) => {
     clearTimeout(searchTimer);
     $('#pagination').hidden = true;
     const q = e.target.value.trim();
-    if (!q) return;
+    const podcast = state.activeSource === 'podcasts';
+    if (!q) {
+        if (podcast) podcastHome();
+        return;
+    }
     searchTimer = setTimeout(async () => {
+        if (podcast) return podcastResults(q);
         try {
             const { items } = await api(
                 `/sources/${state.activeSource}/search?q=${encodeURIComponent(q)}`,
