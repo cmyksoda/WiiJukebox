@@ -48,13 +48,17 @@ int main() {
     assert(!engine.timeKeeper->IsSmoothing());
     engine.selectRandom(false);
     engine.renderFrame();
-    // A later visualizer entry reselects Agitator, as the app does.
-    engine.selectPreset(first, true);
-    unsigned selected;
-    assert(engine.selectedPresetIndex(selected) && selected == (unsigned)first);
-    MilkdropPreset *active = dynamic_cast<MilkdropPreset *>(engine.m_activePreset.get());
-    assert(active && active->absoluteFilePath() == std::string("builtin:/") + agitator);
-    engine.renderFrame();
-    std::printf("Loaded/evaluated %u upstream presets, completed a blend and started on %s "
-                "(GX stubbed; no pixel verification)\n", wj_preset_count, agitator);
+    // Each visualizer entry hard-cuts to a random preset, as the app does.
+    unsigned picks[8];
+    bool varied = false;
+    for (unsigned i = 0; i < 8; i++) {
+        engine.selectRandom(true);
+        assert(engine.selectedPresetIndex(picks[i]) && picks[i] < wj_preset_count);
+        assert(!engine.timeKeeper->IsSmoothing());
+        engine.renderFrame();
+        varied = varied || picks[i] != picks[0];
+    }
+    assert(varied);
+    std::printf("Loaded/evaluated %u upstream presets, completed a blend, booted on %s and "
+                "opened on random presets (GX stubbed; no pixel verification)\n", wj_preset_count, agitator);
 }

@@ -13,14 +13,12 @@ extern "C" {
 static projectM *engine;
 static char error[160];
 static long long next_preset;
-static int first_preset = -1;
-static const char first_preset_name[] = "Aderrasi - Agitator.milk";
 
 extern "C" const char *wj_visualizer_error(void) { return error; }
 
-/* WiiRadio opens on Agitator; every entry starts there before the rotation. */
+/* Every entry cuts straight to a random preset, then the rotation continues. */
 static void start_rotation(void) {
-    if (first_preset >= 0) engine->selectPreset((unsigned)first_preset, true);
+    engine->selectRandom(true);
     next_preset = wj_milliseconds() + 25000;
     wj_pcm_enable(1);
 }
@@ -46,14 +44,14 @@ extern "C" int wj_visualizer_enter(void) {
         settings.easterEgg = 0;
         settings.softCutRatingsEnabled = false;
         settings.presetDIR = "builtin:";
-        settings.presetURL = first_preset_name;
+        // The engine boots on WiiRadio's first preset; it is replaced before anything is shown.
+        settings.presetURL = "Aderrasi - Agitator.milk";
         engine = new projectM(settings, projectM::FLAG_DISABLE_PLAYLIST_LOAD);
         RatingList ratings(2, 3);
         for (unsigned i = 0; i < wj_preset_count; i++) {
             engine->addPresetURL(std::string("builtin:/") + wj_presets[i].name, wj_presets[i].name, ratings);
         }
         engine->setPresetLock(true); // The app schedules exact 25-second changes.
-        first_preset = wj_preset_index(first_preset_name);
         start_rotation();
         return 0;
     } catch (const std::exception &e) {
