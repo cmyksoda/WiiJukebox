@@ -79,6 +79,7 @@ function writeState() {
         page: currentPage,
         setupDone: settings.get('setupDone'),
         openAtLogin: autostart.isEnabled(),
+        tray: Boolean(tray),
         serverUrl,
         ffmpeg: tools?.ffmpeg || null,
         ytdlp: tools?.ytdlp || null,

@@ -2,6 +2,7 @@
 // End-to-end check of a packaged app, run hidden. Ports: <port> web, <port>+1 discovery, <port>+10 debugging.
 // Usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login]
 // --login also ticks "start at login", which changes the system's login items; remove them afterwards.
+// --ytdlp also ticks the yt-dlp download, which needs the network.
 
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const dgram = require('node:dgram');
@@ -15,7 +16,7 @@ const args = process.argv.slice(2);
 const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const target = args.find((arg, index) => !arg.startsWith('--') && !args[index - 1]?.startsWith('--'));
 if (!target) {
-    console.error('usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login]');
+    console.error('usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login] [--ytdlp]');
     process.exit(2);
 }
 const PORT = Number(option('--port', 4680));
@@ -23,6 +24,7 @@ const DISCOVERY_PORT = PORT + 1;
 const DEBUG_PORT = PORT + 10;
 const ARCH = option('--arch', null);
 const LOGIN = args.includes('--login');
+const YTDLP = args.includes('--ytdlp');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let failures = 0;
@@ -220,6 +222,7 @@ async function checkReturningUser() {
         const state = await app.waitState('the server to start', (s) => s.serverUrl);
         check('app started and reported its server', true, `${state.platform}-${state.arch}, version ${state.version}, ${state.serverUrl}`);
         check('server runs on the test port, not 4000', state.serverUrl === `http://127.0.0.1:${PORT}/`);
+        check('the tray icon was created', state.tray === true);
 
         const ffmpeg = state.ffmpeg;
         const inside = ffmpeg && !path.relative(state.resources, ffmpeg.path).startsWith('..');
@@ -270,11 +273,16 @@ async function checkFirstRun() {
         client = await pageClient();
         const shown = await until('the welcome panel', () => client.evaluate("document.querySelector('[data-panel=welcome]')?.hidden === false"), 30000);
         check('welcome panel is visible', shown);
-        await client.evaluate(`document.querySelector('#opt-ytdlp').checked = false; document.querySelector('#opt-login').checked = ${LOGIN}; document.querySelector('#begin').click(); true`);
+        await client.evaluate(`document.querySelector('#opt-ytdlp').checked = ${YTDLP}; document.querySelector('#opt-login').checked = ${LOGIN}; document.querySelector('#begin').click(); true`);
 
         const state = await app.waitState('the connect page', (s) => s.page === 'connect' && s.serverUrl);
         check('setup started the server and marked itself done', state.setupDone === true && state.serverUrl === `http://127.0.0.1:${PORT}/`);
         if (LOGIN) check('start at login was registered with the system', state.openAtLogin === true);
+        if (YTDLP) {
+            const ytdlp = state.ytdlp;
+            const own = ytdlp && !path.relative(app.userData, ytdlp.path).startsWith('..');
+            check('yt-dlp was downloaded into the app folder and runs', Boolean(own && ytdlp.version), ytdlp ? `${ytdlp.path} -- ${ytdlp.version}` : 'not found');
+        }
         check('settings.json was saved', JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8')).setupDone === true);
         const status = await get(`${state.serverUrl}api/status`);
         check('server answers after setup', status.status === 200);
