@@ -30,6 +30,9 @@ void wj_gfx_text(const char *text, int bytes, float x, float baseline, int size,
 /* `texels` must be 32-byte aligned GX-tiled RGB565 and stay valid while drawn. */
 void wj_gfx_image_rgb565(struct wj_image *image, void *texels, int size);
 void wj_gfx_round_image(const struct wj_image *image, float x, float y, float w, float h, float r, u32 tint);
+/* `texels` must be 32-byte aligned GX-tiled I8 coverage, drawn as `color` like text. */
+void wj_gfx_image_i8(struct wj_image *image, void *texels, int width, int height);
+void wj_gfx_mask(const struct wj_image *image, float x, float y, float w, float h, u32 color);
 void wj_gfx_clip(float x, float y, float w, float h);
 void wj_gfx_unclip(void);
 /* Restores the GX defaults projectM's renderer expects before it draws. */

@@ -14,7 +14,8 @@ LIBS := -L$(PORTLIBS_PPC)/lib -lfreetype -lpng16 -lbz2 -lbrotlidec -lbrotlicommo
 FONT_LATIN := vendor/fonts/Nunito-SemiBold-WiiJukebox.ttf
 FONT_GREEK := vendor/fonts/NotoSans-Greek-WiiJukebox.ttf
 FONT_CJK := vendor/fonts/NotoSansCJKjp-Medium-WiiJukebox.otf
-OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o
+LOGO_MARK := assets/jukebox-mark.i8
+OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o build/logo_data.o
 include projectm.mk
 .PHONY: all clean host-test package FORCE
 all: dist/apps/wiijukebox/boot.dol
@@ -26,6 +27,8 @@ build/discovery_port.h: FORCE | build
 build/session.o: build/discovery_port.h
 build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
+build/logo_data.o: source/logo_data.S $(LOGO_MARK) | build
+	$(CC) $(MACHDEP) -DLOGO_MARK='"$(LOGO_MARK)"' -c $< -o $@
 build/font_data.o: source/font_data.S $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) | build
 	$(CC) $(MACHDEP) -DFONT_LATIN='"$(FONT_LATIN)"' -DFONT_GREEK='"$(FONT_GREEK)"' -DFONT_CJK='"$(FONT_CJK)"' -c $< -o $@
 build/wiijukebox.elf: $(OBJECTS) build/libprojectM.a
@@ -42,7 +45,7 @@ host-test: | build
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/font.c tests/font_test.c $(shell pkg-config --libs freetype2) -lm -o build/font_test
 	./build/font_test $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
-	./build/ui_render $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK)
+	./build/ui_render $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) $(LOGO_MARK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test

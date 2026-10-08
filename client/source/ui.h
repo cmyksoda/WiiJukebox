@@ -13,7 +13,8 @@ enum wj_target {
 struct wj_pointer { int valid; float x, y; };
 struct wj_hit { enum wj_target target; int index; };
 
-int wj_ui_init(void);
+/* `logo` is the jukebox mark: 32x48 GX-tiled I8, 32-byte aligned. */
+int wj_ui_init(void *logo);
 void wj_ui_draw(const struct wj_session *session, const struct wj_pointer *pointer);
 struct wj_hit wj_ui_hit(float x, float y);
 /* Seek position for a pointer at x, or -1 when the bar cannot seek. */

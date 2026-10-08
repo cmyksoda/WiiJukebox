@@ -47,14 +47,15 @@ static int last_selected = -1, last_view = -1;
 static float toast_alpha;
 static char toast[257];
 static unsigned art_version;
-static struct wj_image art;
+static struct wj_image art, logo;
 static unsigned char art_texels[WJ_ART_SIZE * WJ_ART_SIZE * 2] __attribute__((aligned(32)));
 
 int wj_ui_grid_columns(enum wj_view view) { return view == WJ_VIEW_SERVERS ? columns + 1 : columns; }
 void wj_ui_seek_preview(int position_ms) { seek_preview = position_ms; }
 void wj_ui_volume_changed(void) { volume_shown = wj_milliseconds(); }
 
-int wj_ui_init(void) {
+int wj_ui_init(void *logo_texels) {
+    wj_gfx_image_i8(&logo, logo_texels, 32, 48);
     L.w = wj_gfx_width();
     L.card_w = floorf(L.w * 0.335f);
     L.content_x = 20;
@@ -248,10 +249,10 @@ static void background(void) {
 }
 
 static void header(const struct wj_session *s, long long now) {
-    wj_gfx_circle(36, 34, 17, DEEP_BLUE);
-    wj_gfx_circle(36, 33, 15, BLUE);
-    icon(ICON_NOTE, 37, 34, 20, WHITE);
-    label("WiiJukebox", 62, 42, 22, 1, DEEP_BLUE, 200, 0);
+    // The web UI's wordmark: blue "Wii", ink "Jukebox", then the jukebox mark.
+    float x = 24 + label("Wii", 24, 42, 22, 1, BLUE, 100, 0) + 1;
+    x += label("Jukebox", x, 42, 22, 1, INK, 200, 0);
+    wj_gfx_mask(&logo, x + 7, 13, 24, 35, BLUE);
     char status[200];
     u32 dot = MUTED;
     if (s->view == WJ_VIEW_SERVERS) snprintf(status, sizeof(status), "%s", s->network);

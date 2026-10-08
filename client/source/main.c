@@ -17,7 +17,7 @@
 #define SEEK_SETTLE_MS 900
 
 extern const unsigned char wj_font_latin[], wj_font_latin_end[], wj_font_greek[], wj_font_greek_end[],
-    wj_font_cjk[], wj_font_cjk_end[];
+    wj_font_cjk[], wj_font_cjk_end[], wj_logo_mark[];
 
 static int visualizer, pcm_available;
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
         { wj_font_cjk, (long)(wj_font_cjk_end - wj_font_cjk) },
     };
     int font = wj_font_init(faces, 3, wj_gfx_scale_x(), wj_gfx_scale_y());
-    wj_ui_init();
+    wj_ui_init((void *)wj_logo_mark);
     ASND_Init();
     MP3Player_Init();
     pcm_available = wj_pcm_init() == 0;

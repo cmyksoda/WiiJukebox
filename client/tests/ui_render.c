@@ -90,8 +90,10 @@ static long load(const char *path, unsigned char *data, long capacity) {
 }
 
 int main(int argc, char **argv) {
-    assert(argc >= 4);
-    const char *out = argc > 4 ? argv[4] : NULL;
+    assert(argc >= 5);
+    const char *out = argc > 5 ? argv[5] : NULL;
+    static unsigned char logo[32 * 48] __attribute__((aligned(32)));
+    assert(load(argv[4], logo, sizeof(logo)) == sizeof(logo));
     static unsigned char latin[1024 * 1024], greek[256 * 1024], cjk[2 * 1024 * 1024];
     const struct wj_font_face faces[] = {
         { latin, load(argv[1], latin, sizeof(latin)) },
@@ -104,7 +106,7 @@ int main(int argc, char **argv) {
         assert(!wj_gfx_init());
         wj_font_shutdown();
         assert(!wj_font_init(faces, 3, wj_gfx_scale_x(), wj_gfx_scale_y()));
-        wj_ui_init();
+        wj_ui_init(logo);
         struct wj_pointer none = { 0, 0, 0 };
 
         struct wj_session s;

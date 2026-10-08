@@ -158,6 +158,7 @@ send the audio.
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Search request format followed; no code copied | MIT |
 | [Nunito](https://github.com/googlefonts/nunito) (`public/fonts/`) | Web UI typeface, latin subset | SIL OFL 1.1 (`public/fonts/OFL.txt`) |
 | `public/images/*` | WiiRadio logo and tile, kept from the original project | See `client/vendor/README.md` |
+| `public/images/jukebox.svg`, `favicon.*`, `apple-touch-icon.png` | Jukebox mark and favicons, traced from a Vecteezy icon | Vecteezy Pro license held by the project owner; **not** covered by the GPL (see `client/vendor/README.md`) |
 
 ## Testing without the real programs
 

@@ -329,6 +329,26 @@ void wj_gfx_image_rgb565(struct wj_image *image, void *texels, int size) {
     bound = NULL;
 }
 
+void wj_gfx_image_i8(struct wj_image *image, void *texels, int width, int height) {
+    DCFlushRange(texels, width * height);
+    GX_InitTexObj(&image->object, texels, width, height, GX_TF_I8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+    GX_InitTexObjFilterMode(&image->object, GX_LINEAR, GX_LINEAR);
+    GX_InvalidateTexAll();
+    image->ready = 1;
+    bound = NULL;
+}
+
+void wj_gfx_mask(const struct wj_image *image, float x, float y, float w, float h, u32 color) {
+    if (!image->ready) return;
+    use(MODE_TEXT, (GXTexObj *)&image->object);
+    GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+    vertex(x, y, color, 0, 0);
+    vertex(x + w, y, color, 1, 0);
+    vertex(x + w, y + h, color, 1, 1);
+    vertex(x, y + h, color, 0, 1);
+    GX_End();
+}
+
 void wj_gfx_round_image(const struct wj_image *image, float x, float y, float w, float h, float r, u32 tint) {
     if (!image->ready) return;
     round_path(x, y, w, h, r);

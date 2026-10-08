@@ -25,7 +25,7 @@ for name, source in licenses.items():
     destination = app / name
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_bytes(source.read_bytes())
-files = ["boot.dol", "meta.xml", "LICENSE", *licenses]
+files = ["boot.dol", "meta.xml", "icon.png", "LICENSE", *licenses]
 for name in files:
     if not (app / name).is_file():
         raise SystemExit(f"Missing {name}; build the client first")
