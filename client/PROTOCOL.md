@@ -33,7 +33,8 @@ Content-Length and no-store. The Wii uses HTTP/1.0 and requests Connection: clos
 | POST `/api/wii/play?source=...&ref=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
 | POST `/api/wii/control?action=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
 | POST `/api/wii/control?action=seek&position=MS` | as above; `position` is whole milliseconds into the track |
-| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; `progress`, elapsed milliseconds, duration milliseconds (0 if unknown); `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`); `art`, artwork key (empty without artwork) |
+| POST `/api/wii/control?action=shuffle&value=on` or `off`, `action=repeat&value=off`, `all` or `one` | as above; without `value`, shuffle flips and repeat moves to its next mode |
+| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; `progress`, elapsed milliseconds, duration milliseconds (0 if unknown); `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`); `art`, artwork key (empty without artwork); `modes`, shuffle (`1` or `0`), repeat (`off`, `all` or `one`) |
 | GET `/api/wii/art?key=K&size=N` | binary, not text: N x N RGB565 in GX 4x4 tiles, 2N² bytes; 404 with an `error` row if unavailable |
 
 An empty browse ref opens the source root. Browse pages contain 12 entries.
@@ -64,11 +65,23 @@ codec delay. Old clients omitting `audible` still receive server-side progress.
 This does not add bytes to the MP3 body or change ICY framing.
 
 Clients ignore status rows they do not know, so later rows can be added
-without a version change; the `art` row and `seek` control are such additions.
+without a version change; the `art` row, `modes` row and `seek`, `shuffle` and
+`repeat` controls are such additions.
 `seek` appears in the controls list only for finite tracks whose source marked
 its stream seekable (Navidrome/Subsonic, Jellyfin, Plex, podcast episodes and
 finite yt-dlp videos). The server restarts that track's decoder at the offset and keeps the
 pause state; radio, live and desktop sources cannot seek.
+
+Shuffle and repeat are player-wide and saved by the server, so they survive
+restarts and carry over from one source to the next; the `modes` row always
+reports them. The `shuffle` and `repeat` controls appear in the controls list
+only while the source can honor them (queue-based sources: Navidrome/Subsonic,
+Jellyfin, Plex, yt-dlp and YouTube Music). Radio, podcasts, Spotify Connect,
+AirPlay and desktop audio omit them, and asking anyway ends in a failed
+command. With nothing playing the modes can still be chosen, so they apply to the
+next album or playlist. Shuffle keeps a picked track first and shuffles the
+rest; repeat `one` replays a track that ends on its own, while Next and
+Previous still move on.
 
 The artwork key is an opaque hash of the heard track's artwork URL, which
 often carries provider credentials and never leaves the server. The server
@@ -77,7 +90,8 @@ fetches the image, crops it square with FFmpeg and caches sizes 64, 96, 128,
 
 Synchronous errors use HTTP 400 and an `error`, message row. Unknown endpoints
 use 404. Async commands expose “Working...”, “Audio ready”, “Paused”, “Resumed”,
-“Stopped”, “End of queue” or an error in
+“Stopped”, “Seeked”, “Shuffle on”, “Shuffle off”, “Repeat off”, “Repeat all”,
+“Repeat one”, “End of queue” or an error in
 status; another Wii command is refused while one is running. Web and Wii
 transport operations share the same serialized pipeline.
 

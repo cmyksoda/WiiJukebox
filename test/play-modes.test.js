@@ -9,6 +9,7 @@ const { Config } = require('../src/config');
 const { Source } = require('../src/sources/base');
 const { QueueSource } = require('../src/sources/queue');
 const { WebServer } = require('../src/web/server');
+const { WiiProtocol } = require('../src/client/protocol');
 const { control } = require('../src/core/transport');
 const { playModes, nextMode } = require('../src/core/play-modes');
 const { tempDir } = require('./helpers/fake-binary');
@@ -221,4 +222,38 @@ test('the web API sets the modes and reports them in status', async () => {
         await pipeline.attach(new Radio());
         assert.equal((await post('shuffle', { value: false })).status, 400);
     } finally { web.close(); await pipeline.shutdown(); }
+});
+
+test('the Wii status carries the modes and its controls change them', async () => {
+    const pipeline = new Pipeline();
+    const config = fakeConfig();
+    const protocol = new WiiProtocol({ config, pipeline });
+    const call = async (method, path) => {
+        let body;
+        await protocol.handle({ method }, { writeHead() {}, end(text) { body = String(text); } }, new URL(`http://fixture/api/wii/${path}`));
+        return body;
+    };
+    const settle = async () => { while (protocol.commandState === 'pending') await sleep(5); };
+    try {
+        await pipeline.attach(new Library());
+        assert.match(await call('GET', 'status'), /\nmodes\t0\toff\n/);
+        assert.match(await call('GET', 'status'), /\n(status\t[^\n]*)shuffle%2Crepeat[^\n]*\n/, 'both appear in the controls list');
+
+        assert.match(await call('POST', 'control?action=shuffle&value=on'), /\nok\taccepted\t1\n/);
+        await settle();
+        assert.equal(protocol.commandStatus, 'Shuffle on');
+        assert.equal(protocol.commandState, 'complete');
+        await call('POST', 'control?action=repeat&value=one');
+        await settle();
+        assert.equal(protocol.commandStatus, 'Repeat one');
+        assert.match(await call('GET', 'status'), /\nmodes\t1\tone\n/);
+        await call('POST', 'control?action=repeat&value=sideways');
+        await settle();
+        assert.equal(protocol.commandState, 'failed');
+        assert.match(protocol.commandStatus, /repeat must be/);
+        await call('POST', 'control?action=shuffle&value=off');
+        await settle();
+        assert.equal(protocol.commandStatus, 'Shuffle off');
+        assert.equal(pipeline.modes.shuffle, false);
+    } finally { await pipeline.shutdown(); }
 });

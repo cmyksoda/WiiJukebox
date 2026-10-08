@@ -6,6 +6,12 @@ const { Artwork } = require('./artwork');
 const PAGE_SIZE = 12;
 const TTL = 60 * 60 * 1000;
 
+function controlMessage(action, result) {
+    if (action === 'shuffle') return `Shuffle ${result.status.modes.shuffle ? 'on' : 'off'}`;
+    if (action === 'repeat') return `Repeat ${result.status.modes.repeat}`;
+    return { stop: 'Stopped', pause: 'Paused', play: 'Resumed', seek: 'Seeked' }[action] || 'Audio ready';
+}
+
 // A bounded text protocol keeps the Wii parser small. Opaque references retain
 // full upstream items (including radio URLs) on the server, not on the console.
 class WiiProtocol {
@@ -65,6 +71,7 @@ class WiiProtocol {
                         Math.floor((s.nowPlaying.duration || 0) * 1000)],
                     ['command', this.commandStatus, this.commandId, this.commandState],
                     ['art', this.artwork.keyFor(s.nowPlaying.artwork)]];
+                if (s.modes) rows.push(['modes', s.modes.shuffle ? 1 : 0, s.modes.repeat]);
                 if (s.jump) rows.push(['jump', s.jump.id, s.jump.epoch, s.jump.byte]);
             } else if (req.method === 'GET' && action === 'art') {
                 const size = Number(url.searchParams.get('size') || 128);
@@ -117,9 +124,10 @@ class WiiProtocol {
                     if (!Number.isSafeInteger(ms) || ms < 0) throw new Error('invalid seek position');
                     position = ms / 1000;
                 }
-                const commandId = this._command(control(this.pipeline, this.config, action, { position }), {
+                const value = url.searchParams.get('value') ?? undefined;
+                const commandId = this._command(control(this.pipeline, this.config, action, { position, value }), {
                     audio: action === 'next' || action === 'previous' || action === 'seek',
-                    message: { stop: 'Stopped', pause: 'Paused', play: 'Resumed', seek: 'Seeked' }[action] || 'Audio ready',
+                    message: (result) => controlMessage(action, result),
                 });
                 rows = [['ok', 'accepted', commandId]];
             } else {
@@ -141,7 +149,7 @@ class WiiProtocol {
                 await this.pipeline.waitForAudio();
             }
             if (id !== this.commandId) return;
-            this.commandStatus = result?.endOfQueue ? 'End of queue' : message;
+            this.commandStatus = result?.endOfQueue ? 'End of queue' : typeof message === 'function' ? message(result) : message;
             this.commandState = 'complete';
         }).catch((err) => {
             if (id !== this.commandId) return;
