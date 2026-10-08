@@ -148,6 +148,29 @@ app with Desktop audio capture, or AirPlay from an Apple device.
 Music is only offered through the AirPlay receiver, where Apple's own devices
 send the audio.
 
+## Play history and scrobbling
+
+WiiJukebox reports listening to the service it plays from, the way that service's
+own apps do. Last.fm, ListenBrainz and similar links stay set up in the service;
+WiiJukebox has no scrobbling settings of its own.
+
+A track starts counting when its audio reaches the stream. It counts as played
+after half its length or 4 minutes of listening, whichever comes first, and tracks
+under 30 seconds never count (Last.fm's rules). Paused time does not count, and
+seeking does not restart the count.
+
+| Service | What WiiJukebox reports | Where plays go next |
+|---|---|---|
+| Navidrome / Subsonic | `scrobble.view`: now playing, then the play with its start time | Navidrome's play counts, and Last.fm or ListenBrainz when linked in Navidrome |
+| Jellyfin | Playback start and stop, with the position | Jellyfin's play state and plugins such as its Last.fm scrobbler, which decide what counts |
+| Plex | Timeline (playing, stopped) and a scrobble once played | Plex's play history and its Last.fm link |
+| YouTube and YouTube Music | Marks a played video watched, with yt-dlp `--mark-watched` | YouTube history, which YouTube Music scrobblers read. Needs your cookies in Advanced, extra options |
+| Spotify Connect | Nothing; librespot sends Spotify no listening reports | Plays through the receiver likely do not reach Spotify history or its Last.fm link |
+| AirPlay | Nothing needed | The sending app (Apple Music on the iPhone or Mac) keeps its own history |
+| Radio, podcasts, desktop audio | Nothing | |
+
+Reports never block playback; a failure appears only as a warning in the log.
+
 ## Third-party code and assets
 
 | Item | Use | License |

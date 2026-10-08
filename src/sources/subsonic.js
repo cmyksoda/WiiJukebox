@@ -326,6 +326,7 @@ class SubsonicSource extends Source {
             artwork: track.artwork || null,
             duration: track.duration || null,
         });
+        this._startTrack(track);
         this._setState('playing');
 
         // Ask for the original file and let our own ffmpeg do the work. The
@@ -340,6 +341,16 @@ class SubsonicSource extends Source {
             }),
             seekable: true,
         };
+    }
+
+    // Navidrome records a play, and forwards it to Last.fm or ListenBrainz, only when a
+    // client reports it; streaming the file alone does not count.
+    async reportPlaying(track) {
+        await this._call('scrobble.view', { id: track.id, submission: 'false' });
+    }
+
+    async reportPlayed(track, { startedAt }) {
+        await this._call('scrobble.view', { id: track.id, time: startedAt, submission: 'true' });
     }
 
     /** Advance the queue. Returns the next handle, or null at the end. */

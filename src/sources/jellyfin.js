@@ -326,6 +326,7 @@ class JellyfinSource extends Source {
             artwork: track.artwork || null,
             duration: track.duration || null,
         });
+        this._startTrack(track);
         this._setState('playing');
 
         // /Audio/{id}/stream with static=true hands back the original file
@@ -341,6 +342,20 @@ class JellyfinSource extends Source {
             headers: { Authorization: this._authHeader() },
             seekable: true,
         };
+    }
+
+    // Jellyfin, and plugins such as its Last.fm scrobbler, learn about plays from the
+    // same start and stop reports its own apps send; Jellyfin decides what counts.
+    async reportPlaying(track) {
+        await this._call('/Sessions/Playing', { method: 'POST', body: {
+            ItemId: track.id, PositionTicks: 0, CanSeek: true, PlayMethod: 'DirectPlay',
+        } });
+    }
+
+    async reportStopped(track, { position }) {
+        await this._call('/Sessions/Playing/Stopped', { method: 'POST', body: {
+            ItemId: track.id, PositionTicks: Math.round(position * 10000000),
+        } });
     }
 
     async advance(step = 1) {

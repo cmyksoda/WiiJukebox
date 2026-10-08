@@ -66,6 +66,14 @@ async function main() {
         assert.ok((await art.arrayBuffer()).byteLength > 0);
         console.log('PASS: cover-art URL authenticates and returns image bytes');
 
+        const plays = async () => (await source._call('getSong.view', { id: songId })).song.playCount || 0;
+        const before = await plays();
+        await source.reportPlaying({ id: songId });
+        await source.reportPlayed({ id: songId }, { startedAt: Date.now() - 60000 });
+        for (let i = 0; i < 50 && await plays() === before; i++) await new Promise((resolve) => setTimeout(resolve, 100));
+        assert.equal(await plays(), before + 1);
+        console.log('PASS: now-playing and scrobble reports count the play in Navidrome');
+
         const config = new Config(tmp); config.save = () => {};
         config.updateSource('subsonic', credentials);
         pipeline = new Pipeline();

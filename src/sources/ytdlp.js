@@ -22,6 +22,8 @@
 // config file -- see _extract().
 
 const { spawn } = require('child_process');
+
+const YOUTUBE_URL = /^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)\//i;
 const { Source } = require('./base');
 const { splitTitle } = require('./radio');
 const { queueStart } = require('./queue');
@@ -236,6 +238,15 @@ class YtdlpSource extends Source {
             throw new Error('yt-dlp found nothing at that link');
         }
         return info;
+    }
+
+    // YouTube history (which YouTube Music scrobblers read) only learns of plays from a
+    // signed-in client, so this needs the user's cookies in extraArgs.
+    async reportPlayed(track) {
+        const signedIn = this._extraArgs().some((arg) => /^--cookies(-from-browser)?(=|$)/.test(arg));
+        if (!signedIn || !YOUTUBE_URL.test(track.url || '')) return;
+        await this._run(['--mark-watched', '--simulate', '--quiet', '--no-warnings', ...this._extraArgs(), track.url],
+            { timeoutMs: 60000, what: 'marking it watched' });
     }
 
     /** Extra flags from config, ignored unless they are a list of strings. */
@@ -480,6 +491,7 @@ class YtdlpSource extends Source {
         this._current = track;
         const meta = metaFor(info, track);
         this._emitMetadata(meta);
+        this._startTrack({ ...meta, url: info.webpage_url || itemUrl(track) });
         this._setState('playing');
 
         return {

@@ -166,6 +166,15 @@ class Source extends EventEmitter {
         this.emit('metadata', meta);
     }
 
+    /**
+     * Announce that `track` (the source's own description, with its id and
+     * duration) starts now. The pipeline then calls the source's optional
+     * reportPlaying, reportPlayed and reportStopped as it is heard.
+     */
+    _startTrack(track) {
+        this.emit('track', track);
+    }
+
     /** Report a recoverable problem without tearing the source down. */
     _warn(message) {
         this.emit('warning', message);

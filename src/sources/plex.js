@@ -132,9 +132,34 @@ class PlexSource extends Source {
         const meta = this._item(track);
         this._emitMetadata({ title: meta.title, artist: meta.artist, album: meta.album,
             duration: meta.duration, artwork: null });
+        this._startTrack({ ...meta, ratingKey: id });
         this._setState('playing');
         return { type: 'uri', uri, headers: { 'X-Plex-Token': this.config.token }, seekable: true };
     }
+
+    // Plex shows and records plays (and forwards them to Last.fm when linked) from the
+    // timeline and scrobble reports its own players send.
+    async _report(path, query) {
+        const url = this._url(path);
+        for (const [key, value] of Object.entries(query)) url.searchParams.set(key, String(value));
+        const response = await fetch(url, { headers: this._headers(), redirect: 'error', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error(`Plex: HTTP ${response.status}`);
+    }
+
+    _timeline(track, state, seconds) {
+        return this._report('/:/timeline', {
+            ratingKey: track.ratingKey, key: `/library/metadata/${track.ratingKey}`, state,
+            time: Math.round(seconds * 1000), duration: Math.round((track.duration || 0) * 1000),
+        });
+    }
+
+    async reportPlaying(track) { await this._timeline(track, 'playing', 0); }
+
+    async reportPlayed(track) {
+        await this._report('/:/scrobble', { key: track.ratingKey, identifier: 'com.plexapp.plugins.library' });
+    }
+
+    async reportStopped(track, { position }) { await this._timeline(track, 'stopped', position); }
 
     async advance(step = 1) {
         const next = this._index + step;

@@ -18,6 +18,7 @@ const { Encoder } = require('./encoder');
 const { Broadcaster } = require('./broadcaster');
 const { Decoder } = require('./decoder');
 const { PlaybackTimeline } = require('./playback-timeline');
+const { Listening } = require('./listening');
 
 // A jump-aware listener drops its stale buffer at a transport change; this much
 // new audio is sent at once so it refills to its usual depth immediately.
@@ -32,7 +33,9 @@ class Pipeline extends EventEmitter {
         this.broadcaster = new Broadcaster({ ...station,
             bitrate: this.encoder.bitrate, sampleRate: this.encoder.sampleRate });
         this.timeline = new PlaybackTimeline({ sampleRate: this.encoder.sampleRate });
+        this.listening = new Listening({ warn: (message) => this.emit('warning', message) });
         this.pacer = new Pacer({ write: (chunk, timing) => {
+            if (timing.audio && this.encoder.running) this.listening.heard(chunk.length, timing.position);
             const jump = this._jump;
             if (jump && jump.byte === null && this.encoder.running && jump.generation === this._generation &&
                 (timing.audio || !jump.audio)) {
@@ -242,6 +245,7 @@ class Pipeline extends EventEmitter {
         this._source = source;
 
         source.on('metadata', this._onSourceMetadata);
+        source.on('track', this._onSourceTrack);
         source.on('warning', this._onSourceWarning);
         source.on('state', this._onSourceState);
         source.on('ended', this._onSourceEnded);
@@ -380,6 +384,10 @@ class Pipeline extends EventEmitter {
         this.emit('status', this.status);
     };
 
+    _onSourceTrack = (track) => {
+        this.listening.start(this._source, track);
+    };
+
     _onSourceWarning = (msg) => {
         this.emit('warning', `${this._source ? this._source.id : 'source'}: ${msg}`);
     };
@@ -406,6 +414,7 @@ class Pipeline extends EventEmitter {
     /** Stop the current source and clear the left-hand side of the pipeline. */
     async detach() {
         this._generation++;
+        this.listening.stop();
         this._audioReady = false;
         this._audioError = null;
         this.emit('audio-readiness');
@@ -427,6 +436,7 @@ class Pipeline extends EventEmitter {
         if (this._source) {
             const source = this._source;
             source.off('metadata', this._onSourceMetadata);
+            source.off('track', this._onSourceTrack);
             source.off('warning', this._onSourceWarning);
             source.off('state', this._onSourceState);
             source.off('ended', this._onSourceEnded);
