@@ -6,11 +6,12 @@ const path = require('node:path');
 
 /** @param {string} serverRoot folder holding the server's `src/` */
 function serverConfig(serverRoot) {
-    const { Config } = require(path.join(serverRoot, 'src', 'config'));
+    const { Config, detectHostIp } = require(path.join(serverRoot, 'src', 'config'));
     const config = new Config();
 
     return {
         file: config.file,
+        detectHostIp,
         /** Saved values merged over the server's defaults. */
         read() {
             return config.load();

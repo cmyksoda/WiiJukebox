@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'">
+<title>WiiJukebox</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+    <div class="brand"><img src="jukebox.svg" alt="" class="mark"><span><span class="wii">Wii</span>Jukebox</span></div>
+
+    <section data-panel="starting" hidden>
+        <h1>Starting WiiJukebox</h1>
+        <p class="dim">Getting your music server ready.</p>
+        <div class="spinner" role="status" aria-label="Starting"></div>
+    </section>
+
+    <section data-panel="welcome" hidden>
+        <h1>Welcome to WiiJukebox</h1>
+        <p>This computer will play your music to your Wii. Pick what you would like, and it is ready in a moment.</p>
+        <ul class="checks">
+            <li>Audio engine (FFmpeg) is included <span class="dim" id="ffmpeg-version"></span></li>
+            <li>Music server is set up for you</li>
+        </ul>
+        <label class="option">
+            <input type="checkbox" id="opt-ytdlp" checked>
+            <span><strong>YouTube, SoundCloud and Bandcamp links</strong>
+                <small>Downloads yt-dlp (about 35 MB) from its official GitHub page. You can add it later from the menu.</small></span>
+        </label>
+        <label class="option">
+            <input type="checkbox" id="opt-login" checked>
+            <span><strong>Start WiiJukebox when I sign in</strong>
+                <small>It opens quietly in the <span class="tray-name">tray</span>, so your Wii can connect after a restart.</small></span>
+        </label>
+        <p class="note" id="welcome-note" hidden></p>
+        <div class="buttons"><button class="primary" id="begin">Set up and start</button></div>
+        <p class="error" id="begin-error" hidden></p>
+    </section>
+
+    <section data-panel="working" hidden>
+        <h1>Setting up</h1>
+        <p id="step" aria-live="polite">One moment.</p>
+        <div class="spinner" role="status" aria-label="Working"></div>
+    </section>
+
+    <section data-panel="connect" hidden>
+        <h1>Connect your Wii</h1>
+        <ol class="steps">
+            <li>Put the Wii on the same Wi-Fi or network as this computer.</li>
+            <li>Open WiiJukebox on your Wii. It looks for this computer by itself.</li>
+            <li>If it does not find it, type this address on the Wii:
+                <span class="address"><code id="address"></code><button class="small" data-copy="address">Copy</button></span></li>
+        </ol>
+        <ul class="status" id="status"></ul>
+        <p class="note" id="connect-note" hidden></p>
+        <details id="trouble">
+            <summary>The Wii cannot find this computer</summary>
+            <ul class="help" id="firewall-steps"></ul>
+            <div id="firewall-commands"></div>
+            <div class="buttons" id="firewall-action" hidden>
+                <button id="allow-firewall">Allow WiiJukebox in Windows Firewall</button>
+            </div>
+            <p class="dim" id="firewall-result" role="status"></p>
+        </details>
+        <p class="dim">Other music players can open <code id="stream"></code> <button class="small" data-copy="stream">Copy</button></p>
+        <div class="buttons">
+            <button class="primary" id="open-player" hidden>Open WiiJukebox</button>
+            <button id="close-guide" hidden>Close</button>
+        </div>
+    </section>
+
+    <section data-panel="ffmpeg" hidden>
+        <h1>FFmpeg is needed</h1>
+        <p>WiiJukebox uses FFmpeg to decode music and build the stream the Wii plays. This copy of the app has none, and none was found on this computer.</p>
+        <p class="dim">Reinstalling WiiJukebox from its download page brings FFmpeg back. To use your own, install it, then press Check again:</p>
+        <pre id="command"></pre>
+        <div class="buttons">
+            <button class="primary" id="recheck">Check again</button>
+            <button id="anyway">Start without it</button>
+        </div>
+    </section>
+
+    <section data-panel="crashed" hidden>
+        <h1 class="error">The server stopped</h1>
+        <p>WiiJukebox could not keep its server running. The last lines it printed:</p>
+        <pre id="detail"></pre>
+        <div class="buttons"><button class="primary" id="restart">Restart server</button></div>
+    </section>
+
+    <section data-panel="port-busy" hidden>
+        <h1 class="error">Port <span id="busy-port"></span> is in use</h1>
+        <p>Another program on this computer is already using the port WiiJukebox listens on. Close that program, or let WiiJukebox use a different port. The Wii finds the new port by itself.</p>
+        <label class="field">Port
+            <input type="number" id="new-port" min="1024" max="65535" inputmode="numeric">
+        </label>
+        <div class="buttons">
+            <button class="primary" id="use-port">Use this port</button>
+            <button id="try-again">Try again</button>
+        </div>
+        <p class="error" id="port-error" hidden></p>
+    </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

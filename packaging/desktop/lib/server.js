@@ -21,6 +21,7 @@ class ServerProcess extends EventEmitter {
         this.child = null;
         this.log = [];
         this.stopping = false;
+        this.started = false;
     }
 
     _record(chunk) {
@@ -35,6 +36,7 @@ class ServerProcess extends EventEmitter {
     /** Starts the server; resolves with its local URL once the web UI is up. */
     start() {
         this.stopping = false;
+        this.started = false;
         return new Promise((resolve, reject) => {
             const child = spawn(this.nodePath, [LAUNCHER, this.entry], {
                 cwd: this.cwd,
@@ -51,7 +53,10 @@ class ServerProcess extends EventEmitter {
                 settled = true;
                 clearTimeout(timer);
                 if (err) reject(err);
-                else resolve(url);
+                else {
+                    this.started = true;
+                    resolve(url);
+                }
             };
             const onData = (chunk) => {
                 this._record(chunk);
@@ -65,7 +70,8 @@ class ServerProcess extends EventEmitter {
                 this.child = null;
                 const reason = `server exited (${signal || `code ${code}`})`;
                 finish(new Error(this.log.at(-1) ? `${reason}: ${this.log.at(-1)}` : reason));
-                if (!this.stopping) this.emit('crashed', reason);
+                // A server that never came up is reported by start() rejecting, not as a crash.
+                if (!this.stopping && this.started) this.emit('crashed', reason);
             });
         });
     }

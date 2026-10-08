@@ -61,12 +61,22 @@ test('server process reports its URL, stops cleanly and reports a crash it did n
     assert.equal(server.child, null);
     assert.deepEqual(crashes, [], 'a requested stop is not a crash');
 
+    // A server that fails while starting rejects start(); only a running one that dies is a crash.
+    const failing = path.join(dir, 'fail.js');
+    fs.writeFileSync(failing, "console.error('boom'); setTimeout(() => process.exit(2), 100); setInterval(() => {}, 1000);");
+    const failed = new ServerProcess({ entry: failing, cwd: dir, env: {}, nodePath: process.execPath });
+    const failedReasons = [];
+    failed.on('crashed', (reason) => failedReasons.push(reason));
+    await assert.rejects(failed.start(), /server exited.*boom/s);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.deepEqual(failedReasons, []);
+
     const crashing = path.join(dir, 'crash.js');
-    fs.writeFileSync(crashing, "console.error('boom'); setTimeout(() => process.exit(2), 300); setInterval(() => {}, 1000);");
+    fs.writeFileSync(crashing, "console.log('  WebUI    http://192.168.0.9:4393'); setTimeout(() => process.exit(2), 300); setInterval(() => {}, 1000);");
     const dying = new ServerProcess({ entry: crashing, cwd: dir, env: {}, nodePath: process.execPath });
     const reasons = [];
     dying.on('crashed', (reason) => reasons.push(reason));
-    await assert.rejects(dying.start(), /server exited.*boom/s);
+    await dying.start();
     await waitFor(() => reasons.length);
     assert.match(reasons[0], /code 2/);
 });

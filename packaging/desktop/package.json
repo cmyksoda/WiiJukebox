@@ -27,7 +27,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "setup.html",
+      "ui/**",
+      "assets/**",
       "lib/**",
       "package.json"
     ],
