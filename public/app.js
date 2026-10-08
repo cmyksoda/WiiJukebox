@@ -830,6 +830,25 @@ function setPlayPauseGlyph(paused) {
     }
 }
 
+const NEXT_REPEAT = { off: 'all', all: 'one', one: 'off' };
+
+function applyModes(modes = {}, caps) {
+    // A source that cannot use a mode shows it neutral, not lit.
+    const shuffle = caps.shuffle && modes.shuffle === true;
+    const repeat = caps.repeat && NEXT_REPEAT[modes.repeat] ? modes.repeat : 'off';
+    const shuffleButton = $('#shuffle');
+    shuffleButton.disabled = !caps.shuffle;
+    shuffleButton.classList.toggle('lit', shuffle);
+    shuffleButton.setAttribute('aria-pressed', String(shuffle));
+    shuffleButton.title = `Shuffle ${shuffle ? 'on' : 'off'}`;
+    const repeatButton = $('#repeat');
+    repeatButton.disabled = !caps.repeat;
+    repeatButton.classList.toggle('lit', repeat !== 'off');
+    repeatButton.dataset.repeat = repeat;
+    repeatButton.title = `Repeat ${{ off: 'off', all: 'all tracks', one: 'this track' }[repeat]}`;
+    repeatButton.setAttribute('aria-label', repeatButton.title);
+}
+
 function applyStatus(status) {
     state.status = status;
     followJump(status.jump);
@@ -861,6 +880,7 @@ function applyStatus(status) {
         $(a).disabled = $(b).disabled = !caps[a === '#prev' ? 'previous' : 'next'];
     }
     $('#stop').disabled = !caps.stop;
+    applyModes(status.modes, caps);
     const canToggle = status.paused ? caps.play : caps.pause;
     $('#playpause').disabled = $('#mini-playpause').disabled = !canToggle;
     setPlayPauseGlyph(Boolean(status.paused) || !status.source);
@@ -1187,6 +1207,8 @@ window.wiiJukeboxBack = () => {
 for (const [ids, action] of [[['#prev', '#mini-prev'], 'previous'], [['#next', '#mini-next'], 'next'], [['#stop'], 'stop']]) {
     for (const id of ids) $(id).onclick = () => control(action);
 }
+$('#shuffle').onclick = () => control('shuffle', { value: !state.status?.modes?.shuffle });
+$('#repeat').onclick = () => control('repeat', { value: NEXT_REPEAT[state.status?.modes?.repeat] || 'all' });
 for (const id of ['#playpause', '#mini-playpause']) {
     $(id).onclick = () => control(state.status?.paused ? 'play' : 'pause');
 }

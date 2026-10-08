@@ -134,6 +134,16 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .g-next::after { clip-path: inset(14% 11% 14% 79% round 2px); }
 .g-prev::before { clip-path: polygon(89% 14%, 35% 50%, 89% 86%); }
 .g-prev::after { clip-path: inset(14% 79% 14% 11% round 2px); }
+/* Shuffle is one arrow mirrored top to bottom; repeat is one half-loop turned half way round. */
+.g-shuffle::before, .g-shuffle::after, .g-repeat::before, .g-repeat::after { content: ""; position: absolute; inset: 0; background: currentColor; }
+.g-shuffle::before, .g-shuffle::after {
+    clip-path: polygon(0 67%, 23.5% 67%, 55.5% 23%, 74% 23%, 74% 14%, 96% 28%, 74% 42%, 74% 33%, 60.5% 33%, 28.5% 77%, 0 77%);
+}
+.g-shuffle::after { transform: scaleY(-1); }
+.g-repeat::before, .g-repeat::after {
+    clip-path: polygon(9% 66%, 9% 31%, 15% 25%, 68% 25%, 68% 13%, 92% 30%, 68% 47%, 68% 35%, 19% 35%, 19% 66%);
+}
+.g-repeat::after { transform: rotate(180deg); }
 .g-menu {
     width: 18px;
     height: 14px;
@@ -195,6 +205,26 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .round.big:hover { background: var(--accent-strong); filter: brightness(1.1); }
 .round.small { width: 44px; height: 44px; font-size: 16px; }
 .round:disabled { opacity: .4; pointer-events: none; }
+.round.mode { position: relative; font-size: 20px; }
+.round.lit { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
+.round.lit:hover { background: var(--accent-strong); filter: brightness(1.1); }
+/* Repeat-one: the lit loop carries a small 1. */
+.round.mode[data-repeat="one"]::after {
+    content: "1";
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-strong);
+    background: var(--surface);
+    color: var(--accent-text);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 13px;
+    text-align: center;
+}
 
 .chip {
     display: inline-flex;
@@ -610,7 +640,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #seek.live #seekbar::-webkit-slider-runnable-track { background: repeating-linear-gradient(90deg, var(--accent-soft) 0 10px, var(--tile) 10px 20px); }
 #seek.live #seekbar::-moz-range-track { background: repeating-linear-gradient(90deg, var(--accent-soft) 0 10px, var(--tile) 10px 20px); }
 
-#controls { display: flex; align-items: center; justify-content: center; gap: 16px; }
+#controls, #modes { display: flex; align-items: center; justify-content: center; gap: 16px; }
 #np-extras { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 
 /* --- phone transport bar ---------------------------------------------------------------- */
@@ -803,7 +833,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 @media (min-width: 600px) and (max-width: 900px) {
     #nowplaying { justify-content: center; gap: 26px; }
     #np-art-frame { max-width: 360px; }
-    #np-head, #seek, #controls, #np-text, #np-extras { max-width: 520px; }
+    #np-head, #seek, #controls, #modes, #np-text, #np-extras { max-width: 520px; }
 }
 
 @media (max-height: 640px) and (max-width: 900px) {

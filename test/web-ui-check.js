@@ -53,6 +53,16 @@ const check = (label, ok) => {
     check('a track plays and the transport bar shows it', true);
     await page.click('#mini-open');
     check('the now-playing sheet opens', await page.evaluate(() => document.body.classList.contains('np-open')));
+    await page.click('#shuffle');
+    await page.waitForFunction(() => document.querySelector('#shuffle').getAttribute('aria-pressed') === 'true');
+    await page.click('#repeat');
+    await page.click('#repeat');
+    await page.waitForFunction(() => document.querySelector('#repeat').dataset.repeat === 'one');
+    check('shuffle and repeat-one light up', true);
+    await page.click('#shuffle');
+    await page.click('#repeat');
+    await page.waitForFunction(() => document.querySelector('#repeat').dataset.repeat === 'off');
+    check('and turn off again', true);
     await page.click('#playpause');
     await page.waitForFunction(() => document.querySelector('#playpause').classList.contains('show-play'));
     check('pause swaps the glyph', true);
