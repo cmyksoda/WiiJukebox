@@ -84,8 +84,13 @@ function writeState() {
         ffmpeg: tools?.ffmpeg || null,
         ytdlp: tools?.ytdlp || null,
     };
-    fs.writeFileSync(`${file}.part`, JSON.stringify(state));
-    fs.renameSync(`${file}.part`, file);
+    try {
+        fs.writeFileSync(`${file}.part`, JSON.stringify(state));
+        fs.renameSync(`${file}.part`, file);
+    } catch {
+        // Windows will not replace a file the test is reading at that moment; try again with fresh state.
+        setTimeout(writeState, 50);
+    }
 }
 
 function windowOptions(extra) {
