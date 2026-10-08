@@ -1,0 +1,83 @@
+{
+  "name": "wiijukebox-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WiiJukebox server in a native window",
+  "author": "WiiJukebox contributors",
+  "license": "GPL-3.0-only",
+  "main": "main.js",
+  "scripts": {
+    "stage": "node scripts/stage.js",
+    "start": "electron . --no-sandbox",
+    "dist:linux": "node scripts/stage.js linux && electron-builder --linux AppImage",
+    "dist:win": "node scripts/stage.js win && electron-builder --win zip nsis",
+    "dist:mac": "node scripts/stage.js mac && electron-builder --mac zip --universal"
+  },
+  "devDependencies": {
+    "electron": "41.7.2",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "org.wiijukebox.desktop",
+    "productName": "WiiJukebox",
+    "copyright": "GPL-3.0-only",
+    "directories": {
+      "output": "../dist/desktop",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "setup.html",
+      "lib/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "app/server",
+        "to": "server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "app/bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "AudioVideo",
+      "icon": "build/icon.png",
+      "artifactName": "WiiJukebox-${version}-linux-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "WiiJukebox-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "WiiJukebox-${version}-win-setup-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "build/icon.png",
+      "identity": null,
+      "artifactName": "WiiJukebox-${version}-mac-${arch}.${ext}"
+    }
+  }
+}
