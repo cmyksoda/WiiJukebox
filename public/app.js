@@ -424,8 +424,10 @@ function applyStatus(status) {
     if (np.artwork) {
         art.src = np.artwork;
         art.hidden = false;
+        $('#np-placeholder').hidden = true;
     } else {
         art.hidden = true;
+        $('#np-placeholder').hidden = false;
     }
 
     // Enable only what the active source actually supports, so a control never
@@ -435,15 +437,13 @@ function applyStatus(status) {
     $('#next').disabled = !caps.next;
     $('#stop').disabled = !caps.stop;
     $('#playpause').disabled = status.paused ? !caps.play : !caps.pause;
-    $('#playpause').textContent = status.paused ? '▶' : 'Ⅱ';
+    $('#playpause').classList.toggle('show-play', !!status.paused || !status.source);
+    $('#playpause').setAttribute('aria-label', status.paused ? 'Resume' : 'Pause');
     $('#playpause').title = status.paused ? 'Resume' : 'Pause';
     const capturing = status.source?.id === 'desktop';
     $('#monitor').disabled = capturing;
-    $('#viz-toggle').disabled = capturing;
     if (capturing) {
-        $('#monitor-audio').pause();
-        $('#monitor').setAttribute('aria-pressed', 'false');
-        if (document.body.classList.contains('viz')) toggleVisualizer();
+        setMonitoring(false);
     }
 
     $('#listeners').textContent =
@@ -482,9 +482,8 @@ function connectEvents() {
 
 // --- visualizer ----------------------------------------------------------
 //
-// Butterchurn needs a Web Audio node to analyse, which means the browser has to
-// be decoding the stream itself. So the visualizer implies monitoring: turning
-// it on starts local playback if it isn't already running.
+// Analysis taps the stream before the speaker gain, so visualization continues
+// when local monitoring is muted.
 
 const viz = {
     instance: null,
@@ -494,6 +493,8 @@ const viz = {
     index: 0,
     raf: null,
     cycleTimer: null,
+    monitoring: false,
+    starting: false,
 };
 
 // Presets that are known to error out in Butterchurn's renderer.
@@ -530,39 +531,56 @@ async function loadPresets() {
     return merged;
 }
 
-function startMonitor() {
+function setMonitoring(enabled) {
+    viz.monitoring = enabled;
+    $('#monitor').setAttribute('aria-pressed', String(enabled));
+    if (viz.outputGain) viz.outputGain.gain.value = enabled ? 1 : 0;
+    if (!enabled && !viz.starting && !document.body.classList.contains('viz')) $('#monitor-audio').pause();
+}
+
+async function startAudio() {
     const audio = $('#monitor-audio');
-    if (state.status?.source?.id === 'desktop') throw new Error('monitoring is disabled during desktop capture to prevent feedback');
     if (!audio.src) audio.src = state.mount || '/stream';
 
     if (!viz.ctx) {
         viz.ctx = new (window.AudioContext || window.webkitAudioContext)();
         viz.sourceNode = viz.ctx.createMediaElementSource(audio);
-        viz.sourceNode.connect(viz.ctx.destination);
+        viz.outputGain = viz.ctx.createGain();
+        viz.outputGain.gain.value = viz.monitoring ? 1 : 0;
+        viz.sourceNode.connect(viz.outputGain);
+        viz.outputGain.connect(viz.ctx.destination);
     }
-    viz.ctx.resume();
-    return audio.play();
+    await viz.ctx.resume();
+    await audio.play();
 }
 
 async function toggleVisualizer() {
+    if (viz.starting) return;
     if (document.body.classList.contains('viz')) {
         document.body.classList.remove('viz');
         $('#viz-toggle').setAttribute('aria-pressed', 'false');
         $('#viz-overlay').hidden = true;
         cancelAnimationFrame(viz.raf);
         clearInterval(viz.cycleTimer);
+        if (!viz.monitoring) $('#monitor-audio').pause();
         return;
     }
 
+    viz.starting = true;
     try {
-        await startMonitor();
-        $('#monitor').setAttribute('aria-pressed', 'true');
+        await startAudio();
         await loadPresets();
     } catch (err) {
+        if (!viz.monitoring) $('#monitor-audio').pause();
         return toast(`Visualizer: ${err.message}`, true);
+    } finally {
+        viz.starting = false;
     }
 
-    if (!viz.names.length) return toast('No presets loaded', true);
+    if (!viz.names.length) {
+        if (!viz.monitoring) $('#monitor-audio').pause();
+        return toast('No presets loaded', true);
+    }
 
     const canvas = $('#visualizer');
     canvas.width = window.innerWidth;
@@ -614,6 +632,11 @@ window.addEventListener('resize', () => {
 function setSourcesOpen(open) {
     document.body.classList.toggle('sources-open', open);
     $('#sources-toggle').setAttribute('aria-expanded', String(open));
+    const modal = open && window.matchMedia('(max-width: 780px)').matches;
+    $('#main').inert = modal;
+    $('#player').inert = modal;
+    $('#sidebar').setAttribute('role', modal ? 'dialog' : 'complementary');
+    $('#sidebar').setAttribute('aria-modal', String(modal));
     if (open) $('#sources-close').focus();
     else if ($('#sidebar').contains(document.activeElement)) $('#sources-toggle').focus();
 }
@@ -621,8 +644,15 @@ function setSourcesOpen(open) {
 $('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
 $('#sources-close').onclick = () => setSourcesOpen(false);
 $('#sidebar-shade').onclick = () => setSourcesOpen(false);
+window.matchMedia('(max-width: 780px)').addEventListener('change', () => setSourcesOpen(false));
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') setSourcesOpen(false);
+    if (event.key === 'Tab' && $('#main').inert) {
+        const targets = [...$('#sidebar').querySelectorAll('button, a[href]')].filter(el => !el.disabled);
+        const first = targets[0], last = targets.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
 });
 
 $('#back').onclick = () => {
@@ -636,17 +666,16 @@ $('#stop').onclick = () => control('stop');
 $('#playpause').onclick = () => control(state.status?.paused ? 'play' : 'pause');
 
 $('#monitor').onclick = async () => {
-    const audio = $('#monitor-audio');
-    const btn = $('#monitor');
-    if (!audio.paused) {
-        audio.pause();
-        btn.setAttribute('aria-pressed', 'false');
+    if (viz.monitoring) {
+        setMonitoring(false);
         return;
     }
+    if (state.status?.source?.id === 'desktop') return;
     try {
-        await startMonitor();
-        btn.setAttribute('aria-pressed', 'true');
+        setMonitoring(true);
+        await startAudio();
     } catch (err) {
+        setMonitoring(false);
         toast(`Could not play here: ${err.message}`, true);
     }
 };

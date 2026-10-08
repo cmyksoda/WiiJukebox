@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WiiJukebox</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
@@ -16,9 +16,9 @@
 
 <div id="app">
   <button id="sidebar-shade" aria-label="Close sources" tabindex="-1"></button>
-  <aside id="sidebar">
+  <aside id="sidebar" aria-label="Music sources">
     <header id="brand">
-      <strong>WiiJukebox</strong>
+      <strong><span class="wii-word">Wii</span>Jukebox</strong>
       <button id="sources-close" class="icon-btn" aria-label="Close sources">&times;</button>
     </header>
 
@@ -37,7 +37,7 @@
 
   <main id="main">
     <div id="toolbar">
-      <button id="sources-toggle" class="btn small" aria-controls="sidebar" aria-expanded="false">Sources</button>
+      <button id="sources-toggle" class="icon-btn menu-button" aria-label="Open sources" aria-controls="sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
       <button id="back" class="icon-btn" title="Back" hidden>&larr;</button>
       <h2 id="crumb">Pick a source</h2>
       <input id="search" type="search" placeholder="Search" hidden>
@@ -60,6 +60,7 @@
      server reports, so nothing here ever pretends to work when it can't. -->
 <footer id="player">
   <div id="np">
+    <span id="np-placeholder" aria-hidden="true">♫</span>
     <img id="np-art" alt="" hidden>
     <div id="np-text">
       <div id="np-title">Nothing playing</div>
@@ -68,16 +69,16 @@
   </div>
 
   <div id="controls">
-    <button id="prev" class="icon-btn" title="Previous" disabled>&#9198;</button>
-    <button id="playpause" class="icon-btn big" title="Play" disabled>&#9199;</button>
-    <button id="next" class="icon-btn" title="Next" disabled>&#9197;</button>
-    <button id="stop" class="icon-btn" title="Stop" disabled>&#9632;</button>
+    <button id="prev" aria-label="Previous track" class="icon-btn" title="Previous" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M19 5 8 12l11 7Z"/></svg></button>
+    <button id="playpause" aria-label="Play" class="icon-btn big" title="Play" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-icon" d="M8 5v14M16 5v14"/><path class="play-icon" d="m8 5 11 7-11 7Z"/></svg></button>
+    <button id="next" aria-label="Next track" class="icon-btn" title="Next" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M5 5l11 7-11 7Z"/></svg></button>
+    <button id="stop" aria-label="Stop" class="icon-btn" title="Stop" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
   </div>
 
   <div id="right">
-    <span id="listeners" title="Wii consoles connected">0 listening</span>
-    <button id="monitor" class="btn small" title="Play the stream here in the browser">Monitor</button>
-    <button id="viz-toggle" class="btn small">Visualizer</button>
+    <span id="listeners" title="Devices connected to the stream">0 listening</span>
+    <button id="monitor" class="btn small" title="Play the stream here in the browser" aria-label="Monitor audio on this device" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v7h4v-7Zm16 0h2v7h-4v-7Z"/></svg><span class="button-label">Monitor</span></button>
+    <button id="viz-toggle" class="btn small" aria-label="Toggle visualizer" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4M8 5v14M12 8v8M16 3v18M20 9v6"/></svg><span class="button-label">Visualizer</span></button>
   </div>
 </footer>
 

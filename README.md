@@ -94,9 +94,16 @@ Use the web UI for free-text searches and new URLs; the Wii has no keyboard yet.
 
 Desktop audio lists output monitors, not microphones. Capture begins only when
 you select one and ends on Stop or source change. It is not resumed automatically
-when the server starts. Browser monitoring/visualization is disabled during
-capture to prevent feeding the stream back into itself. Control the original
+when the server starts. Audible browser monitoring is disabled during capture
+to prevent feeding the stream back into itself; silent visualization remains
+available. Control the original
 music app on the host; WiiJukebox cannot skip tracks in that app.
+
+The visualizer selects a random preset every 25 seconds with a 5-second blend.
+**Monitor** independently enables sound on the browser device. With Monitor off,
+the visualizer still analyzes the stream, but speaker gain is zero. Turning both
+off pauses the browser's stream. On phones, the hamburger opens the sources
+drawer and the compact player keeps transport, Monitor and Visualizer accessible.
 
 ## Testing
 
