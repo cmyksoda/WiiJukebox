@@ -116,7 +116,7 @@ so no account or key is needed. Episodes come straight from each show's RSS feed
   user name or password are refused; tokens in the query string work.
 - An episode plays on its own and the stream stops when it ends. Neighbors in a
   newest-first list are the wrong "next" for serials and for news shows alike,
-  so there is no queue and no skip.
+  so there is no queue, no skip, and no shuffle or repeat.
 - Seeking needs `itunes:duration` in the feed and a host that honors byte
   ranges (most do). Episode artwork is used when the feed has it, else the
   show's.
@@ -157,7 +157,8 @@ WiiJukebox has no scrobbling settings of its own.
 A track starts counting when its audio reaches the stream. It counts as played
 after half its length or 4 minutes of listening, whichever comes first, and tracks
 under 30 seconds never count (Last.fm's rules). Paused time does not count, and
-seeking does not restart the count.
+seeking does not restart the count. Each replay under repeat-one is a new listen
+and counts on its own.
 
 | Service | What WiiJukebox reports | Where plays go next |
 |---|---|---|
