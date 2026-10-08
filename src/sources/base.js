@@ -47,7 +47,8 @@ const CAPABILITIES = [
 /**
  * @typedef {object} AudioHandle
  * What a source returns from open(). Either:
- *   { type: 'uri', uri, headers?, seekSeconds? }  -- pipeline decodes it
+ *   { type: 'uri', uri, headers?, seekSeconds?, seekable? }  -- pipeline decodes it
+ *     (`seekable: true` lets the pipeline reopen a finite input at an offset)
  *   { type: 'pcm', stream }                       -- already interchange PCM
  *   { type: 'device', format: 'pulse', device }   -- selected output monitor
  *   { type: 'encoded', stream }                   -- encoded bytes, pipeline decodes

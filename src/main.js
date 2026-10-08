@@ -26,6 +26,7 @@ async function main() {
             mount: config.data.mount,
             ...config.data.station,
         },
+        audio: config.data.audio,
     });
 
     pipeline.on('warning', (msg) => console.warn(`! ${msg}`));

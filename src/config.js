@@ -32,6 +32,11 @@ const DEFAULTS = {
 
     mount: '/stream',
 
+    // The shared MP3 stream. 48 kHz is ASND's native rate, so the Wii plays it
+    // without resampling. { "bitrate": 128, "sampleRate": 44100 } restores the
+    // original stream; changes apply when the server restarts.
+    audio: { bitrate: 256, sampleRate: 48000 },
+
     station: {
         name: 'WiiJukebox',
         genre: 'Various',

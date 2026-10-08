@@ -11,5 +11,4 @@ struct wj_document { struct wj_row rows[WJ_ROWS]; int count; };
 int wj_fields(char *line, struct wj_row *row);
 int wj_document(char *body, struct wj_document *doc);
 int wj_number(const char *text, int minimum, int maximum, int *value);
-void wj_display_text(char *text);
 #endif

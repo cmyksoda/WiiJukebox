@@ -1,8 +1,27 @@
 # WiiJukebox native client prototype
 
-This is a real devkitPPC/libogc app, with a console UI, background control worker
-and libmad/ASND streaming audio. Music playback, browsing and projectM rendering
-have been tested on a physical Wii; extended network and audio testing is ongoing.
+This is a real devkitPPC/libogc app with a GX interface in the style of the Wii
+Menu, a background control worker and libmad/ASND streaming audio. Music playback,
+browsing and projectM rendering were tested on a physical Wii with the earlier
+console interface; the graphical interface has not yet run on hardware.
+
+## Interface
+
+A light, pinstriped background with Wii-blue accents. Servers and music sources
+are channel-style tiles; folders and tracks are a list with type icons and
+subtitles, and long selected titles scroll. The right-hand card shows album art
+(fetched from `/api/wii/art`, with a note placeholder when there is none), the
+title, artist, playback state, a seek bar with elapsed/total time, and
+previous/play-pause/next/stop buttons. The dock at the bottom has Back and
+Visualizer buttons in raised pods either side of the Wii's clock and date.
+Messages appear as a pill above the dock; volume changes show a meter. The
+header reports the server, connection, bitrate, buffered seconds and audio
+restarts. 16:9 consoles get a wider layout rather than stretched shapes.
+
+Text is drawn with FreeType from embedded Noto Sans (Latin, Greek, Cyrillic)
+and Noto Sans CJK JP (kana and common kanji) subsets; characters outside both,
+such as Hangul or emoji, show a missing-glyph box instead of `?`. Building the host tests needs FreeType
+development headers (`pkg-config freetype2`).
 
 ## Build and install
 
@@ -41,39 +60,49 @@ advertised by discovery and does not need to be compiled into the client.
 
 Select the server name and match its eight-character ID prefix to the web UI.
 The complete UUID is saved in `sd:/apps/wiijukebox/server.id`. On future launches
-only that remembered server is auto-selected. Failed stream connections trigger
-another discovery attempt after three retries; the remembered UUID can then
-resolve to a different IP. Discovery retries every five seconds while a saved
-server is absent. **This ID is an identifier, not authentication or a secret.**
+only that remembered server is auto-selected. After three failed audio or status
+attempts the client rediscovers in the background, every ten seconds, and moves
+to the remembered UUID's new address without leaving the current screen.
+Discovery retries every five seconds while a saved server is absent at startup.
+**This ID is an identifier, not authentication or a secret.**
 
 Without writable SD, selection works for that run but is not saved. Returning
 from the source screen to the server chooser lets you explicitly select a
 different server. Source settings and favorites remain on the host.
 
-The audio worker keeps a 64 KiB compressed buffer and starts decoding after
-32 KiB (about two seconds at 128 kbps). The decoder reads memory instead of
-waiting for the network. If it runs dry, playback refills before restarting.
-The bottom rows show buffered seconds, audio restart count, and transient status.
-An audio restart means the decoder stopped and needed recovery; this does not
-count ordinary background top-ups, or every possible output underrun. Short
-network gaps get a bounded 50 ms wait before the decoder treats them as EOF.
-Navigation movement stays
-responsive during requests; open/back and transport presses wait for the current
-request to finish. Curly quotes and dashes are converted for the ASCII font.
+The audio thread owns the stream connection and a 384 KiB compressed buffer.
+Sizes are durations at the advertised bitrate: decoding starts after two seconds
+of audio, and the server's four-second burst is the normal buffer depth. If the
+connection drops or stalls for three seconds, before the buffer runs dry, the
+thread reconnects (0.25, 0.5,
+1, 2, 2, then 3 seconds apart) and asks for the exact byte it stopped at, so a
+short Wi-Fi gap continues without skipping or repeating audio. A gap the server
+no longer holds, or a server restart, starts a fresh decoder run. After an
+underrun, more than six seconds of backlog is trimmed to four, and more than
+nine seconds while playing reconnects at the live edge, so recovery never
+leaves controls lagging far behind. The decoder reads memory instead of waiting
+for the network; short gaps get a bounded 50 ms wait before it treats them as
+EOF. Status polling backs off to eight seconds while the server is unreachable
+and keeps the last song on screen. Navigation movement stays responsive during
+requests; open/back and transport presses wait for the current request to
+finish.
 
 ## Controls
 
 | Wii Remote input | Action |
 |---|---|
-| Up / Down | Select a row |
-| A | Select server/source; open container; play track/station (continue the album/playlist from that track) |
+| Point | Highlight a row or tile; buttons and the seek bar light up |
+| Up / Down | Select a row; move between tile rows |
+| A | Select server/source; open container; play track/station (continue the album/playlist from that track). When pointing at a button, press it |
+| A on the seek bar | Seek there; hold A and move to preview, release to seek |
 | B (release) | Back |
-| Left / Right | Previous/next library page |
+| Left / Right | Previous/next library page; move between tiles |
 | 2 | Toggle projectM visualizer |
 | Hold B + A | Play the current or highlighted album/playlist from the beginning |
 | Hold B + Left / Right | Previous/next queued track |
 | Hold B + 1 | Pause/resume a supported source |
 | Hold B + 2 | Stop the source |
+| Hold B + Up / Down | Seek 10 seconds forward/back; repeated presses add up, then it seeks |
 | + / - | Local Wii volume |
 | 1 | Refresh current page / scan servers |
 | HOME | Exit |
@@ -104,18 +133,17 @@ The source selector can reach every configured server adapter.
 Text payloads are percent-encoded tab-separated fields. Buffers are bounded:
 80 KB response body, 8 KB HTTP headers, 16 rows, 7 fields/row, 1,024 decoded bytes
 per field, 8 discovered servers and 16 folder levels. Invalid framing fails the
-request. Visible text is sanitized for terminal controls; non-ASCII bytes show
-as `?` until a proper font renderer replaces the console.
+request. Control characters are skipped when text is drawn.
 
 ## Still missing / unverified
 
 - Long Wi-Fi jitter/reconnect runs and HOME/power edge cases. The user has
   confirmed physical Wii music playback, browsing and projectM rendering.
-- A verified emulator render: the isolated offscreen boot produced no frames.
-- Graphical library/now-playing UI, cover art, pointer support and text input.
-  There is no Wii search keyboard yet.
+- The graphical interface on hardware: GX rendering, the pointer, the
+  visualizer handoff in both directions, and memory with projectM loaded.
+- Text input; there is no Wii search keyboard yet.
 - Authentication between LAN controllers and the server, manual addressing,
-  IPv6 discovery, TLS on the Wii-to-server connection, queue editing and seeking.
+  IPv6 discovery, TLS on the Wii-to-server connection and queue editing.
 - Real Plex/Jellyfin account tests and actual desktop monitor capture testing.
 
 Original client code is GPL-3.0-only. See the repository LICENSE. libogc/libmad/
@@ -126,23 +154,35 @@ from devkitPro when distributing a linked binary.
 
 Press **2** to toggle the projectM GX renderer. **B** returns
 to the browser. Volume and B+transport work in either view; browser selection
-and page controls are inactive while the visualizer is visible. Presets are
-embedded, so no extra SD assets are needed when using wiiload. Random presets
-change every 25 seconds with a 5-second blend. Original upstream notices and
+and page controls are inactive while the visualizer is visible. 626 presets are
+embedded, so no extra SD assets are needed when using wiiload. Each entry starts
+on "Aderrasi - Agitator.milk", as WiiRadio did; random presets then change every
+25 seconds with a 5-second blend. Original upstream notices and
 source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
 
-The browser shows `Page X / Y` and the visible item range. Network connection
-status is shown on screen; HTTP diagnostics stay in the optional SD log.
+The list header shows the visible range, with page arrows when there is more
+than one page. Network status is shown on screen; HTTP diagnostics stay in the
+optional SD log.
 Commands show acceptance first, then a matching server
 result. Play/skip completion waits for decoded audio on the server; existing
 stream buffering can still delay what reaches the speakers. Old completion
 messages do not repeatedly replace browser messages.
 
-An ASCII progress bar above HOME shows elapsed and total time; unknown durations
-use `--:--`. The native client sends its first decoded MP3 byte position and
+The seek bar shows elapsed and total time; live streams read `Live`. The native client sends its first decoded MP3 byte position and
 ASND-consumed sample time with status requests. The server maps that cursor onto
 its PCM timeline, including pauses, source changes and silence. This accounts for
 the compressed buffer, decoder read-ahead and initial output silence. A selected
 track waiting behind buffered audio reads `Queued`, then `Playing` when reached.
 The display updates once per second and does not measure downstream TV latency.
-The native stream format remains 44.1 kHz stereo MP3, resampled to 48 kHz ASND.
+
+The stream defaults to 48 kHz stereo MP3 at 256 kbps. ASND plays 48 kHz without
+resampling; mp3player's converter repeats or drops whole samples, so 44.1 kHz
+streams lose detail on the Wii. The server's `config.json` can restore the
+original format without rebuilding the client:
+
+```json
+"audio": { "bitrate": 128, "sampleRate": 44100 }
+```
+
+Restart the server after changing it. The client adapts its buffers and clock to
+whatever the stream advertises.

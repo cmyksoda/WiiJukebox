@@ -2,16 +2,18 @@
 const { randomBytes } = require('node:crypto');
 const { control } = require('../core/transport');
 const { serverIdentity } = require('./discovery');
+const { Artwork } = require('./artwork');
 const PAGE_SIZE = 12;
 const TTL = 60 * 60 * 1000;
 
 // A bounded text protocol keeps the Wii parser small. Opaque references retain
 // full upstream items (including radio URLs) on the server, not on the console.
 class WiiProtocol {
-    constructor({ registry, pipeline, config }) {
+    constructor({ registry, pipeline, config, artwork = new Artwork() }) {
         this.registry = registry;
         this.pipeline = pipeline;
         this.config = config;
+        this.artwork = artwork;
         this.id = serverIdentity(config);
         this.items = new Map();
         this.commandStatus = "";
@@ -61,7 +63,20 @@ class WiiProtocol {
                     Object.entries(s.capabilities).filter(([, enabled]) => enabled).map(([key]) => key).join(',')],
                     ['progress', Math.floor((s.nowPlaying.position || 0) * 1000),
                         Math.floor((s.nowPlaying.duration || 0) * 1000)],
-                    ['command', this.commandStatus, this.commandId, this.commandState]];
+                    ['command', this.commandStatus, this.commandId, this.commandState],
+                    ['art', this.artwork.keyFor(s.nowPlaying.artwork)]];
+            } else if (req.method === 'GET' && action === 'art') {
+                const size = Number(url.searchParams.get('size') || 128);
+                let image;
+                try {
+                    image = await this.artwork.render(url.searchParams.get('key') || '', size);
+                } catch (err) {
+                    return this._send(res, 404, [['error', err.message]]);
+                }
+                res.writeHead(200, { 'Content-Type': 'application/octet-stream',
+                    'Content-Length': image.length, 'Cache-Control': 'no-store',
+                    'X-WiiJukebox-Art': `${size}x${size} rgb565 gx-tiled` });
+                return res.end(image);
             } else if (req.method === 'GET' && action === 'browse') {
                 const id = url.searchParams.get('source');
                 const ref = url.searchParams.get('ref');
@@ -95,9 +110,15 @@ class WiiProtocol {
             } else if (req.method === 'POST' && action === 'control') {
                 const action = url.searchParams.get('action');
                 if (this.commandState === 'pending' && action !== 'stop') throw new Error('a Wii command is already running');
-                const commandId = this._command(control(this.pipeline, this.config, action), {
-                    audio: action === 'next' || action === 'previous',
-                    message: { stop: 'Stopped', pause: 'Paused', play: 'Resumed' }[action] || 'Audio ready',
+                let position;
+                if (action === 'seek') {
+                    const ms = Number(url.searchParams.get('position'));
+                    if (!Number.isSafeInteger(ms) || ms < 0) throw new Error('invalid seek position');
+                    position = ms / 1000;
+                }
+                const commandId = this._command(control(this.pipeline, this.config, action, { position }), {
+                    audio: action === 'next' || action === 'previous' || action === 'seek',
+                    message: { stop: 'Stopped', pause: 'Paused', play: 'Resumed', seek: 'Seeked' }[action] || 'Audio ready',
                 });
                 rows = [['ok', 'accepted', commandId]];
             } else {

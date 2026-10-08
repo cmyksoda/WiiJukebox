@@ -33,6 +33,7 @@ int main(void) {
     }
     assert(!parse("page\t12\t13\nitem\tabc123\ttrack\tDon%E2%80%99t stop\tArtist\n", 0, 12, &menu));
     assert(menu.count == 1 && menu.total == 13);
+    assert(!strcmp(menu.items[0].subtitle, "Artist") && !strcmp(menu.items[0].title, "Don\xe2\x80\x99t stop"));
     saved = menu;
     const char *bad_pages[] = {
         "page\t0\t13\nitem\tabc\ttrack\tWrong page\t\n",

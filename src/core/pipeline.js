@@ -20,13 +20,14 @@ const { Decoder } = require('./decoder');
 const { PlaybackTimeline } = require('./playback-timeline');
 
 class Pipeline extends EventEmitter {
-    constructor({ ffmpegPath = 'ffmpeg', station = {} } = {}) {
+    constructor({ ffmpegPath = 'ffmpeg', station = {}, audio = {} } = {}) {
         super();
         this._ffmpegPath = ffmpegPath;
 
-        this.encoder = new Encoder({ ffmpegPath });
-        this.broadcaster = new Broadcaster({ ...station, bitrate: this.encoder.bitrate });
-        this.timeline = new PlaybackTimeline();
+        this.encoder = new Encoder({ ffmpegPath, ...audio });
+        this.broadcaster = new Broadcaster({ ...station,
+            bitrate: this.encoder.bitrate, sampleRate: this.encoder.sampleRate });
+        this.timeline = new PlaybackTimeline({ sampleRate: this.encoder.sampleRate });
         this.pacer = new Pacer({ write: (chunk, timing) => {
             if (this.encoder.running) this.timeline.write(chunk.length, {
                 generation: this._generation, position: timing.position,
@@ -41,6 +42,8 @@ class Pipeline extends EventEmitter {
         this._source = null;
         this._decoder = null;
         this._pcmStream = null;
+        // The handle being decoded, kept so a seek can reopen it at an offset.
+        this._handle = null;
         // Whichever of the two is currently feeding the pacer, as a pause/resume
         // handle. Kept separate so backpressure works the same for both.
         this._input = null;
@@ -146,6 +149,24 @@ class Pipeline extends EventEmitter {
         return this._source;
     }
 
+    /** Finite URI inputs the source marked seekable can be reopened at an offset. */
+    get seekable() {
+        return Boolean(this._source && this._handle?.type === 'uri' && this._handle.seekable &&
+            this._nowPlaying.duration > 0);
+    }
+
+    /** Restart the current track's decoder at `seconds`, keeping pause state. */
+    async seek(seconds) {
+        if (!this.seekable) throw new Error('this source cannot seek');
+        if (!Number.isFinite(seconds)) throw new Error('invalid seek position');
+        const target = Math.max(0, Math.min(seconds, this._nowPlaying.duration - 0.5));
+        const paused = this.pacer.paused;
+        await this.playHandle({ ...this._handle, seekSeconds: target }, target);
+        this.pacer.paused = paused;
+        this.emit('status', this.status);
+        return target;
+    }
+
     playbackAt(epoch, byte, playedMs) {
         const status = this.status;
         const queued = { ...status, playbackState: status.source ? 'queued' : 'idle',
@@ -169,7 +190,7 @@ class Pipeline extends EventEmitter {
             starving: this.pacer.starving,
             paused: Boolean(this.pacer.paused),
             capabilities: this._source
-                ? { ...this._source.capabilities, seek: false, volume: false, shuffle: false, repeat: false }
+                ? { ...this._source.capabilities, seek: this.seekable, volume: false, shuffle: false, repeat: false }
                 : {},
         };
     }
@@ -208,6 +229,7 @@ class Pipeline extends EventEmitter {
 
     /** Route whatever the source returned into the pacer. */
     _consume(handle) {
+        this._handle = handle;
         this._generation++;
         this._audioReady = false;
         this._audioError = null;
@@ -357,6 +379,7 @@ class Pipeline extends EventEmitter {
         this.pacer.paused = false;
         this._input = null;
         this._paused = false;
+        this._handle = null;
         if (this._decoder) {
             this._decoder.stop();
             this._decoder = null;
@@ -392,7 +415,7 @@ class Pipeline extends EventEmitter {
      * Play the next item from the same source without detaching it -- the normal
      * path when a track finishes and a queue advances.
      */
-    async playHandle(handle) {
+    async playHandle(handle, positionSeconds = 0) {
         clearInterval(this._endTimer);
         this._endTimer = null;
         this.pacer.paused = false;
@@ -407,7 +430,7 @@ class Pipeline extends EventEmitter {
             this._pcmStream.destroy?.();
             this._pcmStream = null;
         }
-        this.pacer.reset();
+        this.pacer.reset(positionSeconds);
         this._consume(handle);
     }
 

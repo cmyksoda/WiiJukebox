@@ -1,0 +1,256 @@
+{
+  "archive_url": "https://sourceforge.net/projects/projectm/files/2.0.1/projectM-complete-2.0.1-Source.tar.gz/download",
+  "archive_name": "projectM-complete-2.0.1-Source.tar.gz",
+  "archive_sha256": "c7e474002d718a9ef440e5eb99a2f84792e9bf0ceab3715aaa438e94c9a45fff",
+  "archive_sha1": "1f04a7ee700c58c3052114fdae52ffcb3da18746",
+  "archive_md5": "9d32fa1357622c7a945a2e10620ee945",
+  "archive_size": 31833234,
+  "checksum_listing_url": "https://sourceforge.net/projects/projectm/files/2.0.1/",
+  "selection": "MilkDrop 1.x presets from presets_milkdrop, presets_milkdrop_104, presets_projectM and presets_yin; not already embedded by content or name; no MilkDrop 2 shader code, user textures or textured shapes; fully parsed by the 2.0.1 engine; 600 host frames without NaN/Inf; median frame cost and load heap within the embedded set's p90 and p95.",
+  "files": {
+    "Aderrasi - Chromatic Abyss (Refined Abyss Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Aderrasi - Chromatic Abyss (Refined Abyss Mix).milk",
+      "sha256": "b1ee23e37b2924c5ee9b7862a6eea9bb1c5b562cb8921483fc1f301e1c1e7136"
+    },
+    "Bmelgren & Krash - Rainbow Orb Peacock (Centred Journey Mix 2).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren & Krash - Rainbow Orb Peacock (Centred Journey Mix 2).milk",
+      "sha256": "3495b13567fd8daf0e98ea3f776b7b0971af7986e346d96a5a8a07a740d62077"
+    },
+    "Bmelgren & Krash - Rainbow Orb Peacock (Lonely Signal Gone Mad Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren & Krash - Rainbow Orb Peacock (Lonely Signal Gone Mad Mix).milk",
+      "sha256": "1aa1a3ef2c8df2bbcb69c168d496e67b8c158715b93e812aa39747b1c091e9dd"
+    },
+    "Bmelgren & Krash - Rainbow Orb Peacock (Unknowable Mix 5).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren & Krash - Rainbow Orb Peacock (Unknowable Mix 5).milk",
+      "sha256": "7ad13e865ed75b11b691aa5eab321483d5aa450784e8b79fe6a5a19356be8a13"
+    },
+    "Bmelgren - Acid Iris.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Bmelgren - Acid Iris.milk",
+      "sha256": "7b84af502440a78174949c94ccf2d12f75c05e44eb3967ddf46502d404ba170b"
+    },
+    "Bmelgren - Hmmm.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Bmelgren - Hmmm.milk",
+      "sha256": "5544334167d0cdfeda49e52ec7eaba9985fa9854946e51db3930c98e2208df0a"
+    },
+    "Fvese - Snowflake Like 2.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Fvese - Snowflake Like 2.milk",
+      "sha256": "401729c6ca3dac102c7c4dbe9af6958d4ba593106b183d8d4728a15eb44a22f9"
+    },
+    "Geiss - Cartographie.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Cartographie.milk",
+      "sha256": "db927c193e81071243471edda80d1d96297d891155c523f54615a68bb05cf66a"
+    },
+    "Geiss - Color Tones 1.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Color Tones 1.milk",
+      "sha256": "9fe2840219e20838f9991ea8af53b5562038f2e117369ccd10491aedcbed16d4"
+    },
+    "Geiss - Color Tones 2.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Geiss - Color Tones 2.milk",
+      "sha256": "b666044020ed3019cf728d78ae30aad45ca040cc1701412e2bb4d34e19558c81"
+    },
+    "Geiss - Fog Tunnel.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Geiss - Fog Tunnel.milk",
+      "sha256": "1f461deeb2d050a5c5cb2a7bfcad29649916024f4af578950afadb8d84c95b15"
+    },
+    "Geiss - Happy Drops.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Happy Drops.milk",
+      "sha256": "7191db2f76e771351ffaeed0a07111cd69fa1a9b35cfb1b53cedfab77403358e"
+    },
+    "Geiss - Hurricane.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Hurricane.milk",
+      "sha256": "fef237a811444ff96aab6c5d42aee856b6ff23ab3fabc8747965ce90ed6bb3f9"
+    },
+    "Geiss - Many Colors 1.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Geiss - Many Colors 1.milk",
+      "sha256": "87cd097f012a80ee01424ce4a9b614ae45183b002bdfd4d1260356e4b3b52ce4"
+    },
+    "Geiss - Many Colors 2.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Many Colors 2.milk",
+      "sha256": "db41fbc5e6f6afc932fea4393861887c5976a028b87b9377c26446fde0b8d0e5"
+    },
+    "Idiot24-7 - Just plain cool 3.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Idiot24-7 - Just plain cool 3.milk",
+      "sha256": "5d017967c8637f010943c1a243f98bb75c7f254bde8cb7e2df98883b0a2dee26"
+    },
+    "Krash & Rovastar - Rainbow Orb.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Krash & Rovastar - Rainbow Orb.milk",
+      "sha256": "84e3ee27766dcd854c552ba13851012d56be8455cdb26810807dd7604214ed49"
+    },
+    "Krash - Molten Indecision (Rozzor Hot Fast tweak).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - Molten Indecision (Rozzor Hot Fast tweak).milk",
+      "sha256": "e55a73ca35e2f6fed645242325fdfb1234c81aefd720aff5a9bbb4a6b7101e4b"
+    },
+    "Krash - Snowflake Halo.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - Snowflake Halo.milk",
+      "sha256": "c06cbe46034e1c1411e41d73b856516d47353f00c63dd236c0b725c7584e397f"
+    },
+    "Krash - Vinyl Disk.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Krash - Vinyl Disk.milk",
+      "sha256": "03d8e1a5c1f277bb9a924e7065aac9ebc92e3074be4036a78b82099f2937f2a1"
+    },
+    "Krash - cardiac rhythm.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - cardiac rhythm.milk",
+      "sha256": "11a0bf9467f8f25316c0d4c7a9b79fff8c82ee145fa90f8104be7dd6ff3bdf52"
+    },
+    "Krash - molten indecision.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - molten indecision.milk",
+      "sha256": "9785633ab52f9d3e1dbec34c916f84b565904b8b7d84e301143295a357524aad"
+    },
+    "Krash - systolic pressure.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Krash - systolic pressure.milk",
+      "sha256": "7e7e04b12979e2ee684b1f39c58e3b8ae2ce15cb492fbe2e54e0c8d5b392843b"
+    },
+    "Mstress - Aurora Boreale.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Mstress - Aurora Boreale.milk",
+      "sha256": "02fc33ab779fa946edcbed7e1ca5e9de8741ff98902eadde76f9e70e88de44fa"
+    },
+    "Mstress - Super nova self control.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Mstress - Super nova self control.milk",
+      "sha256": "7beb4ed39da6cfba492a63964331dcf631baa8fb75398f09b3081f075b755403"
+    },
+    "Rocke - Answer.42.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rocke - Answer.42.milk",
+      "sha256": "809c4d466ba7a3cf578921e6c8a1d42eda44150e555f93fe6dcd9568b64ed3bd"
+    },
+    "Rocke - Answer42.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rocke - Answer42.milk",
+      "sha256": "2a621d90d52bcee877e0ef5306de04a64175c260752c5750c83831a988cd8ac1"
+    },
+    "Rovastar & EvilJim - Bass Tube of Light.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar & EvilJim - Bass Tube of Light.milk",
+      "sha256": "7fbf6ff66699d242cfb66e2b2e60991c902832ccc444ad4cb3dd03612168f562"
+    },
+    "Rovastar & Geiss - Surface (Vectrip Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar & Geiss - Surface (Vectrip Mix).milk",
+      "sha256": "012da95a448337f209092651a199e6fdbb8b4b407824a554cdef57340736a988"
+    },
+    "Rovastar & Krash - Rainbow Deflection.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar & Krash - Rainbow Deflection.milk",
+      "sha256": "07e2684fb31a39e15a8f1f24216f1e9b5113b00a8a766cccbe1dae740bb6a03e"
+    },
+    "Rovastar - A Million Miles From Earth (Drift Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - A Million Miles From Earth (Drift Mix).milk",
+      "sha256": "cc6bec9a55cfbfdaf1fab8795385727623f9855a852d3eaaad0d060bf34a0368"
+    },
+    "Rovastar - Harlequin's Liquid Dragon.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Harlequin's Liquid Dragon.milk",
+      "sha256": "1f414b43c4beedac89af4423c766e55a592de8469cedd14aa306a6aee9387c35"
+    },
+    "Rovastar - Jester's Calling 2.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Jester's Calling 2.milk",
+      "sha256": "a9557a7c48f7a622d554f0f56841cb8d81d6700a2aecbe7680a24b22f7222624"
+    },
+    "Rovastar - Jester's Surreal Tornado (Further Vortex Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Jester's Surreal Tornado (Further Vortex Mix).milk",
+      "sha256": "dce82d8df9d5aeb0d5f7912d4547a4afa518eb34e18415f497f4890e6c78b072"
+    },
+    "Rovastar - Paradigm Sphere.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - Paradigm Sphere.milk",
+      "sha256": "c02fa12ec89fdd2f5059ea8361824e73ce4c32d76131b73c54843a9957a44a42"
+    },
+    "Rovastar - Power Trip.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - Power Trip.milk",
+      "sha256": "2df0eb2046f025e03fc271837610f22ca799ed62db3bab658fe902f89a9107cd"
+    },
+    "Rovastar - Ritual Of Life.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Ritual Of Life.milk",
+      "sha256": "a92040f4c0cae3a54ed9b80026714773d30343532ca972733f1e70c6aeff1b86"
+    },
+    "Rovastar - Sea Life.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - Sea Life.milk",
+      "sha256": "3902febe3e10a070afb42e6cc3873a495f4fa26c8fa088ea5fc8cdc268589fdd"
+    },
+    "Rovastar - Shadows Portal.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Shadows Portal.milk",
+      "sha256": "0b38157b1d8d1223cf06d1e55dc6d8691d044f63354080c4627708173777e925"
+    },
+    "Rovastar - Torrid Tales.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/Rovastar - Torrid Tales.milk",
+      "sha256": "b055a51df4f2cb36d0ef45e4b28450d64233a75d73cbdaabbe0a5ca5ac102f71"
+    },
+    "Rovastar - Trippy S.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Trippy S.milk",
+      "sha256": "a56d49cc9304e84ac2339967713314bd42062c675e202a152a63cf4740ba85f6"
+    },
+    "Rovastar - Violent Relaxation.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Violent Relaxation.milk",
+      "sha256": "eb8856ca77a26b22decb944c733e2de1a846a10a1f6f18fce3ecff39109ce412"
+    },
+    "Rovastar - Visions Of The Future.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Visions Of The Future.milk",
+      "sha256": "286abfddb632dff274e09f14d3618b4ef5ee1b2b0301d416f35b8cd22d6090e3"
+    },
+    "Rovastar - VooV's Brainwaves.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - VooV's Brainwaves.milk",
+      "sha256": "4313dc6b83f0e8a6359a976c0a90e9095e4b9a0292b68498a2ee4466fe01c81f"
+    },
+    "Rovastar - VooV's Organic Light.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rovastar - VooV's Organic Light.milk",
+      "sha256": "10b50a962cd4676e2fabcd7c60f393529f3e84cfe4575b3ecf2dd35208d141cd"
+    },
+    "Rovastar - Xeper.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - Xeper.milk",
+      "sha256": "38ae3419c4478cc0f2f89a8df3a0b594c1262f2736fedb92f44f88aa09d4ca80"
+    },
+    "Rovastar - eclectic interface (despair mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - eclectic interface (despair mix).milk",
+      "sha256": "a18b5721d7677a25051d0d52191a343706f2e109c9238237e5144ab8178b0c19"
+    },
+    "Rovastar - paranormal diffusion analyser.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar - paranormal diffusion analyser.milk",
+      "sha256": "e6c4fd18349b0fbdf298d5007019affd5d59f03ea9edb5e9eedb27b9ad13b6e2"
+    },
+    "Rovastar and Krash - Rainbow Deflection.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Rovastar and Krash - Rainbow Deflection.milk",
+      "sha256": "415f205db8287d7e74012f36427475d67cd527fc7a0f784e5ba3523030f52eff"
+    },
+    "Rozzor & StudioMusic - Vertigyny (Geiss shape mod).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rozzor & StudioMusic - Vertigyny (Geiss shape mod).milk",
+      "sha256": "3cd1dc0f1c5433b346a7656cb131797f00a4030aac918dbca8e9f8ea7e20e7a0"
+    },
+    "Rozzor - Color Breaks its Boycott (shape mod).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Rozzor - Color Breaks its Boycott (shape mod).milk",
+      "sha256": "a593fe8cfd69cb09cbee0194f1e11a91f7dac9e09d181ebfbafa8e3107107081"
+    },
+    "Studio Music - Take Your Pick (Remix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Studio Music - Take Your Pick (Remix).milk",
+      "sha256": "2a591b57d6680d932bbfaea4248effe798c5d8011c1fc14f30fa56eb8ad02bf0"
+    },
+    "StudioMusic & Unchained - Remembering How You Were (Perceived Mix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_projectM/StudioMusic & Unchained - Remembering How You Were (Perceived Mix).milk",
+      "sha256": "f293b860fead3c9218e0b88f461615d9a5aa24de8f2e4657345d17329d8bcba9"
+    },
+    "TEcHNO & SandStorm - Psychodelic Highway.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/TEcHNO & SandStorm - Psychodelic Highway.milk",
+      "sha256": "d377c081671cd5d0375c9a190ec373115708ded2143476e0e70e3758b1f13235"
+    },
+    "Unchained - Proper Identification (Breaks Remix).milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Unchained - Proper Identification (Breaks Remix).milk",
+      "sha256": "4dd519023d6ff005cb1a8bb057edcb5e610aad11db68c7a2a7dd8be2734fcda9"
+    },
+    "idiot - Nothing Yet - 02 - Shifting Squares of idiot.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Nothing Yet - 02 - Shifting Squares of idiot.milk",
+      "sha256": "10dc8a265b067618dfc15422f3d764f993f3f5a1e4829d0df3d2b2cc05cd41bf"
+    },
+    "idiot - Waterfalls.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/idiot - Waterfalls.milk",
+      "sha256": "cc8aa892efb99a59f77414abe7c7ab4ee8428e66eb16efa0fc7edb05446e17d1"
+    },
+    "illusion & techno - double highway.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/illusion & techno - double highway.milk",
+      "sha256": "5926b6092e0979388308d961bf0253d14d27b258a3d94643b259c5286f0fd6ee"
+    },
+    "nil - Tim Leary's Amazing Waterslide.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/nil - Tim Leary's Amazing Waterslide.milk",
+      "sha256": "2fe7899300926ef0cca85a4d3a84dbf9aaa5a5078092044d79385d8cc0f1bc42"
+    },
+    "nil - Wyrm.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/nil - Wyrm.milk",
+      "sha256": "743eb28d4dc72ea1203093d355e38e01f1330f030b2841c4cc77752937818fc7"
+    },
+    "yin - 090 - Exit eternity.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_yin/yin - 090 - Exit eternity.milk",
+      "sha256": "3b15a98d9a1e4d74aa58c26046947913b102ba96fe6369593c4af09efeadd268"
+    }
+  }
+}

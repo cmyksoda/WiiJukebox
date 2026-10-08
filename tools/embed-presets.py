@@ -4,7 +4,9 @@
 from pathlib import Path
 import json
 root = Path(__file__).resolve().parents[1]
-files = sorted((root / 'client/vendor/projectm/presets').glob('*.milk'))
+files = sorted([*(root / 'client/vendor/projectm/presets').glob('*.milk'),
+                *(root / 'client/vendor/projectm/presets-extra').glob('*.milk')], key=lambda p: p.name)
+assert len({p.name for p in files}) == len(files)
 out = root / 'client/build/presets.cpp'
 with out.open('w') as f:
     f.write('#include "presets.h"\n#include <cstring>\n')
@@ -18,6 +20,10 @@ with out.open('w') as f:
             f.write('"' + literal + '"\n')
         f.write('},\n')
     f.write('};\nconst unsigned wj_preset_count = sizeof(wj_presets) / sizeof(wj_presets[0]);\n')
+    f.write('int wj_preset_index(const char *name) {\n'
+            ' for (unsigned i = 0; i < wj_preset_count; i++)\n'
+            '  if (!std::strcmp(name, wj_presets[i].name)) return (int)i;\n'
+            ' return -1;\n}\n')
     f.write('extern "C" const char *wj_builtin_preset(const char *path) {\n'
             ' if (std::strncmp(path, "builtin:/", 9)) return 0;\n'
             ' for (unsigned i = 0; i < wj_preset_count; i++)\n'

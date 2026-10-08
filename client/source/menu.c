@@ -36,6 +36,7 @@ int wj_menu_parse(const struct wj_document *doc, int sources, int offset,
         snprintf(item->ref, sizeof(item->ref), "%s", ref);
         snprintf(item->type, sizeof(item->type), "%s", type);
         snprintf(item->title, sizeof(item->title), "%s", row->field[sources ? 2 : 3]);
+        if (!sources) snprintf(item->subtitle, sizeof(item->subtitle), "%s", row->field[4]);
         next.count++;
     }
     if (sources) next.total = next.count;

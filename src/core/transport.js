@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-function control(pipeline, config, action) {
+function control(pipeline, config, action, { position } = {}) {
     return pipeline.command(async () => {
         const source = pipeline.activeSource;
         if (!source) return { code: 409, error: 'nothing is playing' };
@@ -12,6 +12,8 @@ function control(pipeline, config, action) {
             config.save();
         } else if (action === 'pause' || action === 'play') {
             pipeline.setPaused(action === 'pause');
+        } else if (action === 'seek') {
+            return { ok: true, position: await pipeline.seek(Number(position)) };
         } else if (action === 'next' || action === 'previous') {
             const handle = await source[action]();
             if (!handle) return { ok: true, endOfQueue: true };

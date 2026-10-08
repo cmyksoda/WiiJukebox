@@ -197,7 +197,12 @@ async function main() {
     check('icy-metaint advertised', listener.metaint === 16000, `metaint=${listener.metaint}`);
     check(
         'icy-br advertised (clients estimate buffered duration from this)',
-        /icy-br:\s*128/i.test(listener.headers),
+        new RegExp(`icy-br:\\s*${pipeline.encoder.bitrate}\\r`, 'i').test(listener.headers),
+        `encoder ${pipeline.encoder.bitrate} kbps`,
+    );
+    check(
+        'icy-sr advertised at the encoder output rate',
+        new RegExp(`icy-sr:\\s*${pipeline.encoder.sampleRate}\\r`, 'i').test(listener.headers),
     );
     check('icy-name advertised', /icy-name:\s*SmokeTest/i.test(listener.headers));
     check(
@@ -246,7 +251,7 @@ async function main() {
     check('stream survives having no source at all', listener.audioBytes > beforeDetach);
     check('listener never disconnected', !listener.closed);
 
-    // --- rate sanity: 128 kbps is 16 kB/s -----------------------------------
+    // --- rate sanity: the measured rate must match the encoder's bitrate ----
     // A pacer bug would show up here as a stream running fast or slow, which on
     // the Wii means either a starved buffer or steadily growing latency.
     const totalMs = Date.now() - (listener.lastDataAt - listener.maxGapMs) || 1;
@@ -254,8 +259,8 @@ async function main() {
     const elapsedSec = 9.5; // approximate total sleep above
     const kbps = (observed * 8) / elapsedSec / 1000;
     check(
-        'bitrate close to 128 kbps',
-        kbps > 100 && kbps < 165,
+        `bitrate close to ${pipeline.encoder.bitrate} kbps`,
+        kbps > pipeline.encoder.bitrate * 0.78 && kbps < pipeline.encoder.bitrate * 1.29,
         `measured ~${kbps.toFixed(1)} kbps over ~${elapsedSec}s`,
     );
 

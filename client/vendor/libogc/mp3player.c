@@ -352,7 +352,7 @@ static void *StreamPlay(void *arg)
 
 		while (!mad_frame_decode(&Frame,&Stream) && thr_running) {
 			if(!clock_frame) {
-				wj_mp3_clock_frame(clock_read - (Stream.bufend - Stream.this_frame));
+				wj_mp3_clock_frame(clock_read - (Stream.bufend - Stream.this_frame), Frame.header.samplerate);
 				clock_frame = 1;
 			}
 			if(mp3filterfunc)

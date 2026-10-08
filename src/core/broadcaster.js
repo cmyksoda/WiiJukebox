@@ -18,22 +18,30 @@
 const { EventEmitter } = require('events');
 const http = require('http');
 const { randomInt } = require('node:crypto');
-const { MP3_BITRATE_KBPS } = require('./format');
+const { MP3_BITRATE_KBPS, MP3_SAMPLE_RATE } = require('./format');
 
 // Bytes of audio between metadata blocks. 16000 is what Icecast and SHOUTcast
 // both default to and existing ICY clients support; there is no upside to
 // being clever here.
 const METAINT = 16000;
 
-// Audio held back to hand a client the instant it connects. Without it the Wii
-// sits silent until its own buffer fills from live bytes alone, which reads as
-// several seconds of "nothing happened" after selecting the station. Icecast
-// calls this burst-on-connect. 64 KB at 128 kbps is about four seconds.
-const BURST_BYTES = 64 * 1024;
+// Audio handed to a new listener at once (Icecast's burst-on-connect), so the
+// Wii starts playing without waiting seconds for live bytes. Sized in seconds
+// so every bitrate gets the same head start.
+const BURST_SECONDS = 4;
 
-// A listener that cannot keep up gets dropped once this much audio has queued
-// for it, rather than being allowed to balloon the server's memory.
-const CLIENT_BACKLOG_LIMIT = 512 * 1024;
+// Recent audio kept so a client that lost its connection can ask for the exact
+// byte where it stopped (`?epoch=E&from=B`) and continue without a gap.
+const RESUME_SECONDS = 15;
+
+// A listener with this much audio queued in Node and the kernel is dropped
+// rather than allowed to balloon memory. Generous, because a Wi-Fi stall the
+// connection survives is better ridden out than turned into a reconnect.
+const BACKLOG_SECONDS = 30;
+
+// Keepalive probes find a vanished idle peer; the backlog limit covers a peer
+// that vanished while data was still unacknowledged.
+const KEEPALIVE_MS = 15000;
 
 /** ICY headers are latin1 and unframed, so a newline would forge a header. */
 function icySafe(value) {
@@ -87,6 +95,7 @@ class Broadcaster extends EventEmitter {
         genre = 'Various',
         description = 'WiiJukebox',
         bitrate = MP3_BITRATE_KBPS,
+        sampleRate = MP3_SAMPLE_RATE,
     } = {}) {
         super();
         this.mount = mount.startsWith('/') ? mount : `/${mount}`;
@@ -94,10 +103,12 @@ class Broadcaster extends EventEmitter {
         this.genre = genre;
         this.description = description;
         this.bitrate = bitrate;
+        this.sampleRate = sampleRate;
 
         this._clients = new Set();
-        this._burst = [];
-        this._burstBytes = 0;
+        // { start, chunk } in stream order; `start` is the absolute byte offset.
+        this._history = [];
+        this._historyBytes = 0;
         this._audioBytes = 0;
         this.epoch = randomInt(1, 2147483647);
 
@@ -135,10 +146,26 @@ class Broadcaster extends EventEmitter {
         return path === this.mount || path === `${this.mount}.mp3`;
     }
 
+    _seconds(seconds) {
+        return Math.round(seconds * this.bitrate * 125);
+    }
+
+    /** The resume byte a reconnecting client asked for, or the normal burst start. */
+    _startFor(query) {
+        const first = this._history.length ? this._history[0].start : this._audioBytes;
+        const from = Number(query.get('from'));
+        if (Number(query.get('epoch')) === this.epoch && Number.isSafeInteger(from) &&
+            from >= first && from <= this._audioBytes) return from;
+        const oldest = this._audioBytes - this._seconds(BURST_SECONDS);
+        const entry = this._history.find((item) => item.start >= oldest);
+        return entry ? entry.start : this._audioBytes;
+    }
+
     /** Serve one listener. Call only when handles(req) is true. */
     handleRequest(req, res) {
         // HEAD is how some players probe before committing; answer headers only.
         const headOnly = req.method === 'HEAD';
+        const start = this._startFor(new URLSearchParams((req.url || '').split('?')[1] || ''));
 
         const wantsMeta = String(req.headers['icy-metadata'] || '') === '1';
         const metaint = wantsMeta ? METAINT : 0;
@@ -155,10 +182,10 @@ class Broadcaster extends EventEmitter {
             'icy-genre': icySafe(this.genre).replace(/[^\x20-\x7e]/g, '?'),
             'icy-description': icySafe(this.description).replace(/[^\x20-\x7e]/g, '?'),
             'icy-br': String(this.bitrate),
-            'icy-sr': '44100',
+            'icy-sr': String(this.sampleRate),
             'icy-pub': '0',
             'X-WiiJukebox-Epoch': String(this.epoch),
-            'X-WiiJukebox-Byte-Start': String(this._audioBytes - this._burstBytes),
+            'X-WiiJukebox-Byte-Start': String(start),
         };
         if (metaint) headers['icy-metaint'] = String(metaint);
 
@@ -182,7 +209,6 @@ class Broadcaster extends EventEmitter {
             metaint,
             // Bytes of audio sent since the last metadata block.
             sinceMeta: 0,
-            backlog: 0,
         };
 
         // Nagle would hold small writes back waiting for a full segment, adding
@@ -191,6 +217,7 @@ class Broadcaster extends EventEmitter {
         // The stream is deliberately infinite, so the default socket timeout
         // must not apply.
         req.socket.setTimeout(0);
+        req.socket.setKeepAlive(true, KEEPALIVE_MS);
 
         this._clients.add(client);
         this.emit('listener-connected', {
@@ -203,15 +230,11 @@ class Broadcaster extends EventEmitter {
         res.on('close', drop);
         res.on('error', drop);
 
-        res.on('drain', () => {
-            client.backlog = 0;
-        });
-
         // Hand over the burst so playback starts promptly. A brand-new listener
         // gets the current title immediately rather than waiting for the next
         // track change, otherwise the Wii shows a blank display until then.
-        if (this._burst.length) {
-            for (const chunk of this._burst) this._sendAudio(client, chunk);
+        for (const { start: offset, chunk } of this._history) {
+            if (offset + chunk.length > start) this._sendAudio(client, chunk.subarray(Math.max(0, start - offset)));
         }
         if (client.metaint && this._title) {
             client.pendingMeta = buildMetaBlock(this._title, this._url);
@@ -233,9 +256,8 @@ class Broadcaster extends EventEmitter {
      */
     write(chunk) {
         if (!chunk || !chunk.length) return;
+        this._remember(chunk);
         this._audioBytes += chunk.length;
-
-        this._rememberBurst(chunk);
 
         if (this._metaDirty) {
             const block = buildMetaBlock(this._title, this._url);
@@ -257,9 +279,9 @@ class Broadcaster extends EventEmitter {
         const res = client.res;
         if (res.destroyed || res.writableEnded) return;
 
-        // Slow listeners are dropped rather than buffered indefinitely; a Wii on
-        // flaky wifi that has fallen this far behind is better off reconnecting.
-        if (client.backlog > CLIENT_BACKLOG_LIMIT) {
+        // writableLength counts what is really queued; a counter reset only on
+        // 'drain' grew forever whenever a steady queue never fully emptied.
+        if (res.writableLength > this._seconds(BACKLOG_SECONDS)) {
             this.emit('warning', `dropping slow listener ${client.address}`);
             this._dropClient(client);
             return;
@@ -291,17 +313,15 @@ class Broadcaster extends EventEmitter {
     }
 
     _writeRaw(client, buf) {
-        if (!buf.length) return;
-        const ok = client.res.write(buf);
-        if (!ok) client.backlog += buf.length;
+        if (buf.length) client.res.write(buf);
     }
 
-    /** Keep the trailing BURST_BYTES of audio for instant start on connect. */
-    _rememberBurst(chunk) {
-        this._burst.push(chunk);
-        this._burstBytes += chunk.length;
-        while (this._burstBytes > BURST_BYTES && this._burst.length > 1) {
-            this._burstBytes -= this._burst.shift().length;
+    /** Keep recent audio for burst-on-connect and exact resumes. */
+    _remember(chunk) {
+        this._history.push({ start: this._audioBytes, chunk });
+        this._historyBytes += chunk.length;
+        while (this._historyBytes > this._seconds(RESUME_SECONDS) && this._history.length > 1) {
+            this._historyBytes -= this._history.shift().chunk.length;
         }
     }
 
@@ -332,13 +352,13 @@ class Broadcaster extends EventEmitter {
 
     resetClock() {
         this.close();
-        this._burst = [];
-        this._burstBytes = this._audioBytes = 0;
+        this._history = [];
+        this._historyBytes = this._audioBytes = 0;
         this.epoch = randomInt(1, 2147483647);
     }
 }
 
-module.exports = { Broadcaster, METAINT, buildMetaBlock, icySafe };
+module.exports = { Broadcaster, METAINT, BURST_SECONDS, RESUME_SECONDS, BACKLOG_SECONDS, buildMetaBlock, icySafe };
 
 // Keep http referenced for consumers that construct their own server alongside.
 module.exports.http = http;

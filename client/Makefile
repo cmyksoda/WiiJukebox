@@ -7,10 +7,13 @@ endif
 .DEFAULT_GOAL := all
 CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
-CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -Ibuild -MMD -MP
+PORTLIBS_PPC := $(DEVKITPRO)/portlibs/ppc
+CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -I$(PORTLIBS_PPC)/include/freetype2 -Ibuild -MMD -MP
 DISCOVERY_PORT ?= 4001
-LIBS := -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
-OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o
+LIBS := -L$(PORTLIBS_PPC)/lib -lfreetype -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
+FONT_LATIN := vendor/fonts/NotoSans-Medium-WiiJukebox.ttf
+FONT_CJK := vendor/fonts/NotoSansCJKjp-Medium-WiiJukebox.otf
+OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o
 include projectm.mk
 .PHONY: all clean host-test package FORCE
 all: dist/apps/wiijukebox/boot.dol
@@ -19,9 +22,11 @@ build:
 build/discovery_port.h: FORCE | build
 	@printf '#define WJ_DISCOVERY_PORT %s\n' '$(DISCOVERY_PORT)' > $@.tmp
 	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
-build/main.o: build/discovery_port.h
+build/session.o: build/discovery_port.h
 build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
+build/font_data.o: source/font_data.S $(FONT_LATIN) $(FONT_CJK) | build
+	$(CC) $(MACHDEP) -DFONT_LATIN='"$(FONT_LATIN)"' -DFONT_CJK='"$(FONT_CJK)"' -c $< -o $@
 build/wiijukebox.elf: $(OBJECTS) build/libprojectM.a
 	$(CXX) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wiijukebox.map -o $@
 dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
@@ -31,8 +36,12 @@ HOST_CFLAGS ?= -O2 -g
 host-test: | build
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/playback_clock.c tests/playback_clock_test.c -o build/playback_clock_test
 	./build/playback_clock_test
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/progress.c tests/progress_test.c -o build/progress_test
-	./build/progress_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/utf8.c source/layout.c tests/layout_test.c -o build/layout_test
+	./build/layout_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/font.c tests/font_test.c $(shell pkg-config --libs freetype2) -o build/font_test
+	./build/font_test $(FONT_LATIN) $(FONT_CJK)
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
+	./build/ui_render $(FONT_LATIN) $(FONT_CJK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
@@ -46,6 +55,7 @@ host-test: | build
 	./build/audio_buffer_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/net.c tests/http_probe.c -o build/http_probe
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/wire.c source/net.c source/audio_buffer.c tests/network_probe.c -o build/network_probe
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/wire.c source/net.c source/audio_buffer.c tests/resume_probe.c -o build/resume_probe
 package: all
 	python3 ../tools/package-client.py
 clean:

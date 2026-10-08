@@ -32,7 +32,9 @@ Content-Length and no-store. The Wii uses HTTP/1.0 and requests Connection: clos
 | GET `/api/wii/browse?source=...&ref=...&offset=...` | `page`, offset, total; then `item`, opaque reference, type, title, subtitle |
 | POST `/api/wii/play?source=...&ref=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
 | POST `/api/wii/control?action=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
-| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; `progress`, elapsed milliseconds, duration milliseconds (0 if unknown); `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`) |
+| POST `/api/wii/control?action=seek&position=MS` | as above; `position` is whole milliseconds into the track |
+| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; `progress`, elapsed milliseconds, duration milliseconds (0 if unknown); `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`); `art`, artwork key (empty without artwork) |
+| GET `/api/wii/art?key=K&size=N` | binary, not text: N x N RGB565 in GX 4x4 tiles, 2N² bytes; 404 with an `error` row if unavailable |
 
 An empty browse ref opens the source root. Browse pages contain 12 entries.
 Opaque item references last one hour and are scoped to their source. At most
@@ -61,6 +63,18 @@ The server retains a bounded PCM timeline and accounts for the tagless MP3
 codec delay. Old clients omitting `audible` still receive server-side progress.
 This does not add bytes to the MP3 body or change ICY framing.
 
+Clients ignore status rows they do not know, so later rows can be added
+without a version change; the `art` row and `seek` control are such additions.
+`seek` appears in the controls list only for finite tracks whose source marked
+its stream seekable (Navidrome/Subsonic, Jellyfin, Plex and finite yt-dlp
+videos). The server restarts that track's decoder at the offset and keeps the
+pause state; radio, live and desktop sources cannot seek.
+
+The artwork key is an opaque hash of the heard track's artwork URL, which
+often carries provider credentials and never leaves the server. The server
+fetches the image, crops it square with FFmpeg and caches sizes 64, 96, 128 and
+160, so the Wii copies the bytes straight into a texture.
+
 Synchronous errors use HTTP 400 and an `error`, message row. Unknown endpoints
 use 404. Async commands expose “Working...”, “Audio ready”, “Paused”, “Resumed”,
 “Stopped”, “End of queue” or an error in
@@ -73,11 +87,23 @@ wire. Client display sanitization is separate from parsing.
 
 ## Audio
 
-GET the discovered mount without `Icy-MetaData: 1`. The existing broadcaster
-returns 128 kbps, 44.1 kHz stereo MP3, close-delimited and without chunk framing.
-The client rejects chunked or ICY-interleaved responses. Header reads stop exactly
-at CRLFCRLF, preserving the first audio bytes. The socket stays connected across
-source changes, pause, stop and queue transitions. Disconnects start retries.
+GET the discovered mount without `Icy-MetaData: 1`. The broadcaster returns
+constant-bitrate stereo MP3, close-delimited and without chunk framing. The
+format is a server setting (`audio.bitrate`, `audio.sampleRate`; default 256
+kbps at 48 kHz) advertised in `icy-br` and `icy-sr`; clients size buffers from
+`icy-br`. The client rejects chunked or ICY-interleaved responses. Header reads
+stop exactly at CRLFCRLF, preserving the first audio bytes. The socket stays
+connected across source changes, pause, stop and queue transitions.
+
+A new listener receives the last four seconds of audio at once. The server keeps
+fifteen seconds of history: a reconnecting client may append
+`?epoch=E&from=B`, where B is the absolute byte after the last one it holds.
+If E is the current epoch and B is still in the history, the response starts at
+exactly B and `X-WiiJukebox-Byte-Start` equals B; otherwise it is the normal
+burst and the client must start a new decoder run. Old servers ignore the query
+and always send the burst. A listener with more than thirty seconds of audio
+queued in the server and kernel is disconnected; the server also enables TCP
+keepalive.
 
 The protocol assumes a trusted LAN. UUIDs and nonce echo prevent accidental
 mismatches, not a malicious LAN peer. There is no controller authentication.
