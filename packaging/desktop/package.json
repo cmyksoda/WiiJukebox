@@ -65,19 +65,29 @@
       "category": "AudioVideo",
       "icon": "build/icons",
       "executableName": "wiijukebox",
-      "artifactName": "WiiJukebox-${version}-linux-${arch}.${ext}",
       "syncDesktopName": true,
       "maintainer": "WiiJukebox contributors",
       "vendor": "WiiJukebox contributors",
       "synopsis": "Plays your music to the Wii",
       "description": "WiiJukebox runs a music server on this computer and plays your library, radio, podcasts and streaming links to a Wii over the local network. This package includes FFmpeg."
     },
+    "appImage": {
+      "artifactName": "WiiJukebox-${version}-linux-x64.${ext}"
+    },
+    "deb": {
+      "artifactName": "wiijukebox_${version}_${arch}.${ext}",
+      "packageName": "wiijukebox"
+    },
+    "rpm": {
+      "artifactName": "wiijukebox-${version}-1.${arch}.${ext}",
+      "packageName": "wiijukebox"
+    },
     "win": {
       "target": [
         "zip"
       ],
       "icon": "build/icon.ico",
-      "artifactName": "WiiJukebox-${version}-win-${arch}.${ext}"
+      "artifactName": "WiiJukebox-${version}-win-${arch}-portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -86,7 +96,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "WiiJukebox",
-      "artifactName": "WiiJukebox-${version}-win-setup-${arch}.${ext}"
+      "artifactName": "WiiJukebox-${version}-win-${arch}-setup.${ext}"
     },
     "mac": {
       "target": [

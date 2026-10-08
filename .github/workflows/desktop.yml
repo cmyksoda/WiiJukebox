@@ -154,7 +154,7 @@ jobs:
               if: runner.os == 'Linux'
               working-directory: packaging/desktop
               run: |
-                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x86_64.AppImage --port "$SMOKE_PORT" --login --ytdlp 2>&1 | tee ../dist/smoke-linux.log
+                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x64.AppImage --port "$SMOKE_PORT" --login --ytdlp 2>&1 | tee ../dist/smoke-linux.log
                   exit "${PIPESTATUS[0]}"
 
             # Linux: the .deb installed for real, running with Chromium's sandbox and the installed menu entry.
@@ -167,11 +167,11 @@ jobs:
               if: runner.os == 'Linux'
               working-directory: packaging/desktop
               run: |
-                  sudo apt-get install -y ../dist/desktop/WiiJukebox-*-linux-amd64.deb
+                  sudo apt-get install -y ../dist/desktop/wiijukebox_*_amd64.deb
                   ls -l /opt/WiiJukebox/chrome-sandbox /usr/share/applications/wiijukebox.desktop
                   SMOKE_SANDBOX=1 xvfb-run -a node scripts/smoke.js /opt/WiiJukebox/wiijukebox --port "$SMOKE_PORT" --login 2>&1 | tee ../dist/smoke-linux-deb.log
                   status="${PIPESTATUS[0]}"
-                  sudo apt-get remove -y wiijukebox-desktop
+                  sudo apt-get remove -y wiijukebox
                   test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
                   exit "$status"
 
@@ -185,11 +185,11 @@ jobs:
               if: runner.os == 'Linux'
               run: |
                   docker run --rm --shm-size=1g -v "$PWD:/work:ro" -w /work fedora:latest bash -euo pipefail -c '
-                      dnf install -y -q ./packaging/dist/desktop/WiiJukebox-*-linux-x86_64.rpm nodejs xorg-x11-server-Xvfb xorg-x11-xauth
-                      rpm -qi wiijukebox-desktop
-                      rpm -ql wiijukebox-desktop | grep -E "applications|hicolor|/opt/WiiJukebox/(wiijukebox|chrome-sandbox)$"
+                      dnf install -y -q ./packaging/dist/desktop/wiijukebox-*-1.x86_64.rpm nodejs xorg-x11-server-Xvfb xorg-x11-xauth
+                      rpm -qi wiijukebox
+                      rpm -ql wiijukebox | grep -E "applications|hicolor|/opt/WiiJukebox/(wiijukebox|chrome-sandbox)$"
                       xvfb-run -a node packaging/desktop/scripts/smoke.js /opt/WiiJukebox/wiijukebox --port 4680 --login
-                      dnf remove -y -q wiijukebox-desktop
+                      dnf remove -y -q wiijukebox
                       test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
                   ' 2>&1 | tee packaging/dist/smoke-linux-rpm.log
                   exit "${PIPESTATUS[0]}"
@@ -200,7 +200,7 @@ jobs:
               working-directory: packaging/desktop
               shell: pwsh
               run: |
-                  $zip = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-x64.zip | Select-Object -First 1
+                  $zip = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-x64-portable.zip | Select-Object -First 1
                   Expand-Archive $zip.FullName -DestinationPath "$env:RUNNER_TEMP\portable"
                   node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT --login --ytdlp *>&1 | Tee-Object ../dist/smoke-windows-zip.log
                   $smoke = $LASTEXITCODE
@@ -227,7 +227,7 @@ jobs:
               working-directory: packaging/desktop
               shell: pwsh
               run: |
-                  $setup = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-setup-x64.exe | Select-Object -First 1
+                  $setup = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-x64-setup.exe | Select-Object -First 1
                   $dir = "$env:RUNNER_TEMP\WiiJukeboxInstalled"
                   Start-Process -FilePath $setup.FullName -ArgumentList '/S', "/D=$dir" -Wait
                   $start = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\WiiJukebox.lnk"
