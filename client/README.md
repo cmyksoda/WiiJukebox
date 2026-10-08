@@ -170,14 +170,14 @@ from devkitPro when distributing a linked binary.
 
 Press **2** to toggle the projectM GX renderer. **B** returns
 to the browser. Volume and B+transport work in either view; browser selection
-and page controls are inactive while the visualizer is visible. 684 presets are
-embedded (13 WiiRadio presets that produce invalid math are skipped; see
-`vendor/projectm/excluded-presets.txt`), so no extra SD assets are needed when using wiiload. Each entry opens
+and page controls are inactive while the visualizer is visible. 545 presets are
+embedded (111 WiiRadio presets are skipped, for invalid math or after a hardware
+preset tour; see `vendor/projectm/excluded-presets.txt`), so no extra SD assets are needed when using wiiload. Each entry opens
 on a random preset; presets then change every 25 seconds with a 5-second blend.
 
 For checking every preset on hardware, `make -C client package PRESET_TOUR=1` builds
 a preset tour instead: presets play in name order without changing on their own,
-with `123/684  Name` at the bottom of the screen. Left and Right step one preset, Up
+with `123/545  Name` at the bottom of the screen. Left and Right step one preset, Up
 and Down step ten, and 1 adds the current preset to `sd:/apps/wiijukebox/flagged-presets.txt`. Original upstream notices and
 source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
 
