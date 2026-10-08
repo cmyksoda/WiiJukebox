@@ -312,7 +312,7 @@ body.viz #app { opacity: 0; pointer-events: none; }
     transition: border-color .12s ease, background .12s ease;
 }
 .channel:hover, .channel:focus-visible { border-color: var(--accent); background: var(--tile-hover); }
-.channel .kind { position: absolute; top: 12px; left: 14px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.channel .kind { margin-bottom: auto; padding-bottom: 10px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .channel .name { font-size: 18px; font-weight: 800; line-height: 1.15; }
 .channel .state { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim); }
 .channel .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--edge); flex: none; }
@@ -340,7 +340,8 @@ body.viz #app { opacity: 0; pointer-events: none; }
 }
 .card .art { aspect-ratio: 1; border-radius: var(--radius-sm); }
 .card .art img, .row .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 26px; background: var(--tile) url("images/tile.webp") center / 150px; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 26px; background: var(--tile); isolation: isolate; }
+.ph::before, #np-art-frame::before { content: ""; position: absolute; inset: 0; z-index: -1; background: url("images/tile.webp") center / 150px; opacity: .2; }
 .ph b { background: var(--tile); border-radius: 50%; width: 46px; height: 46px; display: grid; place-items: center; font-weight: 700; }
 .card:hover .art, .card:focus-visible .art { border-color: var(--accent); }
 .card:focus-visible { box-shadow: none; }
@@ -502,12 +503,14 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     overflow: hidden;
     border-radius: var(--radius);
     border: 1px solid var(--edge);
-    background: var(--tile) url("images/tile.webp") center / 190px;
+    background: var(--tile);
+    isolation: isolate;
     box-shadow: var(--highlight);
 }
+#np-art-frame::before { background-size: 190px; }
 #np-art-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 #np-placeholder, #mini-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 52px; }
-#np-placeholder::before { content: ""; position: absolute; left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; background: var(--tile); }
+#np-placeholder::before { content: ""; position: absolute; left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; background: var(--surface); border: 1px solid var(--edge); z-index: -1; }
 #np-placeholder { isolation: isolate; }
 
 #np-text { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
