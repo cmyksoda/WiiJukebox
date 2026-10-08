@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { Source } = require('./base');
+const { queueStart } = require('./queue');
 
 class PlexSource extends Source {
     static id = 'plex';
@@ -114,7 +115,7 @@ class PlexSource extends Source {
         } else queue.push(item);
         if (!queue.length) throw new Error('no audio in this selection');
         this._queue = queue;
-        this._index = 0;
+        this._index = queueStart(queue, item);
         return this._openCurrent();
     }
 

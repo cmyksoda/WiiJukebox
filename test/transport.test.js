@@ -33,6 +33,7 @@ test('short track drains every PCM byte before advancing', async () => {
         source.stream.end(Buffer.alloc(17640, 42)); // 100ms, below 600ms prebuffer.
         await Promise.race([ended, sleep(1000).then(() => { throw new Error('did not drain'); })]);
         assert.equal(heard, 17640);
+        assert.equal(pipeline.status.nowPlaying.position, 0.1);
     } finally { await pipeline.shutdown(); }
 });
 
@@ -43,11 +44,16 @@ test('pause retains buffered audio and resume drains it', async () => {
     try {
         pipeline.pacer.push(Buffer.alloc(120000));
         pipeline.setPaused(true);
+        const position = pipeline.status.nowPlaying.position;
         await sleep(100);
         assert.equal(pipeline.pacer.buffered, 120000);
+        assert.equal(pipeline.status.nowPlaying.position, position);
         pipeline.setPaused(false);
         await sleep(100);
         assert.ok(pipeline.pacer.buffered < 120000);
+        assert.ok(pipeline.status.nowPlaying.position > position);
+        await pipeline.detach();
+        assert.equal(pipeline.status.nowPlaying.position, 0);
     } finally { await pipeline.shutdown(); }
 });
 

@@ -123,7 +123,9 @@ class Pipeline extends EventEmitter {
     }
 
     get nowPlaying() {
-        return { ...this._nowPlaying };
+        const duration = this._nowPlaying.duration;
+        const position = duration > 0 ? Math.min(duration, this.pacer.position) : this.pacer.position;
+        return { ...this._nowPlaying, position };
     }
 
     get activeSource() {

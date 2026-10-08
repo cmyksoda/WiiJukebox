@@ -11,6 +11,7 @@
 
 const crypto = require('crypto');
 const { Source } = require('./base');
+const { queueStart } = require('./queue');
 
 const CLIENT_NAME = 'WiiJukebox';
 const CLIENT_VERSION = '0.1.0';
@@ -305,8 +306,8 @@ class JellyfinSource extends Source {
         if (ref.type === 'album' || ref.type === 'playlist') {
             const { items } = await this.browse({ path: ref.id });
             this._queue = items.filter((i) => i.type === 'track');
-            this._queueIndex = 0;
             if (!this._queue.length) throw new Error('nothing playable in that selection');
+            this._queueIndex = queueStart(this._queue, ref);
         } else {
             this._queue = [ref];
             this._queueIndex = 0;

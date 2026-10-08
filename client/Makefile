@@ -29,6 +29,8 @@ dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
 HOST_CC ?= cc
 HOST_CFLAGS ?= -O2 -g
 host-test: | build
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/progress.c tests/progress_test.c -o build/progress_test
+	./build/progress_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test

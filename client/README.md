@@ -62,11 +62,11 @@ request to finish. Curly quotes and dashes are converted for the ASCII font.
 | Wii Remote input | Action |
 |---|---|
 | Up / Down | Select a row |
-| A | Select server/source; open container; play track/station |
+| A | Select server/source; open container; play track/station (continue the album/playlist from that track) |
 | B (release) | Back |
 | Left / Right | Previous/next library page |
 | 2 | Toggle projectM visualizer |
-| Hold B + A | Play selected album/playlist in full |
+| Hold B + A | Play the current or highlighted album/playlist from the beginning |
 | Hold B + Left / Right | Previous/next queued track |
 | Hold B + 1 | Pause/resume a supported source |
 | Hold B + 2 | Stop the source |
@@ -84,7 +84,8 @@ network may delay exit. Audio/control latency also includes stream buffering.
 
 Use the web UI to connect **Navidrome / Subsonic**. Then the Wii can browse Artists,
 Albums, Playlists and Starred without knowing the service credentials. A opens a
-container; B + A queues its entirety. The Wii displays 12 entries per page, while
+container; B + A queues its entirety, including when viewing its tracks. A on a
+track queues the album/playlist and starts at that track. The Wii displays 12 entries per page, while
 complete playlist queues stay on the server. Both normal MD5-token authentication
 and a reverse-proxy deployment prefix were exercised with a real fixture.
 
@@ -92,7 +93,8 @@ and a reverse-proxy deployment prefix were exercised with a real fixture.
 
 See [PROTOCOL.md](PROTOCOL.md). The audio socket requests no ICY metadata and reads
 unframed MP3. Structured song information arrives through `/api/wii/status` every
-three seconds. Network and text parsing are shared with a host-compiled C probe.
+second during playback, three seconds while idle/paused, and twice per second
+while a command is pending. Network and text parsing are shared with a host-compiled C probe.
 The source selector can reach every configured server adapter.
 
 Text payloads are percent-encoded tab-separated fields. Buffers are bounded:
@@ -103,10 +105,11 @@ as `?` until a proper font renderer replaces the console.
 
 ## Still missing / unverified
 
-- Physical Wii audio, Wi-Fi jitter, HOME/power behavior and long reconnect runs.
+- Long Wi-Fi jitter/reconnect runs and HOME/power edge cases. The user has
+  confirmed physical Wii music playback, browsing and projectM rendering.
 - A verified emulator render: the isolated offscreen boot produced no frames.
-- Graphical library/now-playing UI, cover art, pointer support, text input and
-  the projectM visualizer. There is no Wii search keyboard yet.
+- Graphical library/now-playing UI, cover art, pointer support and text input.
+  There is no Wii search keyboard yet.
 - Authentication between LAN controllers and the server, manual addressing,
   IPv6 discovery, TLS on the Wii-to-server connection, queue editing and seeking.
 - Real Plex/Jellyfin account tests and actual desktop monitor capture testing.
@@ -124,8 +127,15 @@ embedded, so no extra SD assets are needed when using wiiload. Random presets
 change every 25 seconds with a 5-second blend. Original upstream notices and
 source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
 
-The browser shows `Page X / Y` and the visible item range separately from
-network diagnostics. Commands show acceptance first, then a matching server
+The browser shows `Page X / Y` and the visible item range. Network connection
+status is shown on screen; HTTP diagnostics stay in the optional SD log.
+Commands show acceptance first, then a matching server
 result. Play/skip completion waits for decoded audio on the server; existing
 stream buffering can still delay what reaches the speakers. Old completion
 messages do not repeatedly replace browser messages.
+
+An ASCII progress bar above HOME shows elapsed and total time; unknown durations
+use `--:--`. Position counts source PCM drained by the server, excludes pause
+and underrun silence, and resets on track changes. It can lead audible Wii
+playback by the stream buffering delay (initially about two seconds); it is
+not a speaker-side clock.

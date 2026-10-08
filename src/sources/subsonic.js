@@ -11,6 +11,7 @@
 
 const crypto = require('crypto');
 const { Source } = require('./base');
+const { queueStart } = require('./queue');
 
 // Version we claim to speak. 1.16.1 is the last Subsonic spec release and what
 // Navidrome targets; asking for more just gets rejected by older servers.
@@ -295,8 +296,8 @@ class SubsonicSource extends Source {
             // Browsing is paged; a play-container action must still queue every
             // track, in the order supplied by Navidrome.
             this._queue = (songs || []).map((song) => this._trackItem(song));
-            this._queueIndex = 0;
             if (!this._queue.length) throw new Error('nothing playable in that selection');
+            this._queueIndex = queueStart(this._queue, ref);
             return this._openQueueItem();
         }
 

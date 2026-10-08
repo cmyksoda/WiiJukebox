@@ -43,6 +43,10 @@ int main(int argc, char **argv) {
         CHECK(wj_request(server, "GET", path, body, sizeof(body)) == 200);
         CHECK(!wj_document(body, &doc));
         CHECK(doc.count >= 2 && !strcmp(doc.rows[1].field[2], "album"));
+        snprintf(path, sizeof(path), "/api/wii/browse?source=subsonic&ref=%s", doc.rows[1].field[1]);
+        CHECK(wj_request(server, "GET", path, body, sizeof(body)) == 200);
+        CHECK(!wj_document(body, &doc));
+        CHECK(doc.count == 13 && !strcmp(doc.rows[1].field[2], "track"));
     }
     CHECK(doc.count >= 2);
     snprintf(path, sizeof(path), "/api/wii/play?source=%s&ref=%s", source, doc.rows[1].field[1]);

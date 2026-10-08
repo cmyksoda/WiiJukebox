@@ -58,6 +58,7 @@ class Pacer extends EventEmitter {
         this._timer = null;
         this._startedAt = 0;
         this._bytesEmitted = 0;
+        this._playedBytes = 0;
 
         // Gate that opens once enough audio has accumulated. Re-arms whenever a
         // source detaches, so each new source gets its own prebuffer window.
@@ -74,6 +75,10 @@ class Pacer extends EventEmitter {
 
     get buffered() {
         return this._buffered;
+    }
+
+    get position() {
+        return this._playedBytes / BYTES_PER_SECOND;
     }
 
     /** Maximum bytes the buffer will hold before dropping the oldest audio. */
@@ -148,6 +153,7 @@ class Pacer extends EventEmitter {
         this._chunks = [];
         this._buffered = 0;
         this._priming = true;
+        this._playedBytes = 0;
     }
 
     finishInput() {
@@ -232,7 +238,9 @@ class Pacer extends EventEmitter {
             }
         }
 
-        return wanted - remaining;
+        const played = wanted - remaining;
+        this._playedBytes += played;
+        return played;
     }
 
     _fillSilence(bytes) {

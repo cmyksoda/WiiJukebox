@@ -32,7 +32,7 @@ Content-Length and no-store. The Wii uses HTTP/1.0 and requests Connection: clos
 | GET `/api/wii/browse?source=...&ref=...&offset=...` | `page`, offset, total; then `item`, opaque reference, type, title, subtitle |
 | POST `/api/wii/play?source=...&ref=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
 | POST `/api/wii/control?action=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
-| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; then `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`) |
+| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; `progress`, elapsed milliseconds, duration milliseconds (0 if unknown); `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`) |
 
 An empty browse ref opens the source root. Browse pages contain 12 entries.
 Opaque item references last one hour and are scoped to their source. At most
@@ -41,8 +41,15 @@ readable error and requires browsing again. References are navigation handles,
 not authorization tokens. Source IDs remain strings, and provider IDs never need
 to fit Wii integer types.
 
+Track references from inside an album/playlist retain their parent and absolute
+track position. Playing one fetches the complete container and starts there;
+playing the container reference starts at the beginning. Repeated playlist tracks
+prefer the saved position. If the list changed, the server finds the selected ID
+again or reports that it disappeared. Standalone tracks keep a single-item queue.
+
 Synchronous errors use HTTP 400 and an `error`, message row. Unknown endpoints
-use 404. Async commands expose “Working...”, “Done”, “End of queue” or an error in
+use 404. Async commands expose “Working...”, “Audio ready”, “Paused”, “Resumed”,
+“Stopped”, “End of queue” or an error in
 status; another Wii command is refused while one is running. Web and Wii
 transport operations share the same serialized pipeline.
 

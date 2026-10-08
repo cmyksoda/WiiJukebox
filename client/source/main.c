@@ -21,6 +21,7 @@
 #include "audio_buffer.h"
 #include "pcm_snapshot.h"
 #include "visualizer.h"
+#include "progress.h"
 #include "discovery_port.h"
 
 #if WJ_DISCOVERY_PORT < 1 || WJ_DISCOVERY_PORT > 65535
@@ -31,13 +32,14 @@
 #define DEPTH 16
 
 enum job_kind { JOB_NONE, JOB_DISCOVER, JOB_LIST, JOB_STATUS, JOB_CONTROL, JOB_STREAM };
-struct location { char ref[64]; int offset, selected; };
+struct location { char ref[64], type[24], title[257]; int offset, selected; };
 static struct wj_server servers[WJ_SERVERS], server;
 static struct wj_menu menu;
 
 static struct location stack[DEPTH], location;
 static char source[64], title[257] = "WiiJukebox", message[257] = "Finding your server...";
 static char now_playing[257] = "Nothing playing", artist[257], play_state[24] = "idle";
+static int position_ms, duration_ms, progress_available;
 static char saved_id[37];
 static int count, selected, total, server_count, depth;
 static int screen; // 0: servers, 1: sources, 2: source contents
@@ -60,8 +62,6 @@ static int job_network_result, job_direct;
 static int cancel_discovery, network_attempt;
 static long long discovery_started, job_started;
 static struct wj_http_trace job_trace;
-static char list_status[100] = "Sources not loaded";
-static unsigned list_attempt;
 static int pending_command;
 static char previous_lines[26][73];
 enum network_phase { NETWORK_INIT, NETWORK_IP, NETWORK_LOOKUP, NETWORK_SCAN, NETWORK_CLEANUP };
@@ -198,10 +198,6 @@ static void load_list(void) {
     else snprintf(path, sizeof(path), "/api/wii/browse?source=%s&ref=%s&offset=%d",
                   source, location.ref, location.offset);
     copy(message, sizeof(message), "Loading...");
-    list_attempt++;
-    snprintf(list_status, sizeof(list_status), "%s #%u: requesting page %d",
-             screen == 1 ? "Sources" : "Browse", list_attempt,
-             screen == 1 ? 1 : location.offset / PAGE_SIZE + 1);
     start_job(JOB_LIST, "GET", path);
 }
 
@@ -248,7 +244,7 @@ static void finish_job(void) {
                   wj_milliseconds() - job_started);
         if (job_network_result < 0)
             snprintf(network_status, sizeof(network_status), "Network %s (%d); 1: retry", job_init_deadline ? "deadline" : "init failed", job_network_result);
-        else snprintf(network_status, sizeof(network_status), "Wii IP %s | discovery UDP %d", job_ip, WJ_DISCOVERY_PORT);
+        else snprintf(network_status, sizeof(network_status), "Network connected | Wii %s", job_ip);
         next_discovery = wj_milliseconds() + 5000;
         server_count = job_result > 0 ? job_result : 0;
         count = server_count;
@@ -263,8 +259,7 @@ static void finish_job(void) {
         if (count) copy(message, sizeof(message), "A: choose server   1: scan again");
         else if (job_result < 0) snprintf(message, sizeof(message),
             "Network/discovery error %d. 1: retry", job_result);
-        else snprintf(message, sizeof(message),
-            "No server. Allow UDP %d. 1: retry", WJ_DISCOVERY_PORT);
+        else copy(message, sizeof(message), "No server found on your network. 1: search again");
         return;
     }
     if (job == JOB_STREAM) {
@@ -294,11 +289,6 @@ static void finish_job(void) {
                   job, wj_http_stage_name(job_trace.stage), job_trace.error, job_trace.status,
                   job_trace.received, job_trace.expected, job_trace.elapsed_ms);
     }
-    if (job == JOB_LIST) {
-        snprintf(list_status, sizeof(list_status), "%s #%u: HTTP %d %dB %s %d",
-                 screen == 1 ? "Sources" : "Browse", list_attempt, job_trace.status, job_trace.received,
-                 wj_http_stage_name(job_trace.stage), job_trace.error);
-    }
     if (job_result != 200) {
         struct wj_document doc;
         if (!wj_document(reply, &doc) && doc.count && doc.rows[0].count >= 2 &&
@@ -311,8 +301,6 @@ static void finish_job(void) {
     struct wj_document doc;
     if (wj_document(reply, &doc)) {
         if (job == JOB_LIST) {
-            snprintf(list_status, sizeof(list_status), "%s #%u: bad wire HTTP %d %dB",
-                     screen == 1 ? "Sources" : "Browse", list_attempt, job_trace.status, job_trace.received);
             log_event("menu malformed bytes=%d", job_trace.received);
         }
         copy(message, sizeof(message), "Unsupported or malformed server response");
@@ -328,6 +316,7 @@ static void finish_job(void) {
         return;
     }
     if (job == JOB_STATUS) {
+        progress_available = 0;
         for (int i = 0; i < doc.count; i++) {
             struct wj_row *row = &doc.rows[i];
             if (row->count == 4 && !strcmp(row->field[0], "command") && pending_command) {
@@ -336,6 +325,9 @@ static void finish_job(void) {
                     copy(message, sizeof(message), row->field[1]);
                     if (!strcmp(row->field[3], "complete") || !strcmp(row->field[3], "failed")) pending_command = 0;
                 }
+            } else if (row->count == 3 && !strcmp(row->field[0], "progress")) {
+                progress_available = !wj_number(row->field[1], 0, 2147483647, &position_ms) &&
+                    !wj_number(row->field[2], 0, 2147483647, &duration_ms);
             } else if (row->count >= 4 && !strcmp(row->field[0], "status")) {
                 copy(now_playing, sizeof(now_playing), row->field[1]);
                 copy(artist, sizeof(artist), row->field[2]);
@@ -345,8 +337,6 @@ static void finish_job(void) {
         return;
     }
     if (wj_menu_parse(&doc, screen == 1, location.offset, &menu)) {
-        snprintf(list_status, sizeof(list_status), "%s #%u: invalid %d rows, HTTP %d %dB",
-                 screen == 1 ? "Sources" : "Browse", list_attempt, doc.count, job_trace.status, job_trace.received);
         log_event("menu rejected screen=%d rows=%d offset=%d", screen, doc.count, location.offset);
         copy(message, sizeof(message), "Invalid list reply; 1: retry, B: back");
         return;
@@ -354,9 +344,6 @@ static void finish_job(void) {
     count = menu.count;
     total = menu.total;
     log_event("menu accepted screen=%d rows=%d items=%d total=%d", screen, doc.count, count, total);
-    snprintf(list_status, sizeof(list_status), "%s #%u: HTTP %d %dB | %d items | %lldms",
-             screen == 1 ? "Sources" : "Browse", list_attempt, job_trace.status,
-             job_trace.received, count, job_trace.elapsed_ms);
     selected = location.selected < count ? location.selected : 0;
     if (count) copy(message, sizeof(message), "A: open/play  B: back  2: visualizer");
     else if (screen == 1) copy(message, sizeof(message), "No configured sources; 1: refresh, B: servers");
@@ -365,10 +352,18 @@ static void finish_job(void) {
     else copy(message, sizeof(message), "This folder is empty; 1: refresh, B: back");
 }
 
-static void play_item(void) {
+static void play_item(int whole_list) {
     if (!count || screen != 2) return;
+    const char *ref = menu.items[selected].ref;
+    if (whole_list && (!strcmp(location.type, "album") || !strcmp(location.type, "playlist")))
+        ref = location.ref;
+    else if (whole_list && strcmp(menu.items[selected].type, "album") &&
+             strcmp(menu.items[selected].type, "playlist")) {
+        copy(message, sizeof(message), "Choose an album or playlist first; A plays a track");
+        return;
+    }
     char path[256];
-    snprintf(path, sizeof(path), "/api/wii/play?source=%s&ref=%s", source, menu.items[selected].ref);
+    snprintf(path, sizeof(path), "/api/wii/play?source=%s&ref=%s", source, ref);
     copy(message, sizeof(message), "Starting selection...");
     start_job(JOB_CONTROL, "POST", path);
 }
@@ -384,12 +379,14 @@ static void select_item(void) {
         depth = 0;
     } else {
         const char *type = menu.items[selected].type;
-        if (!strcmp(type, "track") || !strcmp(type, "station")) { play_item(); return; }
+        if (!strcmp(type, "track") || !strcmp(type, "station")) { play_item(0); return; }
         if (depth == DEPTH) { copy(message, sizeof(message), "Folder depth limit reached"); return; }
         location.selected = selected;
         stack[depth++] = location;
         memset(&location, 0, sizeof(location));
         copy(location.ref, sizeof(location.ref), menu.items[selected].ref);
+        copy(location.type, sizeof(location.type), type);
+        copy(location.title, sizeof(location.title), menu.items[selected].title);
     }
     count = 0;
     selected = 0;
@@ -428,8 +425,8 @@ static void draw_line(int row, const char *format, ...) {
 
 static void draw(void) {
     draw_line(1, "WiiJukebox  |  native client prototype");
-    draw_line(2, "%s", screen ? server.name : "Choose a server");
-    draw_line(3, "%s", title);
+    draw_line(2, "%s", "");
+    draw_line(3, "%s", location.title[0] && screen == 2 ? location.title : title);
     if (job_busy && job == JOB_DISCOVER) {
         static const char *phases[] = { "initializing", "reading IP", "server lookup", "discovery", "IOS cleanup" };
         LWP_MutexLock(mutex);
@@ -438,7 +435,7 @@ static void draw(void) {
         draw_line(4, "Attempt %d: %s %llds | 1 restart", network_attempt,
                   phases[phase], (wj_milliseconds() - discovery_started) / 1000);
     } else draw_line(4, "%s", network_status);
-    draw_line(5, "%s", screen ? list_status : "");
+    draw_line(5, "%s", "");
     for (int i = 0; i < PAGE_SIZE; i++) {
         draw_line(6 + i, "%s %.65s", i < count && i == selected ? ">" : " ",
                   i < count ? menu.items[i].title : "");
@@ -451,6 +448,9 @@ static void draw(void) {
     draw_line(19, "%s", message);
     draw_line(20, "%.10s  %.57s", play_state, now_playing);
     draw_line(21, "%s", artist);
+    char progress[73] = "";
+    if (progress_available && strcmp(play_state, "idle")) wj_progress(progress, sizeof(progress), position_ms, duration_ms);
+    draw_line(22, "%s", progress);
     draw_line(23, "HOME exit | +/- volume %d%% | 1 refresh/retry", volume * 100 / 255);
     draw_line(24, "Left/right page | B + left/right skip track");
     draw_line(25, "B+1 pause | B+2 stop | B+A play list | 2 visualizer");
@@ -558,7 +558,7 @@ int main(int argc, char **argv) {
             pending_buttons = 0;
             pending_back = pending_combo = 0;
             if (combo && screen && pressed) {
-                if (pressed & WPAD_BUTTON_A) play_item();
+                if (pressed & WPAD_BUTTON_A) play_item(1);
                 else if (pressed & WPAD_BUTTON_LEFT) control("previous");
                 else if (pressed & WPAD_BUTTON_RIGHT) control("next");
                 else if (pressed & WPAD_BUTTON_2) control("stop");
@@ -621,7 +621,7 @@ int main(int argc, char **argv) {
                 stop_audio();
                 start_job(JOB_STREAM, NULL, NULL);
             } else if (now >= next_status) {
-                next_status = now + (pending_command ? 500 : 3000);
+                next_status = now + (pending_command ? 500 : !strcmp(play_state, "playing") ? 1000 : 3000);
                 start_job(JOB_STATUS, "GET", "/api/wii/status");
             }
         }

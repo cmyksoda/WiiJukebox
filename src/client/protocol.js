@@ -19,23 +19,23 @@ class WiiProtocol {
         this.commandState = "idle";
     }
 
-    _remember(source, item) {
+    _remember(source, item, playback = item) {
         const now = Date.now();
         for (const [key, entry] of this.items) {
             if (entry.expires < now) this.items.delete(key);
         }
         while (this.items.size >= 4096) this.items.delete(this.items.keys().next().value);
         const ref = randomBytes(12).toString('hex');
-        this.items.set(ref, { source, item, expires: now + TTL });
+        this.items.set(ref, { source, item, playback, expires: now + TTL });
         return ref;
     }
 
-    _lookup(ref, source) {
+    _lookup(ref, source, playback = false) {
         const entry = this.items.get(ref);
         if (!entry || entry.source !== source || entry.expires < Date.now()) {
             throw new Error('selection expired; return to sources and browse again');
         }
-        return entry.item;
+        return playback ? entry.playback : entry.item;
     }
 
     async handle(req, res, url) {
@@ -51,25 +51,32 @@ class WiiProtocol {
                 const s = this.pipeline.status;
                 rows = [['status', s.nowPlaying.title, s.nowPlaying.artist,
                     s.paused ? 'paused' : (s.source ? 'playing' : 'idle'), s.source?.label || '',
-                    Object.entries(s.capabilities).filter(([, enabled]) => enabled).map(([key]) => key).join(',')], ['command', this.commandStatus, this.commandId, this.commandState]];
+                    Object.entries(s.capabilities).filter(([, enabled]) => enabled).map(([key]) => key).join(',')],
+                    ['progress', Math.floor((s.nowPlaying.position || 0) * 1000),
+                        Math.floor((s.nowPlaying.duration || 0) * 1000)],
+                    ['command', this.commandStatus, this.commandId, this.commandState]];
             } else if (req.method === 'GET' && action === 'browse') {
                 const id = url.searchParams.get('source');
                 const ref = url.searchParams.get('ref');
                 const offset = Number(url.searchParams.get('offset') || 0);
                 if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('invalid page');
                 const source = await this.registry.connect(id);
-                const path = ref ? this._lookup(ref, id).id : '';
+                const parent = ref ? this._lookup(ref, id) : null;
+                const path = parent?.id || '';
                 const result = await source.browse({ path, offset, limit: PAGE_SIZE });
                 // Some existing providers ignore pagination. Normalize at this
                 // boundary until all their browse implementations support it.
                 let items = result.items;
                 if (items.length > PAGE_SIZE) items = items.slice(offset, offset + PAGE_SIZE);
                 rows = [['page', offset, result.total]];
-                rows.push(...items.map((item) => ['item', this._remember(id, item),
-                    item.type, item.title, item.subtitle || '']));
+                rows.push(...items.map((item, index) => {
+                    const playback = item.type === 'track' && ['album', 'playlist'].includes(parent?.type)
+                        ? { ...parent, startId: item.id, startIndex: offset + index } : item;
+                    return ['item', this._remember(id, item, playback), item.type, item.title, item.subtitle || ''];
+                }));
             } else if (req.method === 'POST' && action === 'play') {
                 const id = url.searchParams.get('source');
-                const item = this._lookup(url.searchParams.get('ref'), id);
+                const item = this._lookup(url.searchParams.get('ref'), id, true);
                 if (this.commandState === 'pending') throw new Error('a Wii command is already running');
                 const commandId = this._command(this.pipeline.command(async () => {
                     const source = await this.registry.connect(id);

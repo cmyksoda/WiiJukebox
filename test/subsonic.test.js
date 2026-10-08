@@ -54,6 +54,11 @@ test('Navidrome auth preserves password whitespace, pages libraries and queues c
         const handle = await source.previous();
         assert.equal(new URL(handle.uri).searchParams.get('id'), 'song-uuid-150');
         assert.equal(new URL(handle.uri).searchParams.get('format'), 'raw');
+        await source.open({ id: 'album/album-uuid', type: 'album', startId: songs[144].id, startIndex: 144 });
+        assert.equal(source.queue.items.length, 151);
+        assert.equal(source.queue.index, 144);
+        assert.equal(new URL((await source.next()).uri).searchParams.get('id'), songs[145].id);
+        await assert.rejects(source.open({ id: 'album/album-uuid', type: 'album', startId: 'removed' }), /no longer/);
         await assert.rejects(source.browse({ offset: -1 }), /invalid library page/);
         await source.close();
         assert.equal(source.queue.items.length, 0);

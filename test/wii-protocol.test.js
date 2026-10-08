@@ -72,3 +72,33 @@ test('wire output escapes delimiters, repairs lone surrogates and strips NUL', (
     protocol._send({ writeHead() {}, end(body) { result = body; } }, 200, [['item', 'a\tb\nc\0\ud800']]);
     assert.match(result, /a%09b%0Ac%EF%BF%BD/);
 });
+
+test('Wii tracks retain their full album context across pages; the album ref starts at the beginning', async () => fixture(async ({ url, registry, pipeline }) => {
+    const album = { id: 'album/fixture', type: 'album', title: 'Fixture album' };
+    const songs = Array.from({ length: 25 }, (_, i) => ({ id: `song-${i}`, type: 'track', title: `Track ${i}` }));
+    const source = { browse: async ({ path, offset, limit }) => path
+        ? { items: songs.slice(offset, offset + limit), total: songs.length }
+        : { items: [album], total: 1 } };
+    registry.connect = async () => source;
+    const selections = [];
+    pipeline.attach = async (_, item) => { selections.push(item); };
+    pipeline.waitForAudio = async () => {};
+    const browse = async (query) => (await (await fetch(`${url}/api/wii/browse?source=subsonic${query}`)).text())
+        .trim().split('\n').slice(2).map((line) => line.split('\t').map(decodeURIComponent));
+    const albumRef = (await browse(''))[0][1];
+    const tracks = await browse(`&ref=${albumRef}&offset=12`);
+    const select = async (ref) => {
+        assert.equal((await fetch(`${url}/api/wii/play?source=subsonic&ref=${ref}`, { method: 'POST' })).status, 200);
+        await new Promise(resolve => setImmediate(resolve));
+    };
+    await select(tracks[2][1]);
+    assert.deepEqual(selections[0], { ...album, startId: 'song-14', startIndex: 14 });
+    await select(albumRef);
+    assert.deepEqual(selections[1], album);
+    pipeline._nowPlaying.duration = 120;
+    pipeline.pacer._write = () => {};
+    pipeline.pacer.push(Buffer.alloc(176400));
+    pipeline.pacer._drain(176400);
+    const status = await (await fetch(`${url}/api/wii/status`)).text();
+    assert.match(status, /progress\t1000\t120000/);
+}));
