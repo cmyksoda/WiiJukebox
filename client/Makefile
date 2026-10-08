@@ -27,6 +27,11 @@ dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
 HOST_CC ?= cc
 HOST_CFLAGS ?= -O2 -g
 host-test: | build
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
+	./build/menu_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/init_wait.c tests/init_wait_test.c -o build/init_wait_test
+	./build/init_wait_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -DGEKKO -Itests/ios_shim -Isource source/wire.c source/net.c tests/ios_shim.c tests/http_probe.c -o build/ios_http_probe
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c tests/wire_test.c -o build/wire_test
 	./build/wire_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/wire.c source/net.c source/audio_buffer.c tests/audio_buffer_test.c -o build/audio_buffer_test
