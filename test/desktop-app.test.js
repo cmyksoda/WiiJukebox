@@ -9,7 +9,10 @@ const { ServerProcess } = require('../packaging/desktop/lib/server');
 const { installYtdlp, assetName } = require('../packaging/desktop/lib/ytdlp-install');
 const { tempDir, fakeBinary, waitFor } = require('./helpers/fake-binary');
 
-test('tool detection finds bundled programs, prefers explicit overrides and treats a missing override as not installed', async () => {
+// Stand-in programs are shebang scripts, which Windows cannot run.
+const scriptable = { skip: process.platform === 'win32' && 'needs executable scripts' };
+
+test('tool detection finds bundled programs, prefers explicit overrides and treats a missing override as not installed', scriptable, async () => {
     const bundled = tempDir();
     const ffmpeg = fakeBinary(bundled, 'ffmpeg', "console.log('ffmpeg version 6.1 fake');");
     const ytdlp = fakeBinary(bundled, 'yt-dlp', "console.log('2026.01.01');");
@@ -101,7 +104,7 @@ test('yt-dlp installer writes an executable only for a plausible download', asyn
     const big = Buffer.alloc(1_200_000, 1);
     const ok = await installYtdlp(path.join(dir, 'bin'), async () => ({ ok: true, arrayBuffer: async () => big }));
     assert.equal(fs.statSync(ok).size, big.length);
-    assert.ok(fs.statSync(ok).mode & 0o100, 'executable');
+    if (process.platform !== 'win32') assert.ok(fs.statSync(ok).mode & 0o100, 'executable');
     await assert.rejects(installYtdlp(dir, async () => ({ ok: true, arrayBuffer: async () => Buffer.alloc(10) })), /too small/);
     await assert.rejects(installYtdlp(dir, async () => ({ ok: false, status: 404 })), /HTTP 404/);
 });
