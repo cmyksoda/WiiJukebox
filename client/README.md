@@ -12,8 +12,11 @@ are channel-style tiles; folders and tracks are a list with type icons and
 subtitles, and long selected titles scroll. The right-hand card shows album art
 (fetched from `/api/wii/art`, with a note placeholder when there is none), the
 title, artist, playback state, a seek bar with elapsed/total time, and
-previous/play-pause/next/stop buttons. The dock at the bottom has Back and
-Visualizer buttons in raised pods either side of the Wii's clock and date.
+previous/play-pause/next/stop buttons. Shuffle and repeat buttons flank the
+playback-state chip: a mode that is on turns blue, repeat-one adds a small 1, and
+they stay gray for sources that cannot use them, such as radio. The dock at the
+bottom has Back and Visualizer buttons in raised pods either side of the Wii's
+clock and date.
 Messages appear as a pill above the dock and fade after about four seconds;
 ones that describe an ongoing condition (loading, reconnecting, a pending
 command) stay until it ends. When no server is found, the panel explains why
@@ -111,6 +114,7 @@ finish.
 | Up / Down | Select a row; move between tile rows |
 | A | Select server/source; open container; play track/station (continue the album/playlist from that track). When pointing at a button, press it |
 | A on the seek bar | Seek there; hold A and move to preview, release to seek |
+| A on the shuffle or repeat button | Turn shuffle on or off; step repeat through off, all and one. Pointer only, with no button combo |
 | B (release) | Back |
 | Left / Right | Previous/next library page; move between tiles |
 | 2 | Toggle projectM visualizer |

@@ -61,11 +61,25 @@ static void pixel(int x, int y, unsigned char out[3]) {
     memcpy(out, rgb + (y * 640 + x) * 3, 3);
 }
 
+/* A point in layout units, on the 640x480 frame (16:9 layouts are squeezed into it). */
+static void pixel_at(float x, float y, int wide, unsigned char out[3]) {
+    pixel((int)(x * 640 / (wide ? 854 : 640)), (int)y, out);
+}
+
+/* The repeat-one 1 sits in a ringed badge below and right of the button; look for the ring beyond the button's edge. */
+static int badge_present(float repeat_x, float modes_y, int wide) {
+    unsigned char below[3], above[3];
+    pixel_at(repeat_x + 14.1f, modes_y + 14.1f, wide, below);
+    pixel_at(repeat_x + 14.1f, modes_y + 3.9f, wide, above);
+    return below[0] < 215 || above[0] < 215;
+}
+
 static void playing(struct wj_session *s) {
     snprintf(s->song, sizeof(s->song), "%s", "Dusk on the Promenade");
     snprintf(s->artist, sizeof(s->artist), "%s", "The Lantern Choir");
     snprintf(s->state, sizeof(s->state), "%s", "playing");
-    s->capabilities = WJ_CAN_PAUSE | WJ_CAN_STOP | WJ_CAN_NEXT | WJ_CAN_PREVIOUS | WJ_CAN_SEEK;
+    s->capabilities = WJ_CAN_PAUSE | WJ_CAN_STOP | WJ_CAN_NEXT | WJ_CAN_PREVIOUS | WJ_CAN_SEEK |
+        WJ_CAN_SHUFFLE | WJ_CAN_REPEAT;
     s->position_ms = 83000;
     s->duration_ms = 241000;
     s->has_progress = 1;
@@ -201,12 +215,52 @@ int main(int argc, char **argv) {
         pixel(4, 70, c);
         assert(c[0] > 200);
 
+        // Shuffle and repeat flank the state chip: plain when off, blue when on, a 1 for repeat-one,
+        // and gray, without a target, for a source that cannot use them.
+        float card_w = floorf((wide ? 854 : 640) * 0.335f), card_x = (wide ? 854 : 640) - 20 - card_w;
+        float shuffle_x = card_x + 31, repeat_x = card_x + card_w - 31, modes_y = 72 + 14 + 120 + 59;
+        struct { const char *name; int shuffle; enum wj_repeat repeat; } modes[] = {
+            { "10-modes-off", 0, WJ_REPEAT_OFF }, { "11-modes-shuffle", 1, WJ_REPEAT_OFF },
+            { "12-modes-repeat-all", 0, WJ_REPEAT_ALL }, { "13-modes-repeat-one", 0, WJ_REPEAT_ONE },
+            { "14-modes-both", 1, WJ_REPEAT_ONE },
+        };
+        for (size_t i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
+            s.shuffle = modes[i].shuffle;
+            s.repeat = modes[i].repeat;
+            draw(&s, &none, 3);
+            char name[64];
+            snprintf(name, sizeof(name), "%s%s", modes[i].name, wide ? "-widescreen" : "");
+            save(out, name);
+            pixel_at(shuffle_x - 7, modes_y + 7, wide, c);
+            if (s.shuffle) assert(c[0] < 120 && c[2] > 180);
+            else assert(c[0] > 200 && c[1] > 200 && c[2] > 200);
+            pixel_at(repeat_x - 7, modes_y + 7, wide, c);
+            if (s.repeat != WJ_REPEAT_OFF) assert(c[0] < 120 && c[2] > 180);
+            else assert(c[0] > 200 && c[1] > 200 && c[2] > 200);
+            assert(badge_present(repeat_x, modes_y, wide) == (s.repeat == WJ_REPEAT_ONE));
+        }
+        assert(wj_ui_hit(shuffle_x, modes_y).target == WJ_TARGET_SHUFFLE);
+        assert(wj_ui_hit(repeat_x, modes_y).target == WJ_TARGET_REPEAT);
+        assert(wj_ui_hit(shuffle_x + 13, modes_y - 13).target == WJ_TARGET_SHUFFLE);
+        assert(wj_ui_hit(shuffle_x, modes_y + 20).target == WJ_TARGET_NONE);
+        s.capabilities &= ~(unsigned)(WJ_CAN_SHUFFLE | WJ_CAN_REPEAT);
+        draw(&s, &none, 3);
+        save(out, wide ? "15-modes-unavailable-widescreen" : "15-modes-unavailable");
+        assert(wj_ui_hit(shuffle_x, modes_y).target == WJ_TARGET_NONE);
+        assert(wj_ui_hit(repeat_x, modes_y).target == WJ_TARGET_NONE);
+        pixel_at(shuffle_x - 7, modes_y + 7, wide, c);
+        assert(c[0] > 200 && c[1] > 200 && c[2] > 200);
+        assert(!badge_present(repeat_x, modes_y, wide));
+        s.capabilities |= WJ_CAN_SHUFFLE | WJ_CAN_REPEAT;
+        s.shuffle = 0;
+        s.repeat = WJ_REPEAT_OFF;
+
         memset(&s.menu, 0, sizeof(s.menu));
         s.count = s.total = 0;
         snprintf(s.empty, sizeof(s.empty), "%s", "This folder is empty.");
         draw(&s, &none, 1);
     }
-    printf("UI render: discovery and its help, servers, sources, album list, now playing, expanded cover and empty folder at 4:3 and 16:9 (%d frames, software GX)\n",
+    printf("UI render: discovery and its help, servers, sources, album list, now playing, shuffle and repeat states, expanded cover and empty folder at 4:3 and 16:9 (%d frames, software GX)\n",
            gx_soft_frames());
     return 0;
 }

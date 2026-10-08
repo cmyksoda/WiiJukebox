@@ -47,6 +47,8 @@ static enum wj_action target_action(enum wj_target target) {
     case WJ_TARGET_PAUSE: return WJ_ACT_PAUSE;
     case WJ_TARGET_NEXT: return WJ_ACT_NEXT;
     case WJ_TARGET_STOP: return WJ_ACT_STOP;
+    case WJ_TARGET_SHUFFLE: return WJ_ACT_SHUFFLE;
+    case WJ_TARGET_REPEAT: return WJ_ACT_REPEAT;
     default: return WJ_ACT_NONE;
     }
 }

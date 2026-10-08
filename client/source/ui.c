@@ -430,15 +430,23 @@ static int over(const struct wj_pointer *pointer, float x, float y, float w, flo
     return pointer->valid && pointer->x >= x && pointer->x < x + w && pointer->y >= y && pointer->y < y + h;
 }
 
-static void round_button(float cx, float cy, float r, int enabled, const struct wj_pointer *pointer,
-                         enum wj_target target, void (*glyph)(float, float, float, u32)) {
+/* A lit button is a mode that is on: blue face, white glyph. `reach` widens the pointer target. */
+static void button(float cx, float cy, float r, float reach, int enabled, int lit, const struct wj_pointer *pointer,
+                   enum wj_target target, void (*glyph)(float, float, float, u32)) {
+    lit = lit && enabled;
     int hover = enabled && over(pointer, cx - r, cy - r, r * 2, r * 2);
-    u32 face_top = hover ? PALE_BLUE : WHITE, face_bottom = hover ? WJ_RGBA(0xcf, 0xee, 0xfa, 0xff) : WJ_RGBA(0xe8, 0xec, 0xef, 0xff);
+    u32 face_top = lit ? (hover ? wj_gfx_mix(BLUE, WHITE, 0.25f) : BLUE) : hover ? PALE_BLUE : WHITE;
+    u32 face_bottom = lit ? (hover ? BLUE : DEEP_BLUE) : hover ? WJ_RGBA(0xcf, 0xee, 0xfa, 0xff) : WJ_RGBA(0xe8, 0xec, 0xef, 0xff);
     wj_gfx_circle(cx, cy + 2, r, SHADOW);
     wj_gfx_round(cx - r, cy - r, r * 2, r * 2, r, face_top, face_bottom);
-    wj_gfx_ring(cx, cy, r, 1.5f, hover ? BLUE : BORDER);
-    glyph(cx, cy, r, enabled ? (hover ? DEEP_BLUE : INK) : FAINT);
-    if (enabled) hit(cx - r, cy - r, r * 2, r * 2, target, 0);
+    wj_gfx_ring(cx, cy, r, 1.5f, lit ? DEEP_BLUE : hover ? BLUE : BORDER);
+    glyph(cx, cy, r, !enabled ? FAINT : lit ? WHITE : hover ? DEEP_BLUE : INK);
+    if (enabled) hit(cx - reach, cy - reach, reach * 2, reach * 2, target, 0);
+}
+
+static void round_button(float cx, float cy, float r, int enabled, const struct wj_pointer *pointer,
+                         enum wj_target target, void (*glyph)(float, float, float, u32)) {
+    button(cx, cy, r, r, enabled, 0, pointer, target, glyph);
 }
 
 static void glyph_previous(float cx, float cy, float r, u32 c) {
@@ -478,6 +486,41 @@ static void glyph_visualizer(float cx, float cy, float r, u32 c) {
     }
 }
 
+/* A straight line of the given width, as two triangles. */
+static void stroke(float x0, float y0, float x1, float y1, float width, u32 c) {
+    float dx = x1 - x0, dy = y1 - y0, length = sqrtf(dx * dx + dy * dy);
+    if (length < 0.01f) return;
+    float nx = -dy / length * width / 2, ny = dx / length * width / 2;
+    wj_gfx_triangle(x0 + nx, y0 + ny, x1 + nx, y1 + ny, x1 - nx, y1 - ny, c);
+    wj_gfx_triangle(x0 + nx, y0 + ny, x1 - nx, y1 - ny, x0 - nx, y0 - ny, c);
+}
+
+/* Two crossing arrows: the same one drawn rising, then mirrored to fall. */
+static void glyph_shuffle(float cx, float cy, float r, u32 c) {
+    float s = r * 0.58f, t = r * 0.15f;
+    for (int d = -1; d <= 1; d += 2) {
+        float low = cy + d * s * 0.55f, high = cy - d * s * 0.55f;
+        stroke(cx - s, low, cx - s * 0.35f, low, t, c);
+        stroke(cx - s * 0.35f, low, cx + s * 0.3f, high, t, c);
+        stroke(cx + s * 0.3f, high, cx + s * 0.55f, high, t, c);
+        wj_gfx_circle(cx - s * 0.35f, low, t / 2, c);
+        wj_gfx_circle(cx + s * 0.3f, high, t / 2, c);
+        wj_gfx_triangle(cx + s * 0.45f, high - s * 0.4f, cx + s * 1.05f, high, cx + s * 0.45f, high + s * 0.4f, c);
+    }
+}
+
+/* A loop made of two half-turns: up the left, along the top and into an arrow, then the same turned half way round. */
+static void glyph_repeat(float cx, float cy, float r, u32 c) {
+    float s = r * 0.58f, t = r * 0.15f;
+    for (int d = -1; d <= 1; d += 2) {
+        float left = cx - d * s, top = cy - d * s * 0.62f, corner = d * s * 0.3f;
+        stroke(left, cy + d * s * 0.5f, left, top + corner, t, c);
+        stroke(left, top + corner, left + corner, top, t, c);
+        stroke(left + corner, top, cx + d * s * 0.4f, top, t, c);
+        wj_gfx_triangle(cx + d * s * 0.4f, top - d * s * 0.4f, cx + d * s, top, cx + d * s * 0.4f, top + d * s * 0.4f, c);
+    }
+}
+
 static void now_playing(const struct wj_session *s, const struct wj_pointer *pointer) {
     float x = L.card_x, w = L.card_w;
     panel(x, TOP, w, PANEL_H, 18);
@@ -506,6 +549,19 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
     float chip_w = wj_font_measure(state, (int)strlen(state), 12, 1) + 20;
     wj_gfx_round(x + w / 2 - chip_w / 2, ay + size + 50, chip_w, 18, 9, chip, chip);
     label(state, x + w / 2, ay + size + 63, 12, 1, WHITE, chip_w, 1);
+
+    // Shuffle and repeat flank the state chip. A mode that is on is lit, repeat-one adds a 1, and a source
+    // that cannot use a mode leaves its button gray.
+    float my = ay + size + 59, mode_x = 31;
+    int can_shuffle = (s->capabilities & WJ_CAN_SHUFFLE) != 0, can_repeat = (s->capabilities & WJ_CAN_REPEAT) != 0;
+    button(x + mode_x, my, 12, 14, can_shuffle, s->shuffle, pointer, WJ_TARGET_SHUFFLE, glyph_shuffle);
+    button(x + w - mode_x, my, 12, 14, can_repeat, s->repeat != WJ_REPEAT_OFF, pointer, WJ_TARGET_REPEAT, glyph_repeat);
+    if (can_repeat && s->repeat == WJ_REPEAT_ONE) {
+        float bx = x + w - mode_x + 9, by = my + 9;
+        wj_gfx_circle(bx, by, 8, WHITE);
+        wj_gfx_ring(bx, by, 8, 1.5f, DEEP_BLUE);
+        label("1", bx, centered(by, 11), 11, 1, DEEP_BLUE, 12, 1);
+    }
 
     // Seek bar: blue fill up to the heard position, knob only where seeking works.
     bar_x = x + 20;
