@@ -392,9 +392,9 @@ body.viz #app { opacity: 0; pointer-events: none; }
     z-index: -1;
     background: var(--accent);
     opacity: .3;
-    /* Raised above center: the sparse music notes make the mark look low when centered. */
-    -webkit-mask: url("images/jukebox.svg") 50% 36% / auto 58% no-repeat;
-    mask: url("images/jukebox.svg") 50% 36% / auto 58% no-repeat;
+    /* Measured so the cabinet itself, not the notes and waves around it, is centered. */
+    -webkit-mask: url("images/jukebox.svg") 50.4% 34.5% / auto 58% no-repeat;
+    mask: url("images/jukebox.svg") 50.4% 34.5% / auto 58% no-repeat;
 }
 .card:hover .art, .card:focus-visible .art { border-color: var(--accent); }
 .card:focus-visible { box-shadow: none; }
