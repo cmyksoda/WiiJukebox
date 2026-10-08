@@ -52,6 +52,7 @@ const DEFAULTS = {
         // Receivers: `binary` points at librespot / shairport-sync when they are
         // not on PATH.
         spotify: { binary: '', deviceName: 'WiiJukebox', bitrate: 320, normalise: false, extraArgs: [] },
+        airplay: { binary: '', deviceName: 'WiiJukebox', port: 0, password: '', extraArgs: [] },
     },
 
     // Last source/item, restored at boot so the stream comes back by itself
