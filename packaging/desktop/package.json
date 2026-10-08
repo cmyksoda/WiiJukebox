@@ -1,5 +1,6 @@
 {
   "name": "wiijukebox-desktop",
+  "productName": "WiiJukebox",
   "version": "0.1.0",
   "private": true,
   "description": "WiiJukebox server in a native window",
@@ -9,8 +10,13 @@
   "scripts": {
     "stage": "node scripts/stage.js",
     "start": "electron . --no-sandbox",
-    "dist:linux": "node scripts/stage.js linux && electron-builder --linux AppImage",
-    "dist:win": "node scripts/stage.js win && electron-builder --win zip nsis"
+    "icons": "python3 scripts/make-icons.py",
+    "dist:linux": "node scripts/stage.js linux && electron-builder --linux AppImage --x64 --publish never",
+    "dist:win": "node scripts/stage.js win && electron-builder --win zip nsis --x64 --publish never",
+    "dist:mac-arm64": "node scripts/stage.js mac-arm64 && electron-builder --mac dmg zip --arm64 --publish never",
+    "dist:mac-x64": "node scripts/stage.js mac-x64 && electron-builder --mac dmg zip --x64 --publish never",
+    "dist:mac": "npm run dist:mac-arm64 && npm run dist:mac-x64",
+    "smoke": "node scripts/smoke.js"
   },
   "devDependencies": {
     "electron": "41.7.2",
@@ -55,22 +61,57 @@
       ],
       "category": "AudioVideo",
       "icon": "build/icon.png",
-      "artifactName": "WiiJukebox-${version}-linux-${arch}.${ext}"
+      "executableName": "wiijukebox",
+      "artifactName": "WiiJukebox-${version}-linux-${arch}.${ext}",
+      "syncDesktopName": true
     },
     "win": {
       "target": [
         "zip"
       ],
-      "icon": "build/icon.png",
-      "artifactName": "WiiJukebox-${version}-win-${arch}.${ext}",
-      "signAndEditExecutable": false,
-      "verifyUpdateCodeSignature": false
+      "icon": "build/icon.ico",
+      "artifactName": "WiiJukebox-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WiiJukebox",
       "artifactName": "WiiJukebox-${version}-win-setup-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "build/icon.icns",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "notarize": false,
+      "artifactName": "WiiJukebox-${version}-mac-${arch}.${ext}",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "WiiJukebox lets your Wii find this computer and play music from it over your local network."
+      }
+    },
+    "dmg": {
+      "title": "WiiJukebox ${version}",
+      "contents": [
+        {
+          "x": 140,
+          "y": 200
+        },
+        {
+          "x": 400,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
-  }
+  },
+  "desktopName": "wiijukebox.desktop"
 }
