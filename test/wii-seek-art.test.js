@@ -124,7 +124,7 @@ test('artwork is served by key as tiled RGB565 and failures stay quiet', { timeo
     const png = path.join(tmp, 'cover.png');
     // Wide red-left/blue-right cover: the square crop keeps red on the left edge.
     await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=red:s=300x200', '-f', 'lavfi', '-i',
-        'color=blue:s=300x200', '-filter_complex', '[0][1]hstack', '-frames:v', '1', png]);
+        'color=blue:s=300x200', '-filter_complex', '[0][1]hstack', '-frames:v', '1', '-threads', '1', png]);
     const bytes = await fs.readFile(png);
     let requests = 0;
     const server = http.createServer((req, res) => {

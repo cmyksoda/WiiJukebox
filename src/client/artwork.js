@@ -81,8 +81,8 @@ class Artwork {
         const filter = `scale=${size}:${size}:force_original_aspect_ratio=increase:flags=lanczos,` +
             `crop=${size}:${size}`;
         const pixels = await new Promise((resolve, reject) => {
-            const proc = spawn(this.ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0',
-                '-frames:v', '1', '-vf', filter, '-f', 'rawvideo', '-pix_fmt', 'rgb565be', 'pipe:1'],
+            const proc = spawn(this.ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-threads', '1', '-i', 'pipe:0',
+                '-frames:v', '1', '-vf', filter, '-filter_threads', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb565be', 'pipe:1'],
             { stdio: ['pipe', 'pipe', 'ignore'] });
             const chunks = [];
             const timer = setTimeout(() => proc.kill('SIGKILL'), FETCH_TIMEOUT_MS);
