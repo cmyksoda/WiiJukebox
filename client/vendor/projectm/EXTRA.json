@@ -68,6 +68,14 @@
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Cartographie.milk",
       "sha256": "db927c193e81071243471edda80d1d96297d891155c523f54615a68bb05cf66a"
     },
+    "Geiss - Color Tones 1.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop_104/Geiss - Color Tones 1.milk",
+      "sha256": "9fe2840219e20838f9991ea8af53b5562038f2e117369ccd10491aedcbed16d4"
+    },
+    "Geiss - Color Tones 2.milk": {
+      "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Geiss - Color Tones 2.milk",
+      "sha256": "b666044020ed3019cf728d78ae30aad45ca040cc1701412e2bb4d34e19558c81"
+    },
     "Geiss - Fog Tunnel.milk": {
       "upstream_path": "projectM-complete-2.0.1-Source/presets_milkdrop/Geiss - Fog Tunnel.milk",
       "sha256": "1f461deeb2d050a5c5cb2a7bfcad29649916024f4af578950afadb8d84c95b15"

@@ -15,7 +15,7 @@ Unchained & Illusion - Logic Morph.milk
 Unchained - Painful Plasma (Multi-Wave Mirrored Rage) -- Ro.milk
 Zylot - Color Of Music.milk
 
-# Left out after a preset tour on a real Wii (2026-10-09): duplicates, low quality or broken.
+# Left out after a preset tour on a real Wii (2026-10-09): duplicates, low quality, broken or too laggy.
 Aderrasi - Aimless (Gravity Directive Mix).milk
 Aderrasi - Aimless (Spirogravity Mix).milk
 Aderrasi - Chromatic Abyss (The Other Side).milk
@@ -34,15 +34,11 @@ Eo.S.+Phat - Arm_upgrades - transformer.milk
 Eo.S.+Phat Cool Bug v2 + (Krash's beat detection).milk
 Geiss - Blasto.milk
 Geiss - High Dynamic Range.milk
-Geiss - Octopus Blue.milk
-Geiss - Pistons.milk
-Geiss - Script.milk
 Geiss - Swirlie 5.milk
 Idiot & Che - Various Abstract Effects.milk
 Idiot & Rovastar - Altars Of Madness 2 (X.42 Mix).milk
 Idiot - 9-7-02 (Remix) (sustain fixed).milk
 Idiot - MOTIVATION!.milk
-Idiot24-7 - Meeting place.milk
 Illusion & Che - Return Of The King.milk
 Krash - Dynamic Borders 1.milk
 Krash - Season's Greetings 2.milk
@@ -54,7 +50,7 @@ Phat+fiShbRaiN+Eo.S_Mandala_Chasers_remix.milk
 PieturP - triptrap_(ultimate-trip-mix).milk
 Redi Jedi - acid in your brain.milk
 Redi Jedi - multiple points of origin, one destination.milk
-Rovastar & Geiss - Bipolar 2 (Vectrip Mix).milk
+Rovastar & Fvese - Mosaic Waves.milk
 Rovastar & Geiss - Dynamic Swirls 3 (Smoke Mix).milk
 Rovastar & Geiss - Dynamic Swirls 3 (Voyage Of Twisted Soul.milk
 Rovastar & Krash - Interwoven (Contra Mix).milk
@@ -80,6 +76,8 @@ Rovastar - Inner Thoughts (Distant Memories Mix).milk
 Rovastar - Inner Thoughts (Frantic Thoughts Mix).milk
 Rovastar - Inner Thoughts (Strange Cargo Mix).milk
 Rovastar - Lost Souls of the Bermuda Triangle (Darkest Soul.milk
+Rovastar - Magic Carpet.milk
+Rovastar - Parallel Universe.milk
 Rovastar - Solarized Space.milk
 Rovastar - Space (Twisted Dimension Mix).milk
 Rovastar - Space.milk
@@ -92,6 +90,9 @@ StudioMusic & Unchained - So Much Love.milk
 StudioMusic - Harmonic Bliss (elated mix).milk
 StudioMusic Aderrasi & nil - LA movement (Intellectual Sens.milk
 TEcHNO and SandStorm - Psychodelic Highway.milk
+Telek - Flicker (@xis).milk
+Telek - Flicker.milk
+Telek - Lost Star (Flash).milk
 Telek - Recirculate (Cool).milk
 Telek - Sine Wave.milk
 Telek - Slow Thing (Spiderman Mix).milk
@@ -103,7 +104,6 @@ Unchained & Illusion - Spirit Morph.milk
 Unchained - Bad Karma Oddnezz Style.milk
 Unchained - Games With Light & Sound.milk
 Unchained - Jaded Emotion.milk
-Unchained - Perverted Dialect.milk
 Unchained - Unclaimed Wreckage.milk
 Unchained - Unified Drag 2.milk
 Zylot & Mstress - Toxic Storm On Acid Sea (The End Of The W.milk
