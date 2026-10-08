@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { PlaybackTimeline, MP3_DELAY_MS } = require('../src/core/playback-timeline');
+const { PlaybackTimeline, mp3DelayMs } = require('../src/core/playback-timeline');
 const { Pipeline } = require('../src/core/pipeline');
 const { Broadcaster } = require('../src/core/broadcaster');
 const { BYTES_PER_SECOND } = require('../src/core/format');
 
+const MP3_DELAY_MS = mp3DelayMs(44100);
+
 test('audible timeline follows buffered silence, track changes, pauses and underruns', async () => {
-    const pipeline = new Pipeline();
+    const pipeline = new Pipeline({ audio: { bitrate: 128, sampleRate: 44100 } });
     pipeline._source = { id: 'fixture', label: 'Fixture', capabilities: {}, off() {}, async close() {} };
     pipeline._generation = 2;
     pipeline._nowPlaying = { title: 'New song', duration: 100 };
@@ -44,7 +46,7 @@ test('audible timeline follows buffered silence, track changes, pauses and under
 });
 
 test('timeline compacts continuous audio and bounds old transition history', () => {
-    const timeline = new PlaybackTimeline();
+    const timeline = new PlaybackTimeline({ sampleRate: 44100 });
     for (let i = 0; i < 10000; i++) timeline.write(BYTES_PER_SECOND / 50,
         { generation: 1, position: i / 50, state: 'playing', metadata: { title: 'Song' } });
     assert.equal(timeline.segments.length, 1);
@@ -55,8 +57,23 @@ test('timeline compacts continuous audio and bounds old transition history', () 
     assert.equal(timeline.at(1000), null);
 });
 
+test('the 48 kHz stream clock uses the codec delay at its own sample rate', async () => {
+    const pipeline = new Pipeline();
+    try {
+        assert.equal(pipeline.encoder.sampleRate, 48000);
+        assert.equal(pipeline.timeline.delayMs, 1105 * 1000 / 48000);
+        pipeline._source = { id: 'fixture', label: 'Fixture', capabilities: {}, off() {}, async close() {} };
+        pipeline._generation = 1;
+        pipeline.timeline.write(10 * BYTES_PER_SECOND, { generation: 1, state: 'playing', position: 0,
+            metadata: { title: 'Song', duration: 100 } });
+        const bytes = 2 * pipeline.broadcaster.bitrate * 125;
+        const heard = pipeline.playbackAt(pipeline.broadcaster.epoch, bytes, 1000 + pipeline.timeline.delayMs);
+        assert.equal(heard.nowPlaying.position, 3);
+    } finally { await pipeline.shutdown(); }
+});
+
 test('stream headers anchor the exact burst start and encoder resets invalidate old clocks', () => {
-    const broadcaster = new Broadcaster();
+    const broadcaster = new Broadcaster({ bitrate: 128 });
     broadcaster.write(Buffer.alloc(40000));
     broadcaster.write(Buffer.alloc(40000));
     let headers;
@@ -69,5 +86,5 @@ test('stream headers anchor the exact burst start and encoder resets invalidate 
     broadcaster.resetClock();
     assert.notEqual(broadcaster.epoch, epoch);
     assert.equal(broadcaster._audioBytes, 0);
-    assert.equal(broadcaster._burstBytes, 0);
+    assert.equal(broadcaster._historyBytes, 0);
 });

@@ -20,13 +20,14 @@ const { Decoder } = require('./decoder');
 const { PlaybackTimeline } = require('./playback-timeline');
 
 class Pipeline extends EventEmitter {
-    constructor({ ffmpegPath = 'ffmpeg', station = {} } = {}) {
+    constructor({ ffmpegPath = 'ffmpeg', station = {}, audio = {} } = {}) {
         super();
         this._ffmpegPath = ffmpegPath;
 
-        this.encoder = new Encoder({ ffmpegPath });
-        this.broadcaster = new Broadcaster({ ...station, bitrate: this.encoder.bitrate });
-        this.timeline = new PlaybackTimeline();
+        this.encoder = new Encoder({ ffmpegPath, ...audio });
+        this.broadcaster = new Broadcaster({ ...station,
+            bitrate: this.encoder.bitrate, sampleRate: this.encoder.sampleRate });
+        this.timeline = new PlaybackTimeline({ sampleRate: this.encoder.sampleRate });
         this.pacer = new Pacer({ write: (chunk, timing) => {
             if (this.encoder.running) this.timeline.write(chunk.length, {
                 generation: this._generation, position: timing.position,

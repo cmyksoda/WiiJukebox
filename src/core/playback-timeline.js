@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
-const { BYTES_PER_SECOND, SAMPLE_RATE } = require('./format');
+const { BYTES_PER_SECOND, MP3_DELAY_SAMPLES, MP3_SAMPLE_RATE } = require('./format');
 
-// MP3 without a Xing gapless tag retains LAME's 576-sample encoder delay and
-// the decoder's 529-sample synthesis delay. The stream clock includes both.
-const MP3_DELAY_MS = 1105 * 1000 / SAMPLE_RATE;
+// MP3 without a Xing gapless tag retains the codec delay; the stream clock includes it.
+const mp3DelayMs = (sampleRate) => MP3_DELAY_SAMPLES * 1000 / sampleRate;
 
 class PlaybackTimeline {
-    constructor() { this.reset(); }
+    constructor({ sampleRate = MP3_SAMPLE_RATE } = {}) {
+        this.delayMs = mp3DelayMs(sampleRate);
+        this.reset();
+    }
 
     reset() {
         this.time = 0;
@@ -29,7 +31,7 @@ class PlaybackTimeline {
     }
 
     at(encodedMs) {
-        const time = encodedMs - MP3_DELAY_MS;
+        const time = encodedMs - this.delayMs;
         const segment = this.segments.find((entry) => time >= entry.start && time < entry.end);
         if (!segment) return null;
         const position = segment.position + (segment.state === 'playing' ? (time - segment.start) / 1000 : 0);
@@ -37,4 +39,4 @@ class PlaybackTimeline {
     }
 }
 
-module.exports = { PlaybackTimeline, MP3_DELAY_MS };
+module.exports = { PlaybackTimeline, mp3DelayMs };

@@ -11,7 +11,7 @@
 
 const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
-const { FFMPEG_PCM_INPUT, MP3_BITRATE_KBPS } = require('./format');
+const { FFMPEG_PCM_INPUT, SAMPLE_RATE, mp3Output } = require('./format');
 
 // If ffmpeg dies anyway (OOM, someone kills it, a bad build), come back up
 // rather than leaving a dead mount. Backoff avoids a hot loop when the binary is
@@ -24,11 +24,14 @@ class Encoder extends EventEmitter {
      * @param {object} [opts]
      * @param {string} [opts.ffmpegPath]  path to the ffmpeg binary
      * @param {number} [opts.bitrate]     MP3 bitrate in kbps
+     * @param {number} [opts.sampleRate]  MP3 sample rate in Hz
      */
-    constructor({ ffmpegPath = 'ffmpeg', bitrate = MP3_BITRATE_KBPS } = {}) {
+    constructor({ ffmpegPath = 'ffmpeg', bitrate, sampleRate } = {}) {
         super();
         this._ffmpegPath = ffmpegPath;
-        this._bitrate = bitrate;
+        const output = mp3Output({ bitrate, sampleRate });
+        this._bitrate = output.bitrate;
+        this._sampleRate = output.sampleRate;
         this._proc = null;
         this._stopping = false;
         this._restartDelay = RESTART_DELAY_MS;
@@ -45,6 +48,8 @@ class Encoder extends EventEmitter {
 
     get bitrate() { return this._bitrate; }
 
+    get sampleRate() { return this._sampleRate; }
+
     get writable() {
         return this._writable;
     }
@@ -57,8 +62,12 @@ class Encoder extends EventEmitter {
             '-loglevel', 'error',
             ...FFMPEG_PCM_INPUT,
             '-i', 'pipe:0',
+            // A longer windowed-sinc filter than the default; this runs once on
+            // the server instead of the Wii's nearest-sample resampler.
+            ...(this._sampleRate === SAMPLE_RATE ? [] : ['-af', `aresample=${this._sampleRate}:filter_size=64`]),
             '-c:a', 'libmp3lame',
             '-b:a', `${this._bitrate}k`,
+            '-compression_level', '2',
             // CBR keeps the advertised bitrate and byte-based stream clock accurate.
             // Listeners also use icy-br to estimate their buffered duration.
             '-abr', '0',

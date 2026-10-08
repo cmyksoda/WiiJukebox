@@ -81,7 +81,7 @@ async function main() {
         const output = path.join(tmp, 'stream.mp3');
         const result = await run('./client/build/network_probe', [String(udp.port), output, 'subsonic'], { timeout: 15000 });
         assert.match(result.stdout, /MP3 stream and stop passed/);
-        const pcm = await run('ffmpeg', ['-v', 'error', '-i', output, '-f', 's16le', 'pipe:1'], { encoding: 'buffer', maxBuffer: 2 * 1024 * 1024 });
+        const pcm = await run('ffmpeg', ['-v', 'error', '-i', output, '-f', 's16le', 'pipe:1'], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 });
         let peak = 0;
         for (let i = 0; i + 1 < pcm.stdout.length; i += 2) peak = Math.max(peak, Math.abs(pcm.stdout.readInt16LE(i)));
         assert.ok(peak > 500);

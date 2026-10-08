@@ -64,12 +64,13 @@ int main(int argc, char **argv) {
     struct wj_stream_clock clock;
     int fd = wj_open_audio(server, server->mount, &status, &clock);
     CHECK(fd >= 0 && status == 200);
-    CHECK(clock.epoch > 0 && clock.byte_start >= 0 && clock.bitrate == 128);
+    CHECK(clock.epoch > 0 && clock.byte_start >= 0 && clock.bitrate == 256);
     CHECK(wj_audio_start(fd) == 0);
     FILE *file = fopen(argv[2], "wb");
     CHECK(file);
     int received = 0;
-    int target_bytes = !strcmp(source, "subsonic") ? 96000 : 48000;
+    // The 4-second burst at 256 kbps precedes the selection; read past it.
+    int target_bytes = !strcmp(source, "subsonic") ? 256000 : 192000;
     long long deadline = wj_milliseconds() + 12000;
     while (received < target_bytes) {
         CHECK(wj_milliseconds() < deadline);
