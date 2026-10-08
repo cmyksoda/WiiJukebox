@@ -18,9 +18,9 @@ Messages appear as a pill above the dock; volume changes show a meter. The
 header reports the server, connection, bitrate, buffered seconds and audio
 restarts. 16:9 consoles get a wider layout rather than stretched shapes.
 
-Text is drawn with FreeType from an embedded Noto Sans CJK JP subset (Latin,
-Greek, Cyrillic, kana and common kanji); characters outside the font show the
-font's missing-glyph box instead of `?`. Building the host tests needs FreeType
+Text is drawn with FreeType from embedded Noto Sans (Latin, Greek, Cyrillic)
+and Noto Sans CJK JP (kana and common kanji) subsets; characters outside both,
+such as Hangul or emoji, show a missing-glyph box instead of `?`. Building the host tests needs FreeType
 development headers (`pkg-config freetype2`).
 
 ## Build and install

@@ -19,12 +19,14 @@
 struct glyph { unsigned code; short size, bold, x, y, w, h, left, top; float advance; };
 
 static FT_Library library;
-static FT_Face face;
+/* The primary face covers Latin, Greek and Cyrillic; the second, CJK. */
+static FT_Face faces[2];
+static int face_sizes[2];
 static float scale_x = 1, scale_y = 1;
 static unsigned char *atlas;
 static struct glyph glyphs[GLYPHS];
 static short slots[SLOTS];
-static int glyph_count, shelf_x, shelf_y, shelf_h, current_size, atlas_changed;
+static int glyph_count, shelf_x, shelf_y, shelf_h, atlas_changed;
 static int rendered, resets;
 
 static void reset_atlas(void) {
@@ -34,29 +36,34 @@ static void reset_atlas(void) {
     atlas_changed = 1;
 }
 
-int wj_font_init(const void *data, long size, float sx, float sy) {
+int wj_font_init(const void *data, long size, const void *fallback, long fallback_size, float sx, float sy) {
     scale_x = sx;
     scale_y = sy;
-    current_size = 0;
+    face_sizes[0] = face_sizes[1] = 0;
     if (!atlas) atlas = memalign(32, WJ_ATLAS_WIDTH * WJ_ATLAS_HEIGHT);
     if (!atlas || FT_Init_FreeType(&library)) return -1;
-    if (FT_New_Memory_Face(library, data, size, 0, &face)) return -1;
+    if (FT_New_Memory_Face(library, data, size, 0, &faces[0])) return -1;
+    if (fallback && FT_New_Memory_Face(library, fallback, fallback_size, 0, &faces[1])) faces[1] = NULL;
     reset_atlas();
     rendered = resets = 0;
     return 0;
 }
 
 void wj_font_shutdown(void) {
-    if (face) FT_Done_Face(face);
+    for (int i = 0; i < 2; i++) {
+        if (faces[i]) FT_Done_Face(faces[i]);
+        faces[i] = NULL;
+    }
     if (library) FT_Done_FreeType(library);
-    face = NULL;
     library = NULL;
 }
 
-static void set_size(int size) {
-    if (size == current_size) return;
-    FT_Set_Char_Size(face, (FT_F26Dot6)(size * 64 * scale_x), (FT_F26Dot6)(size * 64 * scale_y), 72, 72);
-    current_size = size;
+static FT_Face set_size(int which, int size) {
+    if (size != face_sizes[which]) {
+        FT_Set_Char_Size(faces[which], (FT_F26Dot6)(size * 64 * scale_x), (FT_F26Dot6)(size * 64 * scale_y), 72, 72);
+        face_sizes[which] = size;
+    }
+    return faces[which];
 }
 
 static void put_pixel(int x, int y, unsigned char value) {
@@ -65,8 +72,13 @@ static void put_pixel(int x, int y, unsigned char value) {
 }
 
 static struct glyph *rasterize(unsigned code, int size, int bold) {
-    set_size(size);
-    unsigned index = FT_Get_Char_Index(face, code);
+    int which = 0;
+    unsigned index = FT_Get_Char_Index(faces[0], code), other;
+    if (!index && faces[1] && (other = FT_Get_Char_Index(faces[1], code))) {
+        which = 1;
+        index = other;
+    }
+    FT_Face face = set_size(which, size);
     if (FT_Load_Glyph(face, index, FT_LOAD_NO_BITMAP)) return NULL;
     FT_GlyphSlot slot = face->glyph;
     FT_Pos strength = bold ? FT_MulFix(face->units_per_EM, face->size->metrics.y_scale) / 28 : 0;
@@ -118,7 +130,7 @@ static unsigned visible(unsigned code) {
 
 float wj_font_run(const char *text, int bytes, int size, int bold, float x, float baseline,
                   wj_glyph_sink sink, void *context) {
-    if (!face) return x;
+    if (!faces[0]) return x;
     for (const char *end = text + bytes; text < end;) {
         unsigned code = visible(wj_utf8_next(&text));
         if (!code) continue;

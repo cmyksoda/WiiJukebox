@@ -12,14 +12,19 @@ static void count(void *context, float x0, float y0, float x1, float y1, float u
     quads++;
 }
 
-int main(int argc, char **argv) {
-    assert(argc == 2);
-    FILE *file = fopen(argv[1], "rb");
+static long load(const char *path, unsigned char *data, long capacity) {
+    FILE *file = fopen(path, "rb");
     assert(file);
-    static unsigned char data[2 * 1024 * 1024];
-    long size = (long)fread(data, 1, sizeof(data), file);
+    long size = (long)fread(data, 1, (size_t)capacity, file);
     fclose(file);
-    assert(!wj_font_init(data, size, 1, 1));
+    return size;
+}
+
+int main(int argc, char **argv) {
+    assert(argc == 3);
+    static unsigned char latin[1024 * 1024], cjk[2 * 1024 * 1024];
+    long latin_size = load(argv[1], latin, sizeof(latin)), cjk_size = load(argv[2], cjk, sizeof(cjk));
+    assert(!wj_font_init(latin, latin_size, cjk, cjk_size, 1, 1));
     int rendered, resets, changed;
     float hello = wj_font_measure("Hello", 5, 20, 0);
     assert(hello > 30 && hello < 80);
@@ -43,6 +48,13 @@ int main(int argc, char **argv) {
     quads = 0;
     wj_font_run(controls, (int)strlen(controls), 20, 0, 0, 30, count, NULL);
     assert(quads == 2);
+    /* Polish, Czech and accented Greek need the primary face; kana the fallback. */
+    const char *european = "\xc4\x85\xc5\x99\xcf\x8d\xd1\x97";
+    quads = 0;
+    wj_font_run(european, (int)strlen(european), 20, 0, 0, 30, count, NULL);
+    assert(quads == 4);
+    float kana = wj_font_measure("\xe3\x81\x82", 3, 20, 0);
+    assert(kana > 17 && kana < 23);
     const char *hangul = "\xed\x95\x9c";
     quads = 0;
     assert(wj_font_run(hangul, 3, 20, 0, 0, 30, count, NULL) > 5 && quads == 1);
@@ -61,11 +73,11 @@ int main(int argc, char **argv) {
 
     float wide;
     wj_font_shutdown();
-    assert(!wj_font_init(data, size, 0.75f, 1));
+    assert(!wj_font_init(latin, latin_size, cjk, cjk_size, 0.75f, 1));
     wide = wj_font_measure("Hello", 5, 20, 0);
     assert(wide > hello * 0.95f && wide < hello * 1.05f);
     wj_font_shutdown();
-    printf("font: metrics, cache, bold, CJK, missing glyphs, controls, atlas reset and widescreen passed (%d glyphs, %d resets)\n",
+    printf("font: metrics, cache, bold, Latin/Greek/Cyrillic with CJK fallback, missing glyphs, controls, atlas reset and widescreen passed (%d glyphs, %d resets)\n",
            rendered, resets);
     return 0;
 }

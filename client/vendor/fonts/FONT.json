@@ -1,27 +1,46 @@
 {
-  "upstream": "https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)",
-  "source_file": "NotoSansCJK-VF.ttc, face 0 (Noto Sans CJK JP), Fedora google-noto-sans-cjk-vf-fonts 2.004",
-  "source_sha256": "d3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32",
-  "weight": 500,
-  "ranges": [
-    "U+0020-U+007E",
-    "U+00A0-U+024F",
-    "U+0370-U+03FF",
-    "U+0400-U+04FF",
-    "U+1E00-U+1EFF",
-    "U+2000-U+206F",
-    "U+20A0-U+20BF",
-    "U+2100-U+214F",
-    "U+2190-U+21FF",
-    "U+25A0-U+25FF",
-    "U+2600-U+266F",
-    "U+3000-U+30FF",
-    "U+31F0-U+31FF",
-    "U+FF00-U+FFEF",
-    "JIS X 0208 level 1 kanji"
-  ],
   "fonttools": "4.63.0",
-  "glyphs": 4055,
-  "sha256": "2c093429de099f4e6dc226c9076fa9e784dcd465466b816ea18826026b880585",
-  "copyright": "\u00a9 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+  "fonts": [
+    {
+      "output": "NotoSans-Medium-WiiJukebox.ttf",
+      "source_file": "NotoSans[wght].ttf, Fedora google-noto-sans-vf-fonts 20251201 (Noto Sans 2.015)",
+      "source_sha256": "fb53504de62e767a54695416123d68d67f71c9b69722175184ad56e7dd13547b",
+      "upstream": "https://github.com/notofonts/latin-greek-cyrillic (OFL-1.1)",
+      "weight": 500,
+      "ranges": [
+        "U+0020-U+007E",
+        "U+00A0-U+024F",
+        "U+02B0-U+036F",
+        "U+0370-U+03FF",
+        "U+0400-U+04FF",
+        "U+1E00-U+1EFF",
+        "U+2000-U+206F",
+        "U+20A0-U+20BF",
+        "U+2100-U+214F",
+        "U+2190-U+21FF",
+        "U+25A0-U+25FF",
+        "U+2600-U+266F"
+      ],
+      "glyphs": 1587,
+      "sha256": "06c13368b73679124220f5aeb9e213201d87b2d7834aa40eaaa1ac7114197267",
+      "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)"
+    },
+    {
+      "output": "NotoSansCJKjp-Medium-WiiJukebox.otf",
+      "source_file": "NotoSansCJK-VF.ttc face 0 (Noto Sans CJK JP), Fedora google-noto-sans-cjk-vf-fonts 2.004",
+      "source_sha256": "d3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32",
+      "upstream": "https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)",
+      "weight": 500,
+      "ranges": [
+        "U+0020-U+007E",
+        "U+3000-U+30FF",
+        "U+31F0-U+31FF",
+        "U+FF00-U+FFEF",
+        "JIS X 0208 level 1 kanji"
+      ],
+      "glyphs": 3554,
+      "sha256": "8f3af0c236415303c065bc7d9a9dd0491e1d0a12a87b33975842524b6c40786e",
+      "copyright": "\u00a9 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+    }
+  ]
 }

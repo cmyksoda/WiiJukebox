@@ -11,7 +11,8 @@ PORTLIBS_PPC := $(DEVKITPRO)/portlibs/ppc
 CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -I$(PORTLIBS_PPC)/include/freetype2 -Ibuild -MMD -MP
 DISCOVERY_PORT ?= 4001
 LIBS := -L$(PORTLIBS_PPC)/lib -lfreetype -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
-FONT := vendor/fonts/NotoSansCJKjp-Medium-WiiJukebox.otf
+FONT_LATIN := vendor/fonts/NotoSans-Medium-WiiJukebox.ttf
+FONT_CJK := vendor/fonts/NotoSansCJKjp-Medium-WiiJukebox.otf
 OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o
 include projectm.mk
 .PHONY: all clean host-test package FORCE
@@ -24,8 +25,8 @@ build/discovery_port.h: FORCE | build
 build/session.o: build/discovery_port.h
 build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
-build/font_data.o: source/font_data.S $(FONT) | build
-	$(CC) $(MACHDEP) -DFONT_PATH='"$(FONT)"' -c $< -o $@
+build/font_data.o: source/font_data.S $(FONT_LATIN) $(FONT_CJK) | build
+	$(CC) $(MACHDEP) -DFONT_LATIN='"$(FONT_LATIN)"' -DFONT_CJK='"$(FONT_CJK)"' -c $< -o $@
 build/wiijukebox.elf: $(OBJECTS) build/libprojectM.a
 	$(CXX) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wiijukebox.map -o $@
 dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
@@ -38,7 +39,7 @@ host-test: | build
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/utf8.c source/layout.c tests/layout_test.c -o build/layout_test
 	./build/layout_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/font.c tests/font_test.c $(shell pkg-config --libs freetype2) -o build/font_test
-	./build/font_test $(FONT)
+	./build/font_test $(FONT_LATIN) $(FONT_CJK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
