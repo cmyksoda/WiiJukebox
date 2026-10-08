@@ -29,10 +29,14 @@ files = ["boot.dol", "meta.xml", "icon.png", "LICENSE", *licenses]
 for name in files:
     if not (app / name).is_file():
         raise SystemExit(f"Missing {name}; build the client first")
-with ZipFile(output, "w", ZIP_DEFLATED) as archive:
-    for name in files:
-        archive.write(app / name, f"apps/wiijukebox/{name}")
-with ZipFile(output) as archive:
-    assert archive.testzip() is None
-    assert archive.namelist() == [f"apps/wiijukebox/{name}" for name in files]
-print(output)
+# The SD card archive unpacks at the card's root; the Homebrew Channel's wiiload
+# install wants the app folder itself at the top of the zip.
+layouts = {output: "apps/wiijukebox", output.with_name("WiiJukebox-client-wiiload.zip"): "wiijukebox"}
+for path, folder in layouts.items():
+    with ZipFile(path, "w", ZIP_DEFLATED) as archive:
+        for name in files:
+            archive.write(app / name, f"{folder}/{name}")
+    with ZipFile(path) as archive:
+        assert archive.testzip() is None
+        assert archive.namelist() == [f"{folder}/{name}" for name in files]
+    print(path)

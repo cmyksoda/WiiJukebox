@@ -32,7 +32,9 @@ make -C client
 
 Requires devkitPPC and libogc, normally under `/opt/devkitpro`. The build uses
 `-Wall -Wextra -Werror` and links libfat, wiiuse, libmad and ASND.
-Copy `client/dist/apps/wiijukebox` to `sd:/apps/wiijukebox`. Start the server using
+Copy `client/dist/apps/wiijukebox` to `sd:/apps/wiijukebox`, or run `make -C client package`
+and install over the network from Homebrew Channel with
+`WIILOAD=tcp:<wii-ip> wiiload client/dist/WiiJukebox-client-wiiload.zip`. Start the server using
 `npm ci && npm start`, configure sources in its web UI, then launch the app from
 Homebrew Channel. Do not put upstream service passwords on the SD card.
 
