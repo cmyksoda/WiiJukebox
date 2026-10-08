@@ -314,7 +314,7 @@ function renderItems(items, path, label, offset = 0) {
             wrap.append(h('button', {
                 class: 'play-all', 'aria-label': `Play ${item.title}`, title: 'Play all',
                 onclick: () => play(item),
-            }, h('span', { 'aria-hidden': 'true', text: '▶︎' })));
+            }, h('i', { class: 'g g-right', 'aria-hidden': 'true' })));
             card.oncontextmenu = (e) => {
                 e.preventDefault();
                 play(item);
@@ -426,7 +426,7 @@ async function bindFavorites(source, urlInput, nameInput, saveButton) {
                     onclick: () => play(radio
                         ? { url: item.url, title: item.name, type: 'station' }
                         : { id: item.url, title: item.name, type: 'track' }),
-                }, h('span', { class: 'favorite-symbol', 'aria-hidden': 'true', text: '▶︎' }), details),
+                }, h('span', { class: 'favorite-symbol', 'aria-hidden': 'true' }, h('i', { class: 'g g-right' })), details),
                 h('button', {
                     class: 'favorite-remove', title: `Remove ${item.name}`, 'aria-label': `Remove ${item.name}`,
                     onclick: async () => {

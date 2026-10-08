@@ -92,7 +92,13 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 
 .g { display: inline-block; position: relative; width: 1em; height: 1em; flex: none; }
 /* Triangles sit by their centroid, not their box, so they look centered in a circle. */
-.g-play { background: currentColor; clip-path: polygon(27% 10%, 95% 50%, 27% 90%); }
+.g-play, .g-right { background: currentColor; clip-path: polygon(27% 10%, 95% 50%, 27% 90%); }
+.g-left { background: currentColor; clip-path: polygon(73% 10%, 5% 50%, 73% 90%); }
+.g-down { background: currentColor; clip-path: polygon(10% 27%, 90% 27%, 50% 95%); }
+.g-close::before, .g-close::after { content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: currentColor; transform: rotate(45deg); }
+.g-close::after { transform: rotate(-45deg); }
+.pill.icon .g { font-size: 12px; }
+.pill.icon .g-close { font-size: 16px; }
 .g-pause {
     background: linear-gradient(90deg, transparent 0 20%, currentColor 20% 42%, transparent 42% 58%, currentColor 58% 80%, transparent 80%);
     clip-path: inset(10% 0 10% 0 round 2px);
@@ -110,7 +116,6 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
         linear-gradient(currentColor 0 0) 0 6px / 100% 2px no-repeat,
         linear-gradient(currentColor 0 0) 0 12px / 100% 2px no-repeat;
 }
-.glyph { font-size: 14px; line-height: 1; }
 
 /* Play and pause share a button; show whichever is the action. */
 .round .g-play { display: none; }
