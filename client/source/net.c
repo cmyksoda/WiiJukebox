@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 #define net_socket socket
+#define net_bind bind
 #define net_connect connect
 #define net_fcntl fcntl
 #define net_select select
@@ -25,6 +26,13 @@
 #define net_sendto sendto
 #define net_recvfrom recvfrom
 #define net_close close
+#endif
+
+/* IOS uses the eight-byte IPv4 address, without BSD's sin_zero padding. */
+#ifdef GEKKO
+#define ADDRESS_SIZE 8
+#else
+#define ADDRESS_SIZE sizeof(struct sockaddr_in)
 #endif
 
 long long wj_milliseconds(void) {
@@ -45,6 +53,9 @@ static int ready(int fd, int writing, int timeout_ms) {
 static int address(struct sockaddr_in *out, const char *ip, int port) {
     memset(out, 0, sizeof(*out));
     out->sin_family = AF_INET;
+#ifdef GEKKO
+    out->sin_len = ADDRESS_SIZE;
+#endif
     out->sin_port = htons((uint16_t)port);
     return inet_aton(ip, &out->sin_addr) && port > 0 && port <= 65535 ? 0 : -1;
 }
@@ -66,9 +77,13 @@ int wj_open(const struct wj_server *server, const char *method, const char *path
     int result = net_connect(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (result < 0) {
         if (ready(fd, 1, 3000) <= 0) goto fail;
+        /* libogc's net_getsockopt is unimplemented. On Wii, the first send
+           verifies the connection after the bounded writable wait. */
+#ifndef GEKKO
         int error = 0;
         socklen_t size = sizeof(error);
         if (net_getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &size) < 0 || error) goto fail;
+#endif
     }
     char request[2048];
     int length = snprintf(request, sizeof(request),
@@ -127,13 +142,44 @@ int wj_request(const struct wj_server *server, const char *method, const char *p
     return status;
 }
 
+int wj_lookup(struct wj_server *server, const char *endpoint) {
+    char ip[16], extra;
+    int port;
+    if (sscanf(endpoint, "%15[0-9.]:%d%c", ip, &port, &extra) != 2) return -1;
+    struct sockaddr_in addr;
+    if (address(&addr, ip, port)) return -1;
+    struct wj_server found = {0};
+    snprintf(found.ip, sizeof(found.ip), "%s", ip);
+    found.port = port;
+    char body[2048];
+    if (wj_request(&found, "GET", "/api/wii/info", body, sizeof(body)) != 200) return -1;
+    struct wj_document doc;
+    if (wj_document(body, &doc) || doc.count != 1) return -1;
+    struct wj_row *row = &doc.rows[0];
+    if (row->count != 4 || strcmp(row->field[0], "server") ||
+        strlen(row->field[1]) != 36 || strspn(row->field[1], "0123456789abcdef-") != 36 ||
+        row->field[3][0] != '/' || strlen(row->field[3]) >= sizeof(found.mount) ||
+        strpbrk(row->field[3], "\r\n ")) return -1;
+    snprintf(found.id, sizeof(found.id), "%s", row->field[1]);
+    snprintf(found.name, sizeof(found.name), "%.127s", row->field[2]);
+    snprintf(found.mount, sizeof(found.mount), "%s", row->field[3]);
+    *server = found;
+    return 0;
+}
+
 int wj_discover(struct wj_server *servers, int capacity, const char *target, int port) {
     struct sockaddr_in addr;
     if (address(&addr, target, port)) return -1;
     int fd = net_socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) return -1;
+    struct sockaddr_in local;
+    memset(&local, 0, sizeof(local));
+    local.sin_family = AF_INET;
+    int result = net_bind(fd, (struct sockaddr *)&local, ADDRESS_SIZE);
+    if (result < 0) { wj_close(fd); return result; }
     int yes = 1;
-    net_setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
+    result = net_setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
+    if (result < 0) { wj_close(fd); return result; }
     char nonce[17], query[80];
     snprintf(nonce, sizeof(nonce), "%016llx", (unsigned long long)wj_milliseconds());
     int size = snprintf(query, sizeof(query), "WIIJUKEBOX_DISCOVER\t1\t%s\n", nonce);
@@ -142,10 +188,13 @@ int wj_discover(struct wj_server *servers, int capacity, const char *target, int
     long long next_send = 0;
     while (wj_milliseconds() < deadline) {
         if (wj_milliseconds() >= next_send) {
-            net_sendto(fd, query, size, 0, (struct sockaddr *)&addr, sizeof(addr));
+            result = net_sendto(fd, query, size, 0, (struct sockaddr *)&addr, ADDRESS_SIZE);
+            if (result < 0) { wj_close(fd); return result; }
             next_send = wj_milliseconds() + 500;
         }
-        if (ready(fd, 0, 100) <= 0) continue;
+        result = ready(fd, 0, 100);
+        if (result < 0) { wj_close(fd); return result; }
+        if (!result) continue;
         char response[2048];
         struct sockaddr_in remote;
         socklen_t remote_size = sizeof(remote);

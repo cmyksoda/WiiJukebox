@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WiiJukebox</title>
-<link rel="icon" href="images/favicon.ico">
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,9 +15,11 @@
 <div id="viz-overlay" hidden><span id="viz-preset"></span></div>
 
 <div id="app">
+  <button id="sidebar-shade" aria-label="Close sources" tabindex="-1"></button>
   <aside id="sidebar">
     <header id="brand">
-      <img src="images/logo.webp" alt="" width="150">
+      <strong>WiiJukebox</strong>
+      <button id="sources-close" class="icon-btn" aria-label="Close sources">&times;</button>
     </header>
 
     <nav id="sources" aria-label="Sources"></nav>
@@ -35,6 +37,7 @@
 
   <main id="main">
     <div id="toolbar">
+      <button id="sources-toggle" class="btn small" aria-controls="sidebar" aria-expanded="false">Sources</button>
       <button id="back" class="icon-btn" title="Back" hidden>&larr;</button>
       <h2 id="crumb">Pick a source</h2>
       <input id="search" type="search" placeholder="Search" hidden>
@@ -48,7 +51,7 @@
     <div id="content"></div>
 
     <div id="empty" class="empty">
-      <p>Choose a source on the left to get started.</p>
+      <p>Choose a source to get started.</p>
     </div>
   </main>
 </div>

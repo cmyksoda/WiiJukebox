@@ -13,6 +13,13 @@ int main(int argc, char **argv) {
     int count = wj_discover(servers, WJ_SERVERS, "127.0.0.1", atoi(argv[1]));
     CHECK(count == 1);
     struct wj_server *server = &servers[0];
+    char endpoint[40];
+    snprintf(endpoint, sizeof(endpoint), "%s:%d", server->ip, server->port);
+    struct wj_server direct;
+    CHECK(wj_lookup(&direct, "127.0.0.1:0") < 0);
+    CHECK(wj_lookup(&direct, "127.0.0.1:4280/path") < 0);
+    CHECK(wj_lookup(&direct, endpoint) == 0);
+    CHECK(!strcmp(direct.id, server->id) && !strcmp(direct.mount, server->mount));
     char body[WJ_BODY];
     struct wj_document doc;
     CHECK(wj_request(server, "GET", "/api/wii/info", body, sizeof(body)) == 200);

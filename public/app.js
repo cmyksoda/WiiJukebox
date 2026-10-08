@@ -82,6 +82,7 @@ function renderSources() {
 }
 
 async function openSource(src) {
+    setSourcesOpen(false);
     state.activeSource = src.id;
     state.stack = [];
     renderSources();
@@ -590,13 +591,13 @@ async function toggleVisualizer() {
     clearInterval(viz.cycleTimer);
     viz.cycleTimer = setInterval(() => {
         loadPreset(Math.floor(Math.random() * viz.names.length));
-    }, 20000);
+    }, 25000);
 }
 
 function loadPreset(i) {
     viz.index = i;
     const name = viz.names[i];
-    viz.instance.loadPreset(viz.presets[name], 2.0);
+    viz.instance.loadPreset(viz.presets[name], 5.0);
     $('#viz-preset').textContent = name;
 }
 
@@ -609,6 +610,20 @@ window.addEventListener('resize', () => {
 });
 
 // --- wire up -------------------------------------------------------------
+
+function setSourcesOpen(open) {
+    document.body.classList.toggle('sources-open', open);
+    $('#sources-toggle').setAttribute('aria-expanded', String(open));
+    if (open) $('#sources-close').focus();
+    else if ($('#sidebar').contains(document.activeElement)) $('#sources-toggle').focus();
+}
+
+$('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
+$('#sources-close').onclick = () => setSourcesOpen(false);
+$('#sidebar-shade').onclick = () => setSourcesOpen(false);
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setSourcesOpen(false);
+});
 
 $('#back').onclick = () => {
     const prev = state.stack.pop();

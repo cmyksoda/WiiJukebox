@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "net.h"
 #include "wire.h"
 #include "discovery_port.h"
@@ -43,18 +44,12 @@ static int job_busy, job_done, job_result;
 static enum job_kind job;
 static char job_path[2048], job_method[8], reply[WJ_BODY];
 static int exiting;
+static char direct_address[32], network_status[80] = "Network not initialized";
+static char job_ip[16];
+static int job_network_result, job_direct;
 
 static void copy(char *out, size_t size, const char *in) {
     snprintf(out, size, "%s", in);
-}
-
-// Metadata is untrusted text, not terminal escape sequences. The initial
-// console font is ASCII; a graphical UTF-8 renderer is a later UI milestone.
-static void print_text(const char *text, int width) {
-    for (int i = 0; i < width && text[i]; i++) {
-        unsigned char c = (unsigned char)text[i];
-        putchar(c >= 32 && c < 127 ? c : '?');
-    }
 }
 
 static void save_server(void) {
@@ -68,9 +63,18 @@ static void *run_job(void *unused) {
     (void)unused;
     int result;
     if (job == JOB_DISCOVER) {
-        char ip[16];
-        result = if_config(ip, NULL, NULL, true, 3);
-        if (result >= 0) result = wj_discover(servers, WJ_SERVERS, "255.255.255.255", WJ_DISCOVERY_PORT);
+        job_ip[0] = 0;
+        job_direct = 0;
+        job_network_result = if_config(job_ip, NULL, NULL, true, 3);
+        if (job_network_result >= 0 && (!job_ip[0] || !strcmp(job_ip, "0.0.0.0")))
+            job_network_result = -1;
+        result = job_network_result;
+        if (result >= 0) {
+            if (direct_address[0] && !wj_lookup(&servers[0], direct_address)) {
+                result = 1;
+                job_direct = 1;
+            } else result = wj_discover(servers, WJ_SERVERS, "255.255.255.255", WJ_DISCOVERY_PORT);
+        }
     } else if (job == JOB_STREAM) {
         int status = 0;
         result = wj_open(&server, "GET", server.mount, &status);
@@ -87,6 +91,7 @@ static void *run_job(void *unused) {
 
 static void start_job(enum job_kind kind, const char *method, const char *path) {
     if (job_busy) return;
+    if (kind == JOB_DISCOVER) copy(message, sizeof(message), "Initializing network and finding server...");
     job = kind;
     copy(job_method, sizeof(job_method), method ? method : "GET");
     copy(job_path, sizeof(job_path), path ? path : "");
@@ -147,18 +152,23 @@ static void finish_job(void) {
     LWP_JoinThread(worker, NULL);
     job_busy = 0;
     if (job == JOB_DISCOVER) {
+        if (job_network_result < 0)
+            snprintf(network_status, sizeof(network_status), "Network init failed (%d); 1: retry", job_network_result);
+        else snprintf(network_status, sizeof(network_status), "Wii IP %s | discovery UDP %d", job_ip, WJ_DISCOVERY_PORT);
         next_discovery = wj_milliseconds() + 5000;
         server_count = job_result > 0 ? job_result : 0;
         count = server_count;
         selected = 0;
         for (int i = 0; i < count; i++) {
             copy(items[i].title, sizeof(items[i].title), servers[i].name);
-            if (saved_id[0] && !strcmp(saved_id, servers[i].id)) {
+            if (job_direct || (saved_id[0] && !strcmp(saved_id, servers[i].id))) {
                 choose_server(i);
                 return;
             }
         }
         if (count) copy(message, sizeof(message), "A: choose server   1: scan again");
+        else if (job_result < 0) snprintf(message, sizeof(message),
+            "Network/discovery error %d. 1: retry", job_result);
         else snprintf(message, sizeof(message),
             "No server. Allow UDP %d. 1: retry", WJ_DISCOVERY_PORT);
         return;
@@ -273,34 +283,68 @@ static void control(const char *action) {
     start_job(JOB_CONTROL, "POST", path);
 }
 
-static void draw(void) {
-    printf("\x1b[2J\x1b[H\x1b[36;1m  WiiJukebox\x1b[37;0m   native client prototype\n\n  ");
-    print_text(screen ? server.name : "Choose a server", 56);
-    if (screen) printf(" [%.*s]", 8, server.id);
-    printf("\n  "); print_text(title, 64);
-    printf("\n\n");
-    for (int i = 0; i < PAGE_SIZE; i++) {
-        printf("  %s ", i < count && i == selected ? ">" : " ");
-        if (i < count) print_text(items[i].title, 65);
-        printf("\n");
+// Update only changed, padded rows: clearing the whole live framebuffer caused
+// visible flashing, and newline-driven output could scroll past the console.
+static void draw_line(int row, const char *format, ...) {
+    static char previous[26][73];
+    char text[512], line[73];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(text, sizeof(text), format, args);
+    va_end(args);
+    int columns, rows;
+    CON_GetMetrics(&columns, &rows);
+    if (row < 1 || row > rows || row > 26) return;
+    int width = columns - 1 < 72 ? columns - 1 : 72;
+    int length = (int)strlen(text);
+    for (int i = 0; i < width; i++) {
+        unsigned char c = i < length ? (unsigned char)text[i] : ' ';
+        line[i] = c >= 32 && c < 127 ? c : '?';
     }
-    printf("\n  "); print_text(message, 71);
-    printf("\n  %s  ", play_state); print_text(now_playing, 57);
-    printf("\n  "); print_text(artist, 64);
-    printf("\n\n  HOME exit | +/- volume %d%% | 1 refresh\n", volume * 100 / 255);
-    printf("  Left/right page | Hold B + left/right skip track\n");
-    printf("  Hold B + 1 pause/resume | Hold B + 2 stop\n");
-    printf("  %s | %s\n", job_busy ? "Working..." : "Ready", stream_started ? "Audio connected" : "Audio disconnected");
+    line[width] = 0;
+    if (!strcmp(previous[row - 1], line)) return;
+    printf("\x1b[%d;1H%s", row, line);
+    copy(previous[row - 1], sizeof(previous[0]), line);
 }
 
-int main(void) {
+static void draw(void) {
+    draw_line(1, "WiiJukebox  |  native client prototype");
+    draw_line(2, "%s", screen ? server.name : "Choose a server");
+    draw_line(3, "%s", title);
+    draw_line(4, "%s", network_status);
+    for (int i = 0; i < PAGE_SIZE; i++) {
+        draw_line(6 + i, "%s %.65s", i < count && i == selected ? ">" : " ",
+                  i < count ? items[i].title : "");
+    }
+    draw_line(19, "%s", message);
+    draw_line(20, "%.10s  %.57s", play_state, now_playing);
+    draw_line(21, "%s", artist);
+    draw_line(23, "HOME exit | +/- volume %d%% | 1 refresh/retry", volume * 100 / 255);
+    draw_line(24, "Left/right page | B + left/right skip track");
+    draw_line(25, "B + 1 pause/resume | B + 2 stop | A choose/play");
+    draw_line(26, "%s | %s", job_busy ? "Working..." : "Ready",
+              stream_started ? "Audio connected" : "Audio disconnected");
+    fflush(stdout);
+}
+
+int main(int argc, char **argv) {
+    // wiiload can put the first application argument in argv[0]; HBC can
+    // prepend the executable path. Accept the endpoint in either position.
+    for (int i = 0; i < argc; i++) {
+        if (strlen(argv[i]) < sizeof(direct_address) && strchr(argv[i], ':') &&
+            strspn(argv[i], "0123456789.:") == strlen(argv[i])) {
+            copy(direct_address, sizeof(direct_address), argv[i]);
+            break;
+        }
+    }
     VIDEO_Init();
     WPAD_Init();
     PAD_Init();
     GXRModeObj *mode = VIDEO_GetPreferredMode(NULL);
     void *framebuffer = MEM_K0_TO_K1(SYS_AllocateFramebuffer(mode));
-    console_init(framebuffer, 20, 20, mode->fbWidth - 40, mode->xfbHeight - 40,
+    console_init(framebuffer, 16, 16, mode->fbWidth - 16, mode->xfbHeight - 16,
                  mode->fbWidth * VI_DISPLAY_PIX_SZ);
+    VIDEO_ClearFrameBuffer(mode, framebuffer, COLOR_BLACK);
     VIDEO_Configure(mode);
     VIDEO_SetNextFramebuffer(framebuffer);
     VIDEO_SetBlack(false);
@@ -363,7 +407,7 @@ int main(void) {
         }
         if (up & WPAD_BUTTON_B) b_combo = 0;
         long long now = wj_milliseconds();
-        if (!screen && !job_busy && saved_id[0] && now >= next_discovery) {
+        if (!screen && !count && !job_busy && now >= next_discovery) {
             start_job(JOB_DISCOVER, NULL, NULL);
         }
         if (screen && !job_busy) {

@@ -18,7 +18,17 @@ Homebrew Channel. Do not put upstream service passwords on the SD card.
 
 Allow UDP 4001 and the configured HTTP port (default TCP 4000) on the host's LAN
 interface. Guest Wi-Fi/client isolation or different subnets can block discovery.
-The prototype supports IPv4; it does not have a manual-address entry fallback.
+The prototype supports IPv4. For networks that block broadcast discovery,
+pass an IPv4 address and HTTP port as a launch argument, for example:
+
+```sh
+WIILOAD=tcp:192.168.0.8 wiiload client/dist/apps/wiijukebox/boot.dol 192.168.0.3:4280
+```
+
+The client initializes networking, verifies `/api/wii/info`, then selects that
+server directly. An unavailable direct address falls back to discovery. Network
+initialization errors and the Wii's assigned IP are shown on screen; failed
+discovery retries automatically. There is no on-screen address keyboard yet.
 
 For alternate ports, set `port` and `discoveryPort` in the server's `config.json`
 and rebuild with the matching discovery port, for example
