@@ -9,6 +9,8 @@ const DEFAULTS = {
     setupDone: false,
     // What closing the window does: 'ask' the first time, then 'background' or 'quit'.
     onClose: 'ask',
+    // Prefer the FFmpeg that ships with the app; off means the one already on this computer.
+    useBundledFfmpeg: true,
 };
 
 class Settings {

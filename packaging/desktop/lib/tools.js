@@ -38,11 +38,13 @@ function isExecutable(file) {
 /**
  * Search order: explicit overrides, the app's own copies, PATH, then common folders. The bundled FFmpeg
  * leads because a system build can lack the MP3 encoder; the app's yt-dlp so that updating it takes effect.
+ * With `useBundled` off the included folder is skipped, so only the computer's own FFmpeg can be found.
  */
-function searchPath({ bundledDir, userBinDir, overrides = {} }) {
+function searchPath({ bundledDir, userBinDir, overrides = {}, useBundled = true }) {
     const forced = [overrides.ffmpeg, overrides.ytdlp].filter(Boolean).map((file) => path.dirname(file));
     const fromEnv = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
-    return [...new Set([...forced, bundledDir, userBinDir, ...fromEnv, ...extraDirectories()].filter(Boolean))];
+    const own = useBundled ? [bundledDir, userBinDir] : [userBinDir];
+    return [...new Set([...forced, ...own, ...fromEnv, ...extraDirectories()].filter(Boolean))];
 }
 
 function findTool(name, dirs) {
@@ -61,24 +63,45 @@ function version(file, args) {
     });
 }
 
+/** Some distro builds leave the MP3 encoder out, and the stream cannot be made without it. */
+function canEncodeMp3(file) {
+    return new Promise((resolve) => {
+        execFile(file, ['-hide_banner', '-encoders'], { timeout: 8000, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) => {
+            resolve(!err && /\blibmp3lame\b/.test(String(stdout)));
+        });
+    });
+}
+
+/** "7.0.2" from a banner such as "ffmpeg version 7.0.2-static https://...", or null for a development build. */
+function ffmpegVersionNumber(banner) {
+    return /version\s+n?(\d+(?:\.\d+)*)/.exec(banner || '')?.[1] ?? null;
+}
+
+/** Why the FFmpeg that was found cannot run the stream: 'none' when there is no working one, 'no-mp3' without the encoder. */
+function ffmpegProblem(ffmpeg) {
+    if (!ffmpeg) return 'none';
+    return ffmpeg.mp3 ? null : 'no-mp3';
+}
+
 /**
  * An override names the one program to use; if it does not exist the tool counts as
  * missing, which is also how tests simulate a missing install without touching PATH.
- * @returns {Promise<{ffmpeg: object|null, ytdlp: object|null, dirs: string[]}>}
+ * @returns {Promise<{ffmpeg: {path: string, version: string, mp3: boolean}|null, ytdlp: object|null, dirs: string[]}>}
  */
 async function detect(dirs, overrides = {}) {
     const pick = (override, name) => (override ? (isExecutable(override) ? override : null) : findTool(name, dirs));
     const ffmpegPath = pick(overrides.ffmpeg, 'ffmpeg');
     const ytdlpPath = pick(overrides.ytdlp, 'yt-dlp');
-    const [ffmpegVersion, ytdlpVersion] = await Promise.all([
+    const [ffmpegVersion, mp3, ytdlpVersion] = await Promise.all([
         ffmpegPath ? version(ffmpegPath, ['-version']) : null,
+        ffmpegPath ? canEncodeMp3(ffmpegPath) : false,
         ytdlpPath ? version(ytdlpPath, ['--version']) : null,
     ]);
     return {
-        ffmpeg: ffmpegVersion ? { path: ffmpegPath, version: ffmpegVersion } : null,
+        ffmpeg: ffmpegVersion ? { path: ffmpegPath, version: ffmpegVersion, mp3 } : null,
         ytdlp: ytdlpVersion ? { path: ytdlpPath, version: ytdlpVersion } : null,
         dirs,
     };
 }
 
-module.exports = { detect, searchPath, findTool, EXE };
+module.exports = { detect, searchPath, findTool, canEncodeMp3, ffmpegVersionNumber, ffmpegProblem, EXE };
