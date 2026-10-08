@@ -36,10 +36,8 @@ function isExecutable(file) {
 }
 
 /**
- * Directories searched, in order: folders of any explicit overrides, the app's own copies,
- * the user's PATH, then common locations. The bundled FFmpeg comes first because a system
- * build can lack the MP3 encoder the stream needs, and the app-managed yt-dlp first so that
- * updating it takes effect.
+ * Search order: explicit overrides, the app's own copies, PATH, then common folders. The bundled FFmpeg
+ * leads because a system build can lack the MP3 encoder; the app's yt-dlp so that updating it takes effect.
  */
 function searchPath({ bundledDir, userBinDir, overrides = {} }) {
     const forced = [overrides.ffmpeg, overrides.ytdlp].filter(Boolean).map((file) => path.dirname(file));

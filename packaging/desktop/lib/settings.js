@@ -47,4 +47,4 @@ function closeAction({ quitting, mode, setupDone }) {
     return mode === 'background' ? 'hide' : 'ask';
 }
 
-module.exports = { Settings, DEFAULTS, closeAction };
+module.exports = { Settings, closeAction };

@@ -52,4 +52,4 @@ function createAutostart({
     };
 }
 
-module.exports = { createAutostart, HIDDEN_ARG, linuxEntry };
+module.exports = { createAutostart, HIDDEN_ARG };

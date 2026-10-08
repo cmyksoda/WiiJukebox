@@ -68,4 +68,4 @@ function allowWindowsFirewall(executable, run = execFile) {
     });
 }
 
-module.exports = { guidance, windowsCommand, allowWindowsFirewall, RULE_NAME };
+module.exports = { guidance, windowsCommand, allowWindowsFirewall };

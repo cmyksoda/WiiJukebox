@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Starts a packaged WiiJukebox app hidden on non-default ports and checks that it works end to end:
-// the bundled server and FFmpeg, the web UI, Wii discovery, the first-run setup page and a clean quit.
-//
+// End-to-end check of a packaged app, run hidden. Ports: <port> web, <port>+1 discovery, <port>+10 debugging.
 // Usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64]
-// Uses <port> (web), <port>+1 (discovery) and <port>+10 (the debugging port that drives the setup page).
 
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const dgram = require('node:dgram');
