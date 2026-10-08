@@ -78,6 +78,8 @@ static u32 init_done = 0;
 static u32 CurrentBuffer = 0;
 static f32 VSA = (1.0/4294967295.0);
 static bool thr_running = false;
+/* WiiJukebox: a thread that ended on its own still runs on StreamPlay_Stack until joined. */
+static bool thr_created = false;
 static bool MP3Playing = false;
 static void *mp3cb_data = NULL;
 
@@ -241,6 +243,29 @@ void MP3Player_Init(void)
 	}
 }
 
+/* WiiJukebox: join the previous thread even when it ended by itself, so a new one
+   never starts on StreamPlay_Stack while the old one is still unwinding there. */
+static void ReapStreamPlay(void)
+{
+	if(!thr_created) return;
+	LWP_JoinThread(hStreamPlay,NULL);
+	thr_created = false;
+}
+
+/* WiiJukebox: running is set before the thread exists, so IsPlaying never reads a
+   thread that has not started yet as one that already finished. */
+static s32 StartStreamPlay(void)
+{
+	ReapStreamPlay();
+	thr_running = true;
+	if(LWP_CreateThread(&hStreamPlay,StreamPlay,NULL,StreamPlay_Stack,STACKSIZE,80)<0) {
+		thr_running = false;
+		return -1;
+	}
+	thr_created = true;
+	return 0;
+}
+
 s32 MP3Player_PlayBuffer(const void *buffer,s32 len,void (*filterfunc)(struct mad_stream *,struct mad_frame *))
 {
 	if(thr_running) return -1;
@@ -252,10 +277,7 @@ s32 MP3Player_PlayBuffer(const void *buffer,s32 len,void (*filterfunc)(struct ma
 	mp3cb_data = &rambuffer;
 	mp3read = _mp3ramcopy;
 	mp3filterfunc = filterfunc;
-	if(LWP_CreateThread(&hStreamPlay,StreamPlay,NULL,StreamPlay_Stack,STACKSIZE,80)<0) {
-		return -1;
-	}
-	return 0;
+	return StartStreamPlay();
 }
 
 s32 MP3Player_PlayFile(void *cb_data,s32 (*reader)(void *,void *,s32),void (*filterfunc)(struct mad_stream *,struct mad_frame *))
@@ -265,18 +287,13 @@ s32 MP3Player_PlayFile(void *cb_data,s32 (*reader)(void *,void *,s32),void (*fil
 	mp3cb_data = cb_data;
 	mp3read = reader;
 	mp3filterfunc = filterfunc;
-	if(LWP_CreateThread(&hStreamPlay,StreamPlay,NULL,StreamPlay_Stack,STACKSIZE,80)<0) {
-		return -1;
-	}
-	return 0;
+	return StartStreamPlay();
 }
 
 void MP3Player_Stop(void)
 {
-	if(!thr_running) return;
-
 	thr_running = false;
-	LWP_JoinThread(hStreamPlay,NULL);
+	ReapStreamPlay();
 }
 
 bool MP3Player_IsPlaying(void)
@@ -296,8 +313,6 @@ static void *StreamPlay(void *arg)
 	struct mad_synth Synth;
 	mad_timer_t Timer;
 	EQState eqs[2];
-
-	thr_running = true;
 
 	CurrentBuffer = 0;
 	memset(OutputBuffer[0],0,ADMA_BUFFERSIZE);

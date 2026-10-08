@@ -65,8 +65,11 @@ performance.
 library. Marked additions publish already-synthesized PCM for visualization and
 pair the first decoded MP3 byte position and sample rate with ASND's sample
 counter for playback timing. Output blocks are zero-padded when short instead of repeating stale
-samples; padding is excluded from the playback clock. Decoder and resampler
-algorithms are unchanged. This avoids synthesizing the same MP3 twice merely to
+samples; padding is excluded from the playback clock. The player also joins its
+decoder thread before starting another, even one that ended by itself, and marks
+itself running before that thread starts: both threads share one static stack, so
+a quick stop-and-restart (as a seek causes) could otherwise run a new decoder on
+the old one's stack. Decoder and resampler algorithms are unchanged. This avoids synthesizing the same MP3 twice merely to
 drive the visualizer. `libogc/LICENSE` is retained.
 
 Source: https://github.com/devkitPro/libogc/blob/v3.1.0/libmad/mp3player.c
