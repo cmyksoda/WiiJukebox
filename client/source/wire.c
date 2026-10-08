@@ -66,33 +66,3 @@ int wj_number(const char *text, int minimum, int maximum, int *value) {
     *value = (int)number;
     return 0;
 }
-
-void wj_display_text(char *text) {
-    static const struct { const char *utf8, *ascii; } punctuation[] = {
-        { "\xe2\x80\x98", "'" }, { "\xe2\x80\x99", "'" },
-        { "\xe2\x80\x9c", "\"" }, { "\xe2\x80\x9d", "\"" },
-        { "\xe2\x80\x93", "-" }, { "\xe2\x80\x94", "-" },
-        { "\xe2\x80\xa6", "..." }, { "\xc2\xa0", " " },
-    };
-    char *out = text;
-    while (*text) {
-        size_t i;
-        for (i = 0; i < sizeof(punctuation) / sizeof(punctuation[0]); i++) {
-            size_t length = strlen(punctuation[i].utf8);
-            if (!strncmp(text, punctuation[i].utf8, length)) {
-                text += length;
-                const char *replacement = punctuation[i].ascii;
-                while (*replacement) *out++ = *replacement++;
-                break;
-            }
-        }
-        if (i < sizeof(punctuation) / sizeof(punctuation[0])) continue;
-        unsigned char c = (unsigned char)*text++;
-        *out++ = c >= 32 && c < 127 ? c : '?';
-        if (c >= 0xc2 && c <= 0xf4) {
-            int remaining = c < 0xe0 ? 1 : c < 0xf0 ? 2 : 3;
-            while (remaining-- && ((unsigned char)*text & 0xc0) == 0x80) text++;
-        }
-    }
-    *out = 0;
-}

@@ -1,8 +1,27 @@
 # WiiJukebox native client prototype
 
-This is a real devkitPPC/libogc app, with a console UI, background control worker
-and libmad/ASND streaming audio. Music playback, browsing and projectM rendering
-have been tested on a physical Wii; extended network and audio testing is ongoing.
+This is a real devkitPPC/libogc app with a GX interface in the style of the Wii
+Menu, a background control worker and libmad/ASND streaming audio. Music playback,
+browsing and projectM rendering were tested on a physical Wii with the earlier
+console interface; the graphical interface has not yet run on hardware.
+
+## Interface
+
+A light, pinstriped background with Wii-blue accents. Servers and music sources
+are channel-style tiles; folders and tracks are a list with type icons and
+subtitles, and long selected titles scroll. The right-hand card shows album art
+(fetched from `/api/wii/art`, with a note placeholder when there is none), the
+title, artist, playback state, a seek bar with elapsed/total time, and
+previous/play-pause/next/stop buttons. The dock at the bottom has Back and
+Visualizer buttons in raised pods either side of the Wii's clock and date.
+Messages appear as a pill above the dock; volume changes show a meter. The
+header reports the server, connection, bitrate, buffered seconds and audio
+restarts. 16:9 consoles get a wider layout rather than stretched shapes.
+
+Text is drawn with FreeType from an embedded Noto Sans CJK JP subset (Latin,
+Greek, Cyrillic, kana and common kanji); characters outside the font show the
+font's missing-glyph box instead of `?`. Building the host tests needs FreeType
+development headers (`pkg-config freetype2`).
 
 ## Build and install
 
@@ -63,26 +82,27 @@ underrun, more than six seconds of backlog is trimmed to four, and more than
 nine seconds while playing reconnects at the live edge, so recovery never
 leaves controls lagging far behind. The decoder reads memory instead of waiting
 for the network; short gaps get a bounded 50 ms wait before it treats them as
-EOF. The bottom rows show connection state, stream bitrate, buffered seconds,
-audio restarts and transient status. Status polling backs off to eight seconds
-while the server is unreachable and keeps the last song on screen.
-Navigation movement stays
-responsive during requests; open/back and transport presses wait for the current
-request to finish. Curly quotes and dashes are converted for the ASCII font.
+EOF. Status polling backs off to eight seconds while the server is unreachable
+and keeps the last song on screen. Navigation movement stays responsive during
+requests; open/back and transport presses wait for the current request to
+finish.
 
 ## Controls
 
 | Wii Remote input | Action |
 |---|---|
-| Up / Down | Select a row |
-| A | Select server/source; open container; play track/station (continue the album/playlist from that track) |
+| Point | Highlight a row or tile; buttons and the seek bar light up |
+| Up / Down | Select a row; move between tile rows |
+| A | Select server/source; open container; play track/station (continue the album/playlist from that track). When pointing at a button, press it |
+| A on the seek bar | Seek there; hold A and move to preview, release to seek |
 | B (release) | Back |
-| Left / Right | Previous/next library page |
+| Left / Right | Previous/next library page; move between tiles |
 | 2 | Toggle projectM visualizer |
 | Hold B + A | Play the current or highlighted album/playlist from the beginning |
 | Hold B + Left / Right | Previous/next queued track |
 | Hold B + 1 | Pause/resume a supported source |
 | Hold B + 2 | Stop the source |
+| Hold B + Up / Down | Seek 10 seconds forward/back; repeated presses add up, then it seeks |
 | + / - | Local Wii volume |
 | 1 | Refresh current page / scan servers |
 | HOME | Exit |
@@ -113,18 +133,17 @@ The source selector can reach every configured server adapter.
 Text payloads are percent-encoded tab-separated fields. Buffers are bounded:
 80 KB response body, 8 KB HTTP headers, 16 rows, 7 fields/row, 1,024 decoded bytes
 per field, 8 discovered servers and 16 folder levels. Invalid framing fails the
-request. Visible text is sanitized for terminal controls; non-ASCII bytes show
-as `?` until a proper font renderer replaces the console.
+request. Control characters are skipped when text is drawn.
 
 ## Still missing / unverified
 
 - Long Wi-Fi jitter/reconnect runs and HOME/power edge cases. The user has
   confirmed physical Wii music playback, browsing and projectM rendering.
-- A verified emulator render: the isolated offscreen boot produced no frames.
-- Graphical library/now-playing UI, cover art, pointer support and text input.
-  There is no Wii search keyboard yet.
+- The graphical interface on hardware: GX rendering, the pointer, the
+  visualizer handoff in both directions, and memory with projectM loaded.
+- Text input; there is no Wii search keyboard yet.
 - Authentication between LAN controllers and the server, manual addressing,
-  IPv6 discovery, TLS on the Wii-to-server connection, queue editing and seeking.
+  IPv6 discovery, TLS on the Wii-to-server connection and queue editing.
 - Real Plex/Jellyfin account tests and actual desktop monitor capture testing.
 
 Original client code is GPL-3.0-only. See the repository LICENSE. libogc/libmad/
@@ -141,15 +160,15 @@ on "Aderrasi - Agitator.milk", as WiiRadio did; random presets then change every
 25 seconds with a 5-second blend. Original upstream notices and
 source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
 
-The browser shows `Page X / Y` and the visible item range. Network connection
-status is shown on screen; HTTP diagnostics stay in the optional SD log.
+The list header shows the visible range, with page arrows when there is more
+than one page. Network status is shown on screen; HTTP diagnostics stay in the
+optional SD log.
 Commands show acceptance first, then a matching server
 result. Play/skip completion waits for decoded audio on the server; existing
 stream buffering can still delay what reaches the speakers. Old completion
 messages do not repeatedly replace browser messages.
 
-An ASCII progress bar above HOME shows elapsed and total time; unknown durations
-use `--:--`. The native client sends its first decoded MP3 byte position and
+The seek bar shows elapsed and total time; live streams read `Live`. The native client sends its first decoded MP3 byte position and
 ASND-consumed sample time with status requests. The server maps that cursor onto
 its PCM timeline, including pauses, source changes and silence. This accounts for
 the compressed buffer, decoder read-ahead and initial output silence. A selected

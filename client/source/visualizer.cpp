@@ -3,22 +3,20 @@
 #include "pcm_snapshot.h"
 #include "presets.h"
 extern "C" {
+#include "gfx.h"
 #include "net.h"
 }
 #include <projectM.hpp>
-#include <malloc.h>
-#include <cstring>
 #include <cstdio>
 #include <exception>
 
 static projectM *engine;
-static void *fifo, *frames[2];
-static unsigned frame;
 static char error[160];
-static bool gx_started;
 static long long next_preset;
 static int first_preset = -1;
 static const char first_preset_name[] = "Aderrasi - Agitator.milk";
+
+extern "C" const char *wj_visualizer_error(void) { return error; }
 
 /* WiiRadio opens on Agitator; every entry starts there before the rotation. */
 static void start_rotation(void) {
@@ -27,42 +25,12 @@ static void start_rotation(void) {
     wj_pcm_enable(1);
 }
 
-extern "C" const char *wj_visualizer_error(void) { return error; }
-
-static void setup_gx(GXRModeObj *mode) {
-    GX_Init(fifo, 256 * 1024);
-    gx_started = true;
-    GX_SetCopyClear((GXColor){0, 0, 0, 255}, 0x00ffffff);
-    GX_SetDispCopySrc(0, 0, mode->fbWidth, mode->efbHeight);
-    GX_SetDispCopyDst(mode->fbWidth, mode->xfbHeight);
-    GX_SetDispCopyYScale(GX_GetYScaleFactor(mode->efbHeight, mode->xfbHeight));
-    GX_SetCopyFilter(mode->aa, mode->sample_pattern, GX_TRUE, mode->vfilter);
-    GX_SetFieldMode(mode->field_rendering,
-                    mode->viHeight == 2 * mode->xfbHeight ? GX_ENABLE : GX_DISABLE);
-    GX_SetViewport(0, 0, mode->fbWidth, mode->efbHeight, 0, 1);
-    GX_SetScissor(0, 0, mode->fbWidth, mode->efbHeight);
-    GX_SetDispCopyGamma(GX_GM_1_0);
-    GX_SetNumTevStages(1);
-    GX_SetNumIndStages(0);
-}
-
-extern "C" int wj_visualizer_enter(GXRModeObj *mode) {
+extern "C" int wj_visualizer_enter(void) {
     error[0] = 0;
+    wj_gfx_prepare_visualizer();
     if (engine) { start_rotation(); return 0; }
+    GXRModeObj *mode = wj_gfx_mode();
     try {
-        if (!fifo) fifo = memalign(32, 256 * 1024);
-        for (unsigned i = 0; i < 2; i++) {
-            if (!frames[i]) {
-                void *allocated = SYS_AllocateFramebuffer(mode);
-                if (allocated) frames[i] = MEM_K0_TO_K1(allocated);
-            }
-        }
-        if (!fifo || !frames[0] || !frames[1]) {
-            std::snprintf(error, sizeof(error), "Not enough memory for projectM");
-            return -1;
-        }
-        for (unsigned i = 0; i < 2; i++) VIDEO_ClearFrameBuffer(mode, frames[i], COLOR_BLACK);
-        setup_gx(mode);
         Settings settings = {};
         settings.meshX = 30;
         settings.meshY = 20;
@@ -110,11 +78,7 @@ extern "C" int wj_visualizer_render(void) {
         GX_SetCopyClear((GXColor){0, 0, 0, 255}, 0x00ffffff);
         GX_SetAlphaUpdate(GX_TRUE);
         GX_SetColorUpdate(GX_TRUE);
-        frame ^= 1;
-        GX_CopyDisp(frames[frame], GX_TRUE);
-        GX_DrawDone();
-        VIDEO_SetNextFramebuffer(frames[frame]);
-        VIDEO_Flush();
+        wj_gfx_present();
         return 0;
     } catch (...) {
         std::snprintf(error, sizeof(error), "projectM preset failed; returned to browser");
@@ -122,21 +86,13 @@ extern "C" int wj_visualizer_render(void) {
     }
 }
 
-extern "C" void wj_visualizer_leave(void *console_framebuffer) {
+extern "C" void wj_visualizer_leave(void) {
     wj_pcm_enable(0);
-    if (gx_started) GX_DrawDone();
-    VIDEO_SetNextFramebuffer(console_framebuffer);
-    VIDEO_Flush();
-    VIDEO_WaitVSync();
+    GX_DrawDone();
 }
 
 extern "C" void wj_visualizer_shutdown(void) {
-    if (gx_started) GX_DrawDone();
+    GX_DrawDone();
     delete engine;
     engine = NULL;
-    for (unsigned i = 0; i < 2; i++) {
-        if (frames[i]) free(MEM_K1_TO_K0(frames[i]));
-        frames[i] = NULL;
-    }
-    // Keep GX's registered FIFO alive until libogc shuts graphics down on exit.
 }
