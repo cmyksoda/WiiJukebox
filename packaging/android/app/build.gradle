@@ -2,6 +2,12 @@ plugins {
     id 'com.android.application'
 }
 
+// The release key lives outside the repository; without it only debug builds work.
+def signingFile = file(System.getenv('WIIJUKEBOX_SIGNING') ?:
+        "${System.getProperty('user.home')}/.local/share/wiijukebox-signing/keystore.properties")
+def signing = new Properties()
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+
 android {
     namespace 'org.wiijukebox.android'
     compileSdk 37
@@ -19,9 +25,21 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        if (signingFile.exists()) {
+            release {
+                storeFile file(signing.storeFile)
+                storePassword signing.storePassword
+                keyAlias signing.keyAlias
+                keyPassword signing.keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            if (signingFile.exists()) signingConfig signingConfigs.release
         }
     }
 

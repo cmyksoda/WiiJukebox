@@ -1,11 +1,11 @@
 # Packaging
 
 Everything here builds from source with scripts. Outputs go to `packaging/dist/`
-(ignored by git). Nothing is signed.
+(ignored by git). Only the Android release build is signed.
 
 | Target | Source | Command | Output |
 |---|---|---|---|
-| Android controller | `android/` | `packaging/android/build.sh` | `dist/WiiJukebox-android-debug.apk` |
+| Android controller | `android/` | `packaging/android/build.sh` (or `build.sh release`) | `dist/WiiJukebox-android-debug.apk` (or `dist/WiiJukebox-android.apk`) |
 | Linux desktop | `desktop/` | `npm run dist:linux` in `packaging/desktop` | `dist/desktop/WiiJukebox-<version>-linux-x86_64.AppImage` |
 | Windows desktop | `desktop/` | `npm run dist:win` | `dist/desktop/WiiJukebox-<version>-win-x64.zip` and `-win-setup-x64.exe` |
 
@@ -34,8 +34,13 @@ receiver programs, and Android would stop a background process playing to the
 Wii whenever the screen is off. A phone is the controller; the server stays on
 a computer or NAS.
 
-Not done: a lock-screen media notification, a release (signed) build and a Play
-Store listing.
+`build.sh release` signs with the key named in
+`~/.local/share/wiijukebox-signing/keystore.properties` (or the file in
+`WIIJUKEBOX_SIGNING`). The key never enters the repository. Android only installs
+an update signed with the same key, so back up both files in that folder; without
+the file, Gradle still makes debug builds.
+
+Not done: a lock-screen media notification and a Play Store listing.
 
 ## Desktop app (Linux, Windows)
 
