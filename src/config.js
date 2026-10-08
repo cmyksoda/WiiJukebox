@@ -55,6 +55,11 @@ const DEFAULTS = {
         airplay: { binary: '', deviceName: 'WiiJukebox', port: 0, password: '', extraArgs: [] },
         // Same knobs as ytdlp; add --cookies-from-browser to extraArgs for Premium.
         ytmusic: { binary: '', format: '', extraArgs: [], links: [] },
+        // clientId/clientSecret may stay empty when Python's tidalapi is installed.
+        tidal: {
+            clientId: '', clientSecret: '', quality: 'HIGH',
+            accessToken: null, refreshToken: null, expiresAt: 0, userId: null, countryCode: null,
+        },
     },
 
     // Last source/item, restored at boot so the stream comes back by itself

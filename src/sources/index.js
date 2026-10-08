@@ -14,11 +14,12 @@ const { PlexSource } = require('./plex');
 const { SpotifySource } = require('./spotify');
 const { AirplaySource } = require('./airplay');
 const { YtMusicSource } = require('./ytmusic');
+const { TidalSource } = require('./tidal');
 const { findExecutable } = require('./receiver');
 
 const REGISTRY = [
     RadioSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
-    SpotifySource, AirplaySource, YtMusicSource, DesktopSource,
+    SpotifySource, AirplaySource, YtMusicSource, TidalSource, DesktopSource,
 ];
 
 class SourceRegistry {
@@ -54,6 +55,7 @@ class SourceRegistry {
         if (id === 'jellyfin') return Boolean(cfg.url && (cfg.token || cfg.username));
         if (id === 'plex') return Boolean(cfg.url && cfg.token);
         if (id === 'ytmusic') return true;
+        if (id === 'tidal') return Boolean(cfg.refreshToken);
         // Receivers are offered once their program is installed; until then the
         // settings screen explains how to get it.
         if (id === 'spotify') return Boolean(findExecutable(cfg.binary || SpotifySource.binaryName));
@@ -101,6 +103,11 @@ class SourceRegistry {
         }
         if (id === 'subsonic' && ['url', 'username', 'password'].some((key) => key in patch)) {
             patch = { ...patch, token: null, salt: null };
+        }
+        // Tokens are bound to the OAuth client that issued them.
+        const tidal = this.config.sourceConfig('tidal');
+        if (id === 'tidal' && ['clientId', 'clientSecret'].some((key) => key in patch && patch[key] !== tidal[key])) {
+            patch = { ...patch, accessToken: null, refreshToken: null, expiresAt: 0 };
         }
         this.config.updateSource(id, patch);
     }
