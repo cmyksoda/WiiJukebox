@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copies the server into app/server and fetches the platform's FFmpeg into app/bin
-// for electron-builder to pick up. Usage: node scripts/stage.js [linux|win|mac|mac-arm64]
+// for electron-builder to pick up. Usage: node scripts/stage.js [linux|win]
 
 const fs = require('node:fs');
 const os = require('node:os');
@@ -14,16 +14,12 @@ const cache = path.join(os.homedir(), '.cache', 'wiijukebox-desktop');
 const TARGETS = {
     linux: { suffix: 'linux-x64', exe: 'ffmpeg' },
     win: { suffix: 'win32-x64', exe: 'ffmpeg.exe' },
-    mac: { suffix: 'darwin-x64', exe: 'ffmpeg' },
-    'mac-arm64': { suffix: 'darwin-arm64', exe: 'ffmpeg' },
 };
 // eugeneware/ffmpeg-static release b6.1.1 (FFmpeg 6.1.1, GPL build with libmp3lame).
 const FFMPEG_BASE = 'https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1';
 const SHA256 = {
     'linux-x64': process.env.FFMPEG_SHA_LINUX,
     'win32-x64': process.env.FFMPEG_SHA_WIN,
-    'darwin-x64': process.env.FFMPEG_SHA_MAC,
-    'darwin-arm64': process.env.FFMPEG_SHA_MAC_ARM64,
 };
 
 async function download(url, file) {

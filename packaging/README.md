@@ -8,7 +8,6 @@ Everything here builds from source with scripts. Outputs go to `packaging/dist/`
 | Android controller | `android/` | `packaging/android/build.sh` | `dist/WiiJukebox-android-debug.apk` |
 | Linux desktop | `desktop/` | `npm run dist:linux` in `packaging/desktop` | `dist/desktop/WiiJukebox-<version>-linux-x86_64.AppImage` |
 | Windows desktop | `desktop/` | `npm run dist:win` | `dist/desktop/WiiJukebox-<version>-win-x64.zip` and `-win-setup-x64.exe` |
-| macOS desktop | `desktop/` | `npm run dist:mac` and `npm run dist:mac-arm64` | `dist/desktop/WiiJukebox-<version>-mac-x64.zip` and `-mac-arm64.zip` |
 
 Run `npm ci` in the repository root first: the desktop builds copy `public/vendor`,
 which `npm ci` creates. The desktop builds also need `npm install` inside
@@ -38,14 +37,15 @@ a computer or NAS.
 Not done: a lock-screen media notification, a release (signed) build and a Play
 Store listing.
 
-## Desktop app (Linux, Windows, macOS)
+## Desktop app (Linux, Windows)
 
 Electron runs the same server code as `npm start` in a child process and shows
 its web page in a native window.
 
 Why Electron: the server is Node, and Electron carries its own Node runtime, so
 users install nothing. It builds reliably here and produces AppImage, zip and
-installer artifacts for all three systems from Linux. Tauri would need a separate
+installer artifacts for both systems from Linux. A macOS build is left out
+until it can be tested on a Mac. Tauri would need a separate
 Node sidecar and system WebKit packages.
 
 What the app does:
@@ -59,8 +59,7 @@ What the app does:
   yt-dlp release into its own folder; Settings, Install or update yt-dlp does the
   same later.
 - Settings stay where the command-line server keeps them
-  (`~/.config/wiijukebox`, `~/Library/Application Support/wiijukebox`,
-  `%APPDATA%\wiijukebox`). The port, discovery port and everything else in
+  (`~/.config/wiijukebox`, `%APPDATA%\wiijukebox`). The port, discovery port and everything else in
   `config.json` apply.
 - A server crash shows its last lines with a Restart button. Closing the window
   stops the server and its FFmpeg.
@@ -98,20 +97,6 @@ so the `.exe` carries Electron's default icon and version strings.
 Windows SmartScreen will warn about an unsigned download. Firewall prompts for
 the app are expected: the Wii connects to the server's port and UDP discovery.
 
-### macOS
-
-Separate Intel (`mac-x64`) and Apple Silicon (`mac-arm64`) zips, each with the
-matching FFmpeg. They are unsigned and not notarized, and building on Linux cannot
-sign. On a Mac:
-
-```bash
-xattr -cr WiiJukebox.app
-codesign --force --deep --sign - WiiJukebox.app
-```
-
-then right-click, Open the first time. Apple Silicon needs the ad-hoc signature
-to run at all.
-
 ## What was and was not verified
 
 Verified on this Linux machine:
@@ -126,12 +111,11 @@ Verified on this Linux machine:
   "Start without it" starts the server. Node tests cover tool detection, server
   start/stop/crash reporting and the yt-dlp installer (`test/desktop-app.test.js`).
 
-Not verified (no Windows or Mac available):
+Not verified (no Windows machine available):
 
-- That the Windows zip, the installer or either macOS zip start at all, and that
+- That the Windows zip or the installer start at all, and that
   the server, FFmpeg or yt-dlp work there. FFmpeg and yt-dlp discovery on Windows
-  folders (Scoop, WinGet, Chocolatey, Program Files) and on Homebrew's paths is
-  untested.
-- Installer behavior (shortcuts, uninstall), SmartScreen or Gatekeeper behavior,
-  code signing and notarization.
-- Wii discovery through the Windows and macOS firewalls.
+  folders (Scoop, WinGet, Chocolatey, Program Files) is untested.
+- Installer behavior (shortcuts, uninstall), SmartScreen behavior and code
+  signing.
+- Wii discovery through the Windows firewall.
