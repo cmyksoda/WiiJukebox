@@ -29,6 +29,7 @@ static void toggle_visualizer(void) {
         wj_session_set_message("Could not initialize visualizer audio tap");
     } else if (!wj_visualizer_enter()) {
         visualizer = 1;
+        wj_ui_show_art(0);
     } else {
         wj_visualizer_leave();
         wj_session_set_message(wj_visualizer_error());
@@ -107,8 +108,20 @@ int main(int argc, char **argv) {
         }
         if (visualizer && !(held & WPAD_BUTTON_B))
             down &= ~(WPAD_BUTTON_A | WPAD_BUTTON_1 | WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT | WPAD_BUTTON_UP | WPAD_BUTTON_DOWN);
-        if (down & WPAD_BUTTON_PLUS) { wj_session_volume(16); wj_ui_volume_changed(); }
-        if (down & WPAD_BUTTON_MINUS) { wj_session_volume(-16); wj_ui_volume_changed(); }
+        // The large cover takes A and B for closing; only volume reaches past it.
+        if (wj_ui_art_open() && !visualizer) {
+            if ((down & WPAD_BUTTON_A) || ((up & WPAD_BUTTON_B) && !b_combo) ||
+                ((held & WPAD_BUTTON_B) && (down & WPAD_BUTTON_PLUS))) {
+                wj_ui_show_art(0);
+                if (held & WPAD_BUTTON_B) b_combo = 1;
+            }
+            if (up & WPAD_BUTTON_B) b_combo = 0;
+            down &= (held & WPAD_BUTTON_B) ? WPAD_BUTTON_MINUS : WPAD_BUTTON_MINUS | WPAD_BUTTON_PLUS;
+            up = 0;
+        }
+        wj_session_want_large_art(wj_ui_art_open());
+        if ((down & WPAD_BUTTON_PLUS) && !(held & WPAD_BUTTON_B)) { wj_session_volume(16); wj_ui_volume_changed(); }
+        if ((down & WPAD_BUTTON_MINUS) && !(held & WPAD_BUTTON_B)) { wj_session_volume(-16); wj_ui_volume_changed(); }
 
         // Pointing selects, like the Wii Menu, but only when the pointer moves,
         // so a resting remote never fights the D-pad.
@@ -118,14 +131,17 @@ int main(int argc, char **argv) {
         last = pointer;
 
         if (held & WPAD_BUTTON_B && down & (WPAD_BUTTON_A | WPAD_BUTTON_1 | WPAD_BUTTON_2 | WPAD_BUTTON_LEFT |
-                                            WPAD_BUTTON_RIGHT | WPAD_BUTTON_UP | WPAD_BUTTON_DOWN)) {
+                                            WPAD_BUTTON_RIGHT | WPAD_BUTTON_UP | WPAD_BUTTON_DOWN | WPAD_BUTTON_PLUS)) {
             b_combo = 1;
             if (down & WPAD_BUTTON_A) wj_session_act(WJ_ACT_PLAY_LIST, 0);
             else if (down & WPAD_BUTTON_LEFT) wj_session_act(WJ_ACT_PREVIOUS, 0);
             else if (down & WPAD_BUTTON_RIGHT) wj_session_act(WJ_ACT_NEXT, 0);
             else if (down & WPAD_BUTTON_1) wj_session_act(WJ_ACT_PAUSE, 0);
             else if (down & WPAD_BUTTON_2) wj_session_act(WJ_ACT_STOP, 0);
-            else if (!(s->capabilities & WJ_CAN_SEEK) || !s->has_progress || s->duration_ms <= 0) {
+            else if (down & WPAD_BUTTON_PLUS) {
+                if (s->has_art && s->view != WJ_VIEW_SERVERS) wj_ui_show_art(1);
+                else wj_session_set_message("No cover art for this song");
+            } else if (!(s->capabilities & WJ_CAN_SEEK) || !s->has_progress || s->duration_ms <= 0) {
                 wj_session_set_message("This track cannot seek");
             } else {
                 // Each press moves the preview; the seek is sent once presses stop.
@@ -141,6 +157,8 @@ int main(int argc, char **argv) {
                     dragging = 1;
                 } else if (hit.target == WJ_TARGET_VISUALIZER) {
                     toggle_visualizer();
+                } else if (hit.target == WJ_TARGET_ART) {
+                    wj_ui_show_art(1);
                 } else if (hit.target != WJ_TARGET_NONE) {
                     if (hit.target == WJ_TARGET_ITEM) wj_session_select(hit.index);
                     wj_session_act(target_action(hit.target), 0);

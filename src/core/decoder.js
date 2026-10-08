@@ -48,7 +48,8 @@ class Decoder extends EventEmitter {
     start() {
         if (this._proc || this._stopped) return;
 
-        const args = ['-hide_banner', '-loglevel', 'warning'];
+        // Audio decodes on one core; FFmpeg's default pools only add threads.
+        const args = ['-hide_banner', '-loglevel', 'warning', '-threads', '1', '-filter_threads', '1'];
 
         if (this._uri && /^https?:/i.test(this._uri)) {
             // Radio servers redirect constantly, and several of the self-hosted

@@ -72,8 +72,8 @@ pause state; radio, live and desktop sources cannot seek.
 
 The artwork key is an opaque hash of the heard track's artwork URL, which
 often carries provider credentials and never leaves the server. The server
-fetches the image, crops it square with FFmpeg and caches sizes 64, 96, 128 and
-160, so the Wii copies the bytes straight into a texture.
+fetches the image, crops it square with FFmpeg and caches sizes 64, 96, 128,
+160 and 192, so the Wii copies the bytes straight into a texture.
 
 Synchronous errors use HTTP 400 and an `error`, message row. Unknown endpoints
 use 404. Async commands expose “Working...”, “Audio ready”, “Paused”, “Resumed”,
@@ -104,6 +104,24 @@ burst and the client must start a new decoder run. Old servers ignore the query
 and always send the burst. A listener with more than thirty seconds of audio
 queued in the server and kernel is disconnected; the server also enables TCP
 keepalive.
+
+### Jumps (stream version 2)
+
+A client that appends `v=2` to its stream query (`?v=2`, or
+`?v=2&epoch=E&from=B`) promises to skip ahead at transport changes. A new
+selection, seek, next, previous or stop records a jump marker; status then adds
+a `jump`, id, epoch, byte row once the stream byte where the change begins is
+known (the first new audio, or for stop the first byte after it). A natural
+track end is continuous and never marked. The client drops whatever it holds
+before that byte, skipping within its buffer or reconnecting with
+`?v=2&epoch=E&from=B`, and restarts its decoder there. The first status a
+client sees only sets its baseline, so changes made before it connected are
+not replayed. While at least one `v=2` listener is connected, the server sends
+the first four seconds after a marker faster than real time, so the client's
+buffer is full again at once. Other listeners keep every byte, but each burst
+leaves them four seconds further behind; a player that follows `jump` (it is
+also in `/api/status`) avoids that. Old clients ignore the row and old servers
+never send it.
 
 The protocol assumes a trusted LAN. UUIDs and nonce echo prevent accidental
 mismatches, not a malicious LAN peer. There is no controller authentication.

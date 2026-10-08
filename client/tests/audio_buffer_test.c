@@ -131,8 +131,8 @@ int main(void) {
     assert(offset == 1000000);
     read_checked(&offset, first + 49000);
     char expected[64];
-    snprintf(expected, sizeof(expected), "?epoch=9&from=%lld", 1000000 + first);
-    assert(!strcmp(queries[0], "") && !strcmp(queries[1], expected));
+    snprintf(expected, sizeof(expected), "?v=2&epoch=9&from=%lld", 1000000 + first);
+    assert(!strcmp(queries[0], "?v=2") && !strcmp(queries[1], expected));
     struct wj_audio_state state = wj_audio_state();
     assert(!state.stale && state.read_byte == 1000000 + first + 49000 && state.bitrate == 256);
     finish();
@@ -153,7 +153,7 @@ int main(void) {
     assert(offset == 0);
     read_checked(&offset, 40000);
     wait_opened(4);
-    assert(!strcmp(queries[1], "?epoch=3&from=40000") && !strcmp(queries[3], queries[1]));
+    assert(!strcmp(queries[1], "?v=2&epoch=3&from=40000") && !strcmp(queries[3], queries[1]));
     assert(opened_at[3] - opened_at[1] >= 700);
     wait_buffered(30000);
     assert(wj_audio_state().stale && wj_audio_state().failures == 0);
@@ -183,10 +183,37 @@ int main(void) {
     assert(wj_audio_state().stale && !wj_audio_state().buffered);
     wait_opened(2);
     while (wj_audio_state().read_byte != 700000) usleep(1000);
-    assert(!strcmp(queries[1], "") && wj_audio_state().stale);
+    assert(!strcmp(queries[1], "?v=2") && wj_audio_state().stale);
     offset = wj_audio_begin_decode(0);
     read_checked(&offset, 10000);
     finish();
-    puts("audio buffer passed: jitter, wraparound, exact resume, backoff, gaps, epochs, trimming, resync and bounded stop");
+
+    /* Jumps skip stale audio: within the buffer without reconnecting, beyond it
+       by reconnecting at the exact byte. Stale bytes and other epochs are ignored. */
+    struct plan jumps[] = {
+        { 0, 300000, 5, 0, 0, 0 },
+        { 500000, 30000, 5, 0, 0, 1000 },
+    };
+    reset(jumps, 2);
+    assert(!wj_audio_start(open_fixture));
+    wait_buffered(100000);
+    offset = wj_audio_begin_decode(0);
+    read_checked(&offset, 1000);
+    assert(!wj_audio_jump(6, 50000) && !wj_audio_jump(5, 500) && !wj_audio_state().stale);
+    assert(wj_audio_jump(5, 60000));
+    assert(wj_audio_state().stale && wj_audio_read(&probe, 1) == 0);
+    offset = wj_audio_begin_decode(0);
+    assert(offset == 60000);
+    read_checked(&offset, 20000);
+    assert(wj_audio_jump(5, 500000));
+    assert(!wj_audio_state().buffered);
+    wait_opened(2);
+    assert(!strcmp(queries[1], "?v=2&epoch=5&from=500000"));
+    wait_buffered(30000);
+    offset = wj_audio_begin_decode(0);
+    assert(offset == 500000);
+    read_checked(&offset, 30000);
+    finish();
+    puts("audio buffer passed: jitter, wraparound, exact resume, backoff, gaps, epochs, trimming, resync, jumps and bounded stop");
     return 0;
 }

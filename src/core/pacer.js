@@ -59,6 +59,10 @@ class Pacer extends EventEmitter {
         this._startedAt = 0;
         this._bytesEmitted = 0;
         this._playedBytes = 0;
+        // Audio a burst may still emit ahead of the clock, and how far ahead
+        // bursts have moved the stream; the schedule keeps that lead.
+        this._burstBytes = 0;
+        this._leadBytes = 0;
 
         // Gate that opens once enough audio has accumulated. Re-arms whenever a
         // source detaches, so each new source gets its own prebuffer window.
@@ -105,6 +109,7 @@ class Pacer extends EventEmitter {
         if (this._timer) return;
         this._startedAt = Date.now();
         this._bytesEmitted = 0;
+        this._leadBytes = 0;
         this._timer = setInterval(() => this._tick(), TICK_MS);
         // Unref'd so the pacer alone never keeps the process alive; the HTTP
         // server is what should decide that.
@@ -153,7 +158,16 @@ class Pacer extends EventEmitter {
         this._chunks = [];
         this._buffered = 0;
         this._priming = true;
+        this._burstBytes = 0;
         this._playedBytes = alignToFrame(Math.round(positionSeconds * BYTES_PER_SECOND));
+    }
+
+    /**
+     * Emit up to `ms` of the next audio as soon as it is decoded instead of in
+     * real time, so a listener that skips its stale buffer refills at once.
+     */
+    burst(ms) {
+        this._burstBytes = bytesForMs(ms);
     }
 
     finishInput() {
@@ -169,7 +183,7 @@ class Pacer extends EventEmitter {
         // compound into the encoder being meaningfully ahead of or behind real
         // time.
         const elapsedMs = Date.now() - this._startedAt;
-        const target = alignToFrame(Math.floor((BYTES_PER_SECOND * elapsedMs) / 1000));
+        const target = alignToFrame(Math.floor((BYTES_PER_SECOND * elapsedMs) / 1000)) + this._leadBytes;
         let owed = target - this._bytesEmitted;
 
         if (owed < FRAME_BYTES) return;
@@ -182,6 +196,7 @@ class Pacer extends EventEmitter {
             owed = maxCatchUp;
             this._startedAt = Date.now();
             this._bytesEmitted = 0;
+            this._leadBytes = 0;
             this.emit('resync');
         }
 
@@ -212,6 +227,12 @@ class Pacer extends EventEmitter {
         }
 
         this._bytesEmitted += owed;
+        if (this._burstBytes >= FRAME_BYTES) {
+            const extra = this._drain(alignToFrame(Math.min(this._burstBytes, this._buffered)));
+            this._burstBytes -= extra;
+            this._bytesEmitted += extra;
+            this._leadBytes += extra;
+        }
     }
 
     /** Emit up to `wanted` bytes of real audio. Returns how much was emitted. */

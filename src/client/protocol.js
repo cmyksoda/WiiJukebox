@@ -65,6 +65,7 @@ class WiiProtocol {
                         Math.floor((s.nowPlaying.duration || 0) * 1000)],
                     ['command', this.commandStatus, this.commandId, this.commandState],
                     ['art', this.artwork.keyFor(s.nowPlaying.artwork)]];
+                if (s.jump) rows.push(['jump', s.jump.id, s.jump.epoch, s.jump.byte]);
             } else if (req.method === 'GET' && action === 'art') {
                 const size = Number(url.searchParams.get('size') || 128);
                 let image;

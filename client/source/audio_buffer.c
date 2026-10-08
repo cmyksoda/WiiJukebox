@@ -19,7 +19,7 @@ static pthread_t thread;
 #endif
 
 static unsigned char bytes[WJ_AUDIO_CAPACITY];
-static int read_pos, used, stopping, resync, connected, failures, reconnects;
+static int read_pos, used, stopping, resync, rejoin, connected, failures, reconnects;
 static int bitrate = 128, epoch, active;
 static unsigned generation, reader_generation;
 /* Absolute stream position of read_pos; -1 until a server supplies one. */
@@ -87,7 +87,7 @@ static int receive(int fd, long long skip) {
     int received = 0;
     for (;;) {
         LOCK();
-        int stop = stopping || resync;
+        int stop = stopping || resync || rejoin;
         int space = WJ_AUDIO_CAPACITY - used;
         UNLOCK();
         if (stop) break;
@@ -106,7 +106,7 @@ static int receive(int fd, long long skip) {
         }
         if (skip) { skip -= n; continue; }
         LOCK();
-        if (!resync) append(chunk, n);
+        if (!resync && !rejoin) append(chunk, n);
         UNLOCK();
     }
     return received;
@@ -116,11 +116,12 @@ static void *run(void *unused) {
     (void)unused;
     int delay = 0;
     while (!pause_unless_stopped(delay)) {
-        char query[64] = "";
+        char query[80] = "?v=2";
         LOCK();
         if (resync) { resync = 0; epoch = 0; }
+        rejoin = 0;
         if (epoch > 0 && read_byte >= 0)
-            snprintf(query, sizeof(query), "?epoch=%d&from=%lld", epoch, read_byte + used);
+            snprintf(query, sizeof(query), "?v=2&epoch=%d&from=%lld", epoch, read_byte + used);
         UNLOCK();
         struct wj_stream_clock clock = { .byte_start = -1, .bitrate = 128 };
         int fd = opener(query, &clock);
@@ -138,7 +139,7 @@ static void *run(void *unused) {
         LOCK();
         connected = 0;
         if (!stopping) reconnects++;
-        delay = received ? 100 : backoff(++failures);
+        delay = rejoin ? 0 : received ? 100 : backoff(++failures);
         UNLOCK();
     }
     return NULL;
@@ -154,7 +155,7 @@ int wj_audio_start(wj_audio_opener open) {
     }
 #endif
     LOCK();
-    read_pos = used = stopping = resync = connected = failures = reconnects = epoch = 0;
+    read_pos = used = stopping = resync = rejoin = connected = failures = reconnects = epoch = 0;
     read_byte = -1;
     bitrate = 128;
     reader_generation = ++generation;
@@ -184,6 +185,26 @@ void wj_audio_stop(void) {
     read_pos = used = 0;
     UNLOCK();
     active = 0;
+}
+
+int wj_audio_jump(int stream_epoch, long long byte) {
+    LOCK();
+    int jumped = stream_epoch == epoch && epoch > 0 && read_byte >= 0 && byte > read_byte;
+    if (jumped) {
+        long long end = read_byte + used;
+        if (byte <= end) {
+            int skip = (int)(byte - read_byte);
+            read_pos = (read_pos + skip) % WJ_AUDIO_CAPACITY;
+            used -= skip;
+        } else {
+            read_pos = used = 0;
+            rejoin = 1;
+        }
+        read_byte = byte;
+        generation++;
+    }
+    UNLOCK();
+    return jumped;
 }
 
 void wj_audio_resync(void) {

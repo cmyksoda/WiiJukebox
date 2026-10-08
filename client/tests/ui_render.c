@@ -13,19 +13,21 @@
 
 static long long clock_ms = 100000;
 long long wj_milliseconds(void) { return clock_ms; }
-static unsigned char art[WJ_ART_SIZE * WJ_ART_SIZE * 2];
+static unsigned char art[WJ_ART_SIZE * WJ_ART_SIZE * 2], large_art[WJ_ART_LARGE * WJ_ART_LARGE * 2];
 const unsigned char *wj_session_art(void) { return art; }
+const unsigned char *wj_session_large_art(void) { return large_art; }
 
 /* Album-art stand-in: a dusk gradient with a sun, tiled like the server's output. */
-static void paint_art(void) {
-    for (int y = 0; y < WJ_ART_SIZE; y++)
-        for (int x = 0; x < WJ_ART_SIZE; x++) {
-            float t = y / (float)WJ_ART_SIZE, dx = x - 84.0f, dy = y - 52.0f;
+static void paint_art(unsigned char *texels, int size) {
+    for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++) {
+            float u = x * 128.0f / size, v0 = y * 128.0f / size;
+            float t = v0 / 128, dx = u - 84.0f, dy = v0 - 52.0f;
             float r = 0.98f - 0.5f * t, g = 0.55f - 0.35f * t, b = 0.45f + 0.3f * t;
             if (dx * dx + dy * dy < 22 * 22) { r = 1; g = 0.86f; b = 0.55f; }
-            if (y > 92 + 6 * sinf(x / 9.0f)) { r *= 0.3f; g *= 0.3f; b *= 0.45f; }
+            if (v0 > 92 + 6 * sinf(u / 9.0f)) { r *= 0.3f; g *= 0.3f; b *= 0.45f; }
             unsigned v = (unsigned)(r * 31) << 11 | (unsigned)(g * 63) << 5 | (unsigned)(b * 31);
-            unsigned char *p = art + ((y / 4) * (WJ_ART_SIZE / 4) + x / 4) * 32 + ((y % 4) * 4 + x % 4) * 2;
+            unsigned char *p = texels + ((y / 4) * (size / 4) + x / 4) * 32 + ((y % 4) * 4 + x % 4) * 2;
             p[0] = (unsigned char)(v >> 8);
             p[1] = (unsigned char)v;
         }
@@ -100,7 +102,8 @@ int main(int argc, char **argv) {
         { greek, load(argv[2], greek, sizeof(greek)) },
         { cjk, load(argv[3], cjk, sizeof(cjk)) },
     };
-    paint_art();
+    paint_art(art, WJ_ART_SIZE);
+    paint_art(large_art, WJ_ART_LARGE);
     for (int wide = 0; wide < 2; wide++) {
         gx_soft_set_aspect(wide);
         assert(!wj_gfx_init());
@@ -125,6 +128,12 @@ int main(int argc, char **argv) {
         assert(c[0] > 200 && c[1] > 200 && c[2] > 200);
 
         s.discovering = 0;
+        snprintf(s.message, sizeof(s.message), "%s", "Server discovery isn't available on this network. Launch with "
+                 "the server's address (see README), or press 1 to retry.");
+        s.message_held = 1;
+        draw(&s, &none, 20);
+        if (!wide) save(out, "8-discovery-help");
+        s.message[0] = 0;
         item(&s, "server", "server", "Living room PC", "ID 3f2a9c1e");
         item(&s, "server", "server", "Studio laptop", "ID 77b01d42");
         draw(&s, &none, 1);
@@ -173,8 +182,31 @@ int main(int argc, char **argv) {
         int seek = wj_ui_seek_at(&s, pointer.x);
         assert(seek > 0 && seek < s.duration_ms);
         assert(wj_ui_hit(wide ? 300 : 200, 44 + 72 + 3 * 21 + 10).target == WJ_TARGET_ITEM);
+
+        // Pointing at the cover opens it large over a dimmed screen; nothing beneath reacts.
+        float art_x = wide ? 854 - 20 - floorf(854 * 0.335f) / 2 : 640 - 20 - floorf(640 * 0.335f) / 2;
+        assert(wj_ui_hit(art_x, 72 + 14 + 60).target == WJ_TARGET_ART);
+        s.message[0] = 0;
+        s.has_large_art = 1;
+        s.large_art_version = 1;
+        wj_ui_show_art(1);
+        assert(wj_ui_art_open());
+        draw(&s, &none, 15);
+        save(out, wide ? "9-cover-expanded-widescreen" : "7-cover-expanded");
+        assert(wj_ui_hit(art_x, 72 + 14 + 60).target == WJ_TARGET_NONE);
+        pixel(4, 470, c);
+        assert(c[0] < 90 && c[1] < 90 && c[2] < 100);
+        wj_ui_show_art(0);
+        draw(&s, &none, 15);
+        pixel(4, 70, c);
+        assert(c[0] > 200);
+
+        memset(&s.menu, 0, sizeof(s.menu));
+        s.count = s.total = 0;
+        snprintf(s.empty, sizeof(s.empty), "%s", "This folder is empty.");
+        draw(&s, &none, 1);
     }
-    printf("UI render: discovery, servers, sources, album list and now playing at 4:3 and 16:9 (%d frames, software GX)\n",
+    printf("UI render: discovery and its help, servers, sources, album list, now playing, expanded cover and empty folder at 4:3 and 16:9 (%d frames, software GX)\n",
            gx_soft_frames());
     return 0;
 }

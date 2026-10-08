@@ -123,6 +123,13 @@ class Broadcaster extends EventEmitter {
         return this._clients.size;
     }
 
+    /** Listeners that asked for stream version 2 and skip ahead at jumps. */
+    get jumpListeners() {
+        let count = 0;
+        for (const client of this._clients) if (client.jumps) count++;
+        return count;
+    }
+
     /** Snapshot of connected listeners, for the WebUI. */
     get listeners() {
         return [...this._clients].map((c) => ({
@@ -165,7 +172,8 @@ class Broadcaster extends EventEmitter {
     handleRequest(req, res) {
         // HEAD is how some players probe before committing; answer headers only.
         const headOnly = req.method === 'HEAD';
-        const start = this._startFor(new URLSearchParams((req.url || '').split('?')[1] || ''));
+        const query = new URLSearchParams((req.url || '').split('?')[1] || '');
+        const start = this._startFor(query);
 
         const wantsMeta = String(req.headers['icy-metadata'] || '') === '1';
         const metaint = wantsMeta ? METAINT : 0;
@@ -209,6 +217,7 @@ class Broadcaster extends EventEmitter {
             metaint,
             // Bytes of audio sent since the last metadata block.
             sinceMeta: 0,
+            jumps: Number(query.get('v')) >= 2,
         };
 
         // Nagle would hold small writes back waiting for a full segment, adding

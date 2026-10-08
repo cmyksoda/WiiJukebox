@@ -8,6 +8,7 @@ function control(pipeline, config, action, { position } = {}) {
         }
         if (action === 'stop') {
             await pipeline.detach();
+            pipeline.markJump({ audio: false });
             config.data.lastPlayed = null;
             config.save();
         } else if (action === 'pause' || action === 'play') {
@@ -18,6 +19,7 @@ function control(pipeline, config, action, { position } = {}) {
             const handle = await source[action]();
             if (!handle) return { ok: true, endOfQueue: true };
             await pipeline.playHandle(handle);
+            pipeline.markJump();
         } else return { code: 400, error: 'unsupported control' };
         return { ok: true, status: pipeline.status };
     });
