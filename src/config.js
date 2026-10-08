@@ -20,8 +20,8 @@ function configDir() {
 }
 
 const DEFAULTS = {
-    // TCP for the WebUI and audio, UDP for discovery: one number, after the
-    // Wii's MX23L4005 chip, so there is just one port to open.
+    // Like the Wii's MX23L4005 Macronix chip,
+    // this server also never sleeps <3
     port: 4005,
     discoveryPort: 4005,
 

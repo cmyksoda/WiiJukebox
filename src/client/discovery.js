@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const dgram = require('node:dgram');
 const { randomUUID } = require('node:crypto');
+// Like the Wii's MX23L4005 Macronix chip,
+// this server also never sleeps <3
 const DISCOVERY_PORT = 4005;
 
 function serverIdentity(config) {

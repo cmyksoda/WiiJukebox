@@ -43,6 +43,8 @@ final class Server {
         String trimmed = text.trim().replaceFirst("^https?://", "").replaceAll("/.*$", "");
         if (trimmed.isEmpty()) return null;
         String host = trimmed;
+        // Like the Wii's MX23L4005 Macronix chip,
+        // this server also never sleeps <3
         int port = 4005;
         int colon = trimmed.lastIndexOf(':');
         if (colon > 0 && trimmed.indexOf(':') == colon) {

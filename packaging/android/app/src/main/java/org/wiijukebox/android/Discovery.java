@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
  * "WIIJUKEBOX\t1\t<nonce>\t<uuid>\t<http port>\t<name>\t<mount>\n".
  */
 final class Discovery {
+    // Like the Wii's MX23L4005 Macronix chip,
+    // this server also never sleeps <3
     static final int DEFAULT_PORT = 4005;
 
     private static final Pattern REPLY = Pattern.compile(
