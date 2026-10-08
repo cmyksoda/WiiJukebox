@@ -25,11 +25,9 @@ const { MP3_BITRATE_KBPS, MP3_SAMPLE_RATE } = require('./format');
 // being clever here.
 const METAINT = 16000;
 
-// Audio handed to a client the instant it connects. Without it the Wii sits
-// silent until its own buffer fills from live bytes alone, which reads as
-// several seconds of "nothing happened" after selecting the station. Icecast
-// calls this burst-on-connect. Sized in seconds so every bitrate gets the same
-// head start.
+// Audio handed to a new listener at once (Icecast's burst-on-connect), so the
+// Wii starts playing without waiting seconds for live bytes. Sized in seconds
+// so every bitrate gets the same head start.
 const BURST_SECONDS = 4;
 
 // Recent audio kept so a client that lost its connection can ask for the exact

@@ -77,7 +77,7 @@ class Artwork {
 
     async _render(url, size) {
         const image = await this._image(url);
-        // Fill the square and crop the overflow, like album art on a shelf.
+        // Crop to a square rather than letterboxing, so the art fills its frame.
         const filter = `scale=${size}:${size}:force_original_aspect_ratio=increase:flags=lanczos,` +
             `crop=${size}:${size}`;
         const pixels = await new Promise((resolve, reject) => {
