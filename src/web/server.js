@@ -224,8 +224,8 @@ class WebServer {
                 for (const [key, value] of Object.entries(this.config.sourceConfig(id))) {
                     if (SECRET_KEYS.has(key)) secrets[key] = Boolean(value);
                     else if (['string', 'number', 'boolean'].includes(typeof value) || Array.isArray(value)) {
-                        // Saved stations and links have their own endpoints.
-                        if (!['stations', 'links'].includes(key)) values[key] = value;
+                        // Saved stations, links and subscriptions have their own endpoints.
+                        if (!['stations', 'links', 'subscriptions'].includes(key)) values[key] = value;
                     }
                 }
                 return this._json(res, 200, { values, secrets });

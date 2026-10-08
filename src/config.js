@@ -46,6 +46,8 @@ const DEFAULTS = {
     // Per-source settings, keyed by source id.
     sources: {
         radio: { stations: [] },
+        // `country` is the two-letter Apple store used for search and the chart.
+        podcasts: { subscriptions: [], country: 'us' },
         desktop: {},
         subsonic: { url: '', username: '', password: '' },
         jellyfin: { url: '', username: '', password: '', token: null, userId: null, deviceId: null },
