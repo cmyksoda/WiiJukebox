@@ -40,6 +40,8 @@ host-test: | build
 	./build/layout_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/font.c tests/font_test.c $(shell pkg-config --libs freetype2) -o build/font_test
 	./build/font_test $(FONT_LATIN) $(FONT_CJK)
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
+	./build/ui_render $(FONT_LATIN) $(FONT_CJK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test

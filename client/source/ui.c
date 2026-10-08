@@ -272,8 +272,8 @@ static void tiles(const struct wj_session *s, long long now) {
         } else wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 1.5f, BORDER);
         enum icon kind = icon_for(item->type, item->ref);
         icon(kind, tx + tile_w / 2, ty + 26, 26, icon_color(kind));
-        label(item->title, tx + tile_w / 2, ty + 54, 14, selected, INK, tile_w - 12, 1);
-        if (item->subtitle[0]) label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, MUTED, tile_w - 12, 1);
+        label(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8, 1);
+        if (item->subtitle[0]) label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, MUTED, tile_w - 8, 1);
         hit(tx, ty, tile_w, tile_h, WJ_TARGET_ITEM, i);
     }
 }
@@ -383,7 +383,7 @@ static void glyph_visualizer(float cx, float cy, float r, u32 c) {
 static void now_playing(const struct wj_session *s, const struct wj_pointer *pointer) {
     float x = L.card_x, w = L.card_w;
     panel(x, TOP, w, PANEL_H, 18);
-    float size = w - 40 < 140 ? w - 40 : 140, ax = x + (w - size) / 2, ay = TOP + 16;
+    float size = w - 40 < 120 ? w - 40 : 120, ax = x + (w - size) / 2, ay = TOP + 14;
     wj_gfx_round(ax, ay + 3, size, size, 12, SHADOW, SHADOW);
     if (s->has_art && art.ready) wj_gfx_round_image(&art, ax, ay, size, size, 12, WHITE);
     else {
@@ -393,21 +393,21 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
     wj_gfx_round_line(ax, ay, size, size, 12, 1.5f, BORDER);
     int idle = !strcmp(s->state, "idle");
     const char *song = s->song[0] ? s->song : idle ? "Nothing playing" : "";
-    label(song, x + w / 2, ay + size + 26, 17, 1, INK, w - 24, 1);
-    label(s->artist, x + w / 2, ay + size + 45, 14, 0, MUTED, w - 24, 1);
+    label(song, x + w / 2, ay + size + 24, 17, 1, INK, w - 24, 1);
+    label(s->artist, x + w / 2, ay + size + 42, 14, 0, MUTED, w - 24, 1);
 
     char state[24];
     snprintf(state, sizeof(state), "%s", s->seek_until ? "Seeking" : s->state);
     if (state[0] >= 'a' && state[0] <= 'z') state[0] -= 'a' - 'A';
     u32 chip = !strcmp(s->state, "playing") ? BLUE : !strcmp(s->state, "paused") ? WJ_RGBA(0xf0, 0xa8, 0x30, 0xff) : FAINT;
     float chip_w = wj_font_measure(state, (int)strlen(state), 12, 1) + 20;
-    wj_gfx_round(x + w / 2 - chip_w / 2, ay + size + 53, chip_w, 18, 9, chip, chip);
-    label(state, x + w / 2, ay + size + 66, 12, 1, WHITE, chip_w, 1);
+    wj_gfx_round(x + w / 2 - chip_w / 2, ay + size + 50, chip_w, 18, 9, chip, chip);
+    label(state, x + w / 2, ay + size + 63, 12, 1, WHITE, chip_w, 1);
 
     // Seek bar: blue fill up to the heard position, knob only where seeking works.
     bar_x = x + 20;
     bar_w = w - 40;
-    float bar_y = TOP + PANEL_H - 74;
+    float bar_y = TOP + PANEL_H - 68;
     int duration = s->has_progress ? s->duration_ms : 0;
     int position = s->seek_until ? s->seek_target_ms : s->position_ms;
     int can_seek = (s->capabilities & WJ_CAN_SEEK) && duration > 0;
