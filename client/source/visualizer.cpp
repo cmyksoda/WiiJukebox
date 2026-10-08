@@ -10,6 +10,7 @@ extern "C" {
 }
 #include <projectM.hpp>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 
@@ -20,10 +21,41 @@ static long long next_preset;
 extern "C" const char *wj_visualizer_error(void) { return error; }
 
 #if WJ_PRESET_TOUR
+static const char flag_file[] = "sd:/apps/wiijukebox/flagged-presets.txt";
 static int tour_index;
-static long long flagged_until;
+static unsigned char flagged[2048];
+static bool flags_loaded;
 
-static void tour_show(void) { engine->selectPreset((unsigned)tour_index, true); }
+// Earlier flags show again on a later tour of the same set, so a second pass can see and undo
+// them; lines from a different set (another count after the slash) are ignored.
+static void load_flags(void) {
+    flags_loaded = true;
+    FILE *file = std::fopen(flag_file, "r");
+    if (!file) return;
+    char line[512];
+    while (std::fgets(line, sizeof(line), file)) {
+        char *slash = std::strchr(line, '/'), *name = std::strchr(line, '\t');
+        if (!slash || !name || std::strtoul(slash + 1, NULL, 10) != wj_preset_count) continue;
+        name++;
+        name[std::strcspn(name, "\r\n")] = 0;
+        int index = wj_preset_index(name);
+        if (index >= 0 && index < (int)sizeof(flagged)) flagged[index] = 1;
+    }
+    std::fclose(file);
+}
+
+static void save_flags(void) {
+    FILE *file = std::fopen(flag_file, "w");
+    if (!file) return;
+    for (unsigned i = 0; i < wj_preset_count && i < sizeof(flagged); i++)
+        if (flagged[i]) std::fprintf(file, "%u/%u\t%s\n", i + 1, wj_preset_count, wj_presets[i].name);
+    std::fclose(file);
+}
+
+static void tour_show(void) {
+    if (!flags_loaded) load_flags();
+    engine->selectPreset((unsigned)tour_index, true);
+}
 
 extern "C" void wj_visualizer_step(int delta) {
     if (!engine) return;
@@ -33,11 +65,9 @@ extern "C" void wj_visualizer_step(int delta) {
 }
 
 extern "C" void wj_visualizer_flag(void) {
-    FILE *file = std::fopen("sd:/apps/wiijukebox/flagged-presets.txt", "a");
-    if (!file) return;
-    std::fprintf(file, "%d/%u\t%s\n", tour_index + 1, wj_preset_count, wj_presets[tour_index].name);
-    std::fclose(file);
-    flagged_until = wj_milliseconds() + 2000;
+    if (!engine || tour_index >= (int)sizeof(flagged)) return;
+    flagged[tour_index] ^= 1;
+    save_flags();
 }
 
 static void tour_overlay(void) {
@@ -45,7 +75,7 @@ static void tour_overlay(void) {
     const char *name = wj_presets[tour_index].name;
     int length = (int)std::strlen(name) - 5;
     int bytes = std::snprintf(text, sizeof(text), "%d/%u  %.*s%s", tour_index + 1, wj_preset_count, length, name,
-                              wj_milliseconds() < flagged_until ? "  \xc2\xb7  flagged" : "");
+                              tour_index < (int)sizeof(flagged) && flagged[tour_index] ? "  \xc2\xb7  flagged" : "");
     const int size = 16;
     float limit = wj_gfx_width() - 48;
     while (bytes > 0 && wj_font_measure(text, bytes, size, 1) > limit) bytes--;

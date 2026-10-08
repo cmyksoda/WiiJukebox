@@ -178,7 +178,7 @@ on a random preset; presets then change every 25 seconds with a 5-second blend.
 For checking every preset on hardware, `make -C client package PRESET_TOUR=1` builds
 a preset tour instead: presets play in name order without changing on their own,
 with `123/545  Name` at the bottom of the screen. Left and Right step one preset, Up
-and Down step ten, and 1 adds the current preset to `sd:/apps/wiijukebox/flagged-presets.txt`. Original upstream notices and
+and Down step ten, and 1 flags or unflags the current preset in `sd:/apps/wiijukebox/flagged-presets.txt`. Original upstream notices and
 source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
 
 The list header shows the visible range, with page arrows when there is more
