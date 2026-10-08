@@ -3,6 +3,7 @@
 #define WJ_NET_H
 #include <stddef.h>
 #define WJ_SERVERS 8
+#define WJ_TIMEOUT (-10000)
 struct wj_server { char ip[16], id[37], name[128], mount[256]; int port; };
 long long wj_milliseconds(void);
 int wj_discover(struct wj_server *servers, int capacity, const char *target, int port);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "wire.h"
 #include "net.h"
+#include "audio_buffer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,19 +59,23 @@ int main(int argc, char **argv) {
     int status = 0;
     int fd = wj_open(server, "GET", server->mount, &status);
     CHECK(fd >= 0 && status == 200);
+    CHECK(wj_audio_start(fd) == 0);
     FILE *file = fopen(argv[2], "wb");
     CHECK(file);
     int received = 0;
     int target_bytes = !strcmp(source, "subsonic") ? 96000 : 48000;
+    long long deadline = wj_milliseconds() + 12000;
     while (received < target_bytes) {
+        CHECK(wj_milliseconds() < deadline);
         unsigned char audio[4096];
-        int n = wj_receive(fd, audio, sizeof(audio), 3000);
-        CHECK(n > 0);
+        int n = wj_audio_read(audio, sizeof(audio));
+        if (!n) { CHECK(!wj_audio_state().ended); usleep(1000); continue; }
         CHECK(fwrite(audio, 1, n, file) == (size_t)n);
         received += n;
+        CHECK(wj_request(server, "GET", "/api/wii/status", body, sizeof(body)) == 200);
     }
     fclose(file);
-    wj_close(fd);
+    wj_audio_stop();
     CHECK(wj_request(server, "POST", "/api/control/stop", body, sizeof(body)) == 200);
     puts("C client discovery, browsing, selection, status, MP3 stream and stop passed");
     return 0;

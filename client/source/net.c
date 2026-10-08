@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/time.h>
 #ifdef GEKKO
@@ -62,18 +63,44 @@ static int address(struct sockaddr_in *out, const char *ip, int port) {
 
 void wj_close(int fd) { if (fd >= 0) net_close(fd); }
 
-int wj_receive(int fd, void *buffer, int size, int timeout_ms) {
-    if (ready(fd, 0, timeout_ms) <= 0) return -1;
-    return net_recv(fd, buffer, size, 0);
+static int receive_flags(int fd, void *buffer, int size, int timeout_ms, int flags) {
+    /* libogc shares a 64 KiB network heap between sockets. Keep each read
+       small enough that audio and a browse response can coexist. */
+    if (size > 4096) size = 4096;
+    long long deadline = wj_milliseconds() + timeout_ms;
+    for (;;) {
+        int result = ready(fd, 0, (int)(deadline - wj_milliseconds()));
+        if (!result) return WJ_TIMEOUT;
+        if (result < 0) return -1;
+        result = net_recv(fd, buffer, size, flags);
+#ifdef GEKKO
+        int again = result == -EAGAIN || result == -EWOULDBLOCK;
+#else
+        int again = result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR);
+#endif
+        if (!again) return result;
+        if (wj_milliseconds() >= deadline) return WJ_TIMEOUT;
+    }
 }
 
-int wj_open(const struct wj_server *server, const char *method, const char *path, int *status) {
+int wj_receive(int fd, void *buffer, int size, int timeout_ms) {
+    return receive_flags(fd, buffer, size, timeout_ms, 0);
+}
+
+static int open_http(const struct wj_server *server, const char *method, const char *path,
+                     int *status, int *content_length) {
     struct sockaddr_in addr;
     if (address(&addr, server->ip, server->port)) return -1;
     if (path[0] != '/' || strpbrk(path, "\r\n ")) return -1;
     int fd = net_socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) return -1;
+#ifdef GEKKO
+    /* net_fcntl expects IOS flags, not newlib's O_NONBLOCK value. */
+    int nonblocking = 1;
+    if (net_ioctl(fd, FIONBIO, &nonblocking) < 0) goto fail;
+#else
     if (net_fcntl(fd, F_SETFL, O_NONBLOCK) < 0) goto fail;
+#endif
     int result = net_connect(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (result < 0) {
         if (ready(fd, 1, 3000) <= 0) goto fail;
@@ -99,13 +126,20 @@ int wj_open(const struct wj_server *server, const char *method, const char *path
         if (n <= 0) goto fail;
         sent += n;
     }
-    // Read exactly through the header delimiter so no MP3 bytes are lost.
+    // Peek in blocks, then consume only through the header delimiter. This
+    // preserves the first MP3 bytes without hundreds of one-byte IOS calls.
     char headers[8192];
     int used = 0;
     while (used < (int)sizeof(headers) - 1) {
         int left = (int)(deadline - wj_milliseconds());
-        if (wj_receive(fd, headers + used, 1, left) != 1) goto fail;
-        used++;
+        int n = receive_flags(fd, headers + used, sizeof(headers) - 1 - used, left, MSG_PEEK);
+        if (n <= 0) goto fail;
+        headers[used + n] = 0;
+        char *end = strstr(headers, "\r\n\r\n");
+        int take = end ? (int)(end + 4 - headers) - used : n;
+        int consumed = wj_receive(fd, headers + used, take, left);
+        if (consumed <= 0) goto fail;
+        used += consumed;
         if (used >= 4 && !memcmp(headers + used - 4, "\r\n\r\n", 4)) break;
     }
     headers[used] = 0;
@@ -116,24 +150,43 @@ int wj_open(const struct wj_server *server, const char *method, const char *path
         if (headers[i] >= 'A' && headers[i] <= 'Z') headers[i] += 'a' - 'A';
     }
     if (strstr(headers, "\r\ntransfer-encoding:") || strstr(headers, "\r\nicy-metaint:")) goto fail;
+    if (content_length) {
+        *content_length = -1;
+        char *length_header = strstr(headers, "\r\ncontent-length:");
+        if (length_header) {
+            char *end;
+            const char *value = length_header + strlen("\r\ncontent-length:");
+            long length = strtol(value, &end, 10);
+            if (end == value || length < 0 || length >= WJ_BODY || strncmp(end, "\r\n", 2)) goto fail;
+            *content_length = (int)length;
+        }
+    }
     return fd;
 fail:
     wj_close(fd);
     return -1;
 }
 
+int wj_open(const struct wj_server *server, const char *method, const char *path, int *status) {
+    return open_http(server, method, path, status, NULL);
+}
+
 int wj_request(const struct wj_server *server, const char *method, const char *path,
                char *body, size_t capacity) {
     int status = 0;
-    int fd = wj_open(server, method, path, &status);
+    int length = -1;
+    int fd = open_http(server, method, path, &status, &length);
     if (fd < 0 || capacity < 2) { wj_close(fd); return -1; }
+    if (length >= 0 && (size_t)length >= capacity) { wj_close(fd); return -1; }
     size_t used = 0;
     long long deadline = wj_milliseconds() + 8000;
     for (;;) {
+        if (length >= 0 && used == (size_t)length) break;
         if (used == capacity - 1) { status = -1; break; }
         int left = (int)(deadline - wj_milliseconds());
-        int n = wj_receive(fd, body + used, (int)(capacity - 1 - used), left);
-        if (n == 0) break;
+        int want = length >= 0 ? length - (int)used : (int)(capacity - 1 - used);
+        int n = wj_receive(fd, body + used, want, left);
+        if (n == 0) { if (length >= 0 && used != (size_t)length) status = -1; break; }
         if (n < 0) { status = -1; break; }
         used += (size_t)n;
     }

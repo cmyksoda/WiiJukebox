@@ -28,7 +28,10 @@ WIILOAD=tcp:192.168.0.8 wiiload client/dist/apps/wiijukebox/boot.dol 192.168.0.3
 The client initializes networking, verifies `/api/wii/info`, then selects that
 server directly. An unavailable direct address falls back to discovery. Network
 initialization errors and the Wii's assigned IP are shown on screen; failed
-discovery retries automatically. There is no on-screen address keyboard yet.
+discovery retries automatically. During initialization, `1` cancels and restarts
+the attempt. The screen shows the attempt number and elapsed seconds; a
+ten-second initialization deadline requests network cleanup before retrying.
+There is no on-screen address keyboard yet.
 
 For alternate ports, set `port` and `discoveryPort` in the server's `config.json`
 and rebuild with the matching discovery port, for example
@@ -46,6 +49,13 @@ server is absent. **This ID is an identifier, not authentication or a secret.**
 Without writable SD, selection works for that run but is not saved. Returning
 from the source screen to the server chooser lets you explicitly select a
 different server. Source settings and favorites remain on the host.
+
+The audio worker keeps a 64 KiB compressed buffer and starts decoding after
+32 KiB (about two seconds at 128 kbps). The decoder reads memory instead of
+waiting for the network. If it runs dry, playback refills before restarting.
+The bottom row shows buffered KiB and refill count. Navigation movement stays
+responsive during requests; open/back and transport presses wait for the current
+request to finish. Curly quotes and dashes are converted for the ASCII font.
 
 ## Controls
 

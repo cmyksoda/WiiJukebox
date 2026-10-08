@@ -10,8 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
+#include <unistd.h>
 #include "net.h"
 #include "wire.h"
+#include "audio_buffer.h"
 #include "discovery_port.h"
 
 #if WJ_DISCOVERY_PORT < 1 || WJ_DISCOVERY_PORT > 65535
@@ -35,6 +38,7 @@ static int screen; // 0: servers, 1: sources, 2: source contents
 static int volume = 160;
 static int stream_fd = -1;
 static int stream_started;
+static int audio_buffered, audio_underruns;
 static int storage;
 static long long next_status, next_stream, next_discovery;
 static int stream_failures;
@@ -47,6 +51,8 @@ static int exiting;
 static char direct_address[32], network_status[80] = "Network not initialized";
 static char job_ip[16];
 static int job_network_result, job_direct;
+static int cancel_discovery, network_attempt;
+static long long discovery_started;
 
 static void copy(char *out, size_t size, const char *in) {
     snprintf(out, size, "%s", in);
@@ -59,15 +65,34 @@ static void save_server(void) {
     if (file) { fprintf(file, "%s\n", saved_id); fclose(file); }
 }
 
+static int initialize_network(void) {
+    /* if_config retries net_init internally many times. Start it once here,
+       with a visible deadline and cancellation, before retrieving the IP. */
+    int result = net_init_async(NULL, NULL);
+    long long deadline = wj_milliseconds() + 10000;
+    while (result >= 0 || result == -EBUSY) {
+        LWP_MutexLock(mutex);
+        int cancel = cancel_discovery || exiting;
+        LWP_MutexUnlock(mutex);
+        if (cancel) { result = -ECANCELED; break; }
+        result = net_get_status();
+        if (result != -EBUSY) break;
+        if (wj_milliseconds() >= deadline) { result = -ETIMEDOUT; break; }
+        usleep(20000);
+    }
+    if (result >= 0) result = if_config(job_ip, NULL, NULL, true, 1);
+    if (result >= 0 && (!job_ip[0] || !strcmp(job_ip, "0.0.0.0"))) result = -ENETDOWN;
+    if (result < 0) net_deinit();
+    return result;
+}
+
 static void *run_job(void *unused) {
     (void)unused;
     int result;
     if (job == JOB_DISCOVER) {
         job_ip[0] = 0;
         job_direct = 0;
-        job_network_result = if_config(job_ip, NULL, NULL, true, 3);
-        if (job_network_result >= 0 && (!job_ip[0] || !strcmp(job_ip, "0.0.0.0")))
-            job_network_result = -1;
+        job_network_result = initialize_network();
         result = job_network_result;
         if (result >= 0) {
             if (direct_address[0] && !wj_lookup(&servers[0], direct_address)) {
@@ -91,7 +116,15 @@ static void *run_job(void *unused) {
 
 static void start_job(enum job_kind kind, const char *method, const char *path) {
     if (job_busy) return;
-    if (kind == JOB_DISCOVER) copy(message, sizeof(message), "Initializing network and finding server...");
+    if (kind == JOB_DISCOVER) {
+        LWP_MutexLock(mutex);
+        cancel_discovery = 0;
+        LWP_MutexUnlock(mutex);
+        network_attempt++;
+        discovery_started = wj_milliseconds();
+        copy(network_status, sizeof(network_status), "Initializing network...");
+        copy(message, sizeof(message), "Connecting. 1: restart attempt | HOME: exit");
+    }
     job = kind;
     copy(job_method, sizeof(job_method), method ? method : "GET");
     copy(job_path, sizeof(job_path), path ? path : "");
@@ -132,16 +165,15 @@ static s32 audio_read(void *unused, void *buffer, s32 size) {
     int stop = exiting;
     LWP_MutexUnlock(mutex);
     if (stop) return 0;
-    // A bounded receive lets HOME terminate a stalled server connection.
-    int n = wj_receive(stream_fd, buffer, size, 1500);
-    return n > 0 ? n : 0;
+    return wj_audio_read(buffer, size);
 }
 
 static void stop_audio(void) {
+    wj_audio_stop();
     MP3Player_Stop();
-    wj_close(stream_fd);
     stream_fd = -1;
     stream_started = 0;
+    audio_buffered = 0;
 }
 
 static void finish_job(void) {
@@ -176,10 +208,10 @@ static void finish_job(void) {
     if (job == JOB_STREAM) {
         stream_fd = job_result;
         if (stream_fd >= 0) {
-            if (MP3Player_PlayFile(NULL, audio_read, NULL) < 0) {
+            if (wj_audio_start(stream_fd) < 0) {
                 wj_close(stream_fd);
                 stream_fd = -1;
-            } else stream_started = 1;
+            } else copy(message, sizeof(message), "Buffering audio...");
         }
         next_stream = wj_milliseconds() + 3000;
         if (stream_fd < 0) {
@@ -292,6 +324,7 @@ static void draw_line(int row, const char *format, ...) {
     va_start(args, format);
     vsnprintf(text, sizeof(text), format, args);
     va_end(args);
+    wj_display_text(text);
     int columns, rows;
     CON_GetMetrics(&columns, &rows);
     if (row < 1 || row > rows || row > 26) return;
@@ -311,7 +344,10 @@ static void draw(void) {
     draw_line(1, "WiiJukebox  |  native client prototype");
     draw_line(2, "%s", screen ? server.name : "Choose a server");
     draw_line(3, "%s", title);
-    draw_line(4, "%s", network_status);
+    if (job_busy && job == JOB_DISCOVER)
+        draw_line(4, "Network attempt %d: %llds | 1 restart | HOME exit",
+                  network_attempt, (wj_milliseconds() - discovery_started) / 1000);
+    else draw_line(4, "%s", network_status);
     for (int i = 0; i < PAGE_SIZE; i++) {
         draw_line(6 + i, "%s %.65s", i < count && i == selected ? ">" : " ",
                   i < count ? items[i].title : "");
@@ -322,8 +358,9 @@ static void draw(void) {
     draw_line(23, "HOME exit | +/- volume %d%% | 1 refresh/retry", volume * 100 / 255);
     draw_line(24, "Left/right page | B + left/right skip track");
     draw_line(25, "B + 1 pause/resume | B + 2 stop | A choose/play");
-    draw_line(26, "%s | %s", job_busy ? "Working..." : "Ready",
-              stream_started ? "Audio connected" : "Audio disconnected");
+    draw_line(26, "%s | %s | %d KiB | refills %d", job_busy ? "Working" : "Ready",
+              stream_started ? "Playing" : stream_fd >= 0 ? "Buffering" : "Disconnected",
+              audio_buffered / 1024, audio_underruns);
     fflush(stdout);
 }
 
@@ -362,6 +399,8 @@ int main(int argc, char **argv) {
     start_job(JOB_DISCOVER, NULL, NULL);
     long long last_draw = 0;
     int b_combo = 0;
+    u32 pending_buttons = 0;
+    int pending_back = 0, pending_combo = 0;
     while (SYS_MainLoop()) {
         WPAD_ScanPads();
         u32 down = WPAD_ButtonsDown(0), held = WPAD_ButtonsHeld(0), up = WPAD_ButtonsUp(0);
@@ -369,28 +408,44 @@ int main(int argc, char **argv) {
         finish_job();
         if (down & WPAD_BUTTON_PLUS) { volume = volume < 239 ? volume + 16 : 255; MP3Player_Volume(volume); }
         if (down & WPAD_BUTTON_MINUS) { volume = volume > 16 ? volume - 16 : 0; MP3Player_Volume(volume); }
+        if (down & WPAD_BUTTON_UP) selected = count ? (selected + count - 1) % count : 0;
+        if (down & WPAD_BUTTON_DOWN) selected = count ? (selected + 1) % count : 0;
+        u32 action = down & (WPAD_BUTTON_A | WPAD_BUTTON_1 | WPAD_BUTTON_2 | WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT);
+        if (action) {
+            pending_buttons = action;
+            pending_combo = (held & WPAD_BUTTON_B) && screen && !(action & WPAD_BUTTON_A);
+            if (pending_combo) b_combo = 1;
+            if ((action & WPAD_BUTTON_1) && !screen && job_busy && job == JOB_DISCOVER) {
+                LWP_MutexLock(mutex);
+                cancel_discovery = 1;
+                LWP_MutexUnlock(mutex);
+                copy(message, sizeof(message), "Restart requested; resetting network...");
+            }
+        }
+        if ((up & WPAD_BUTTON_B) && !b_combo) { pending_back = 1; pending_buttons = 0; }
         if (!job_busy) {
-            if ((held & WPAD_BUTTON_B) && screen && (down & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT | WPAD_BUTTON_1 | WPAD_BUTTON_2))) {
-                b_combo = 1;
-                if (down & WPAD_BUTTON_LEFT) control("previous");
-                else if (down & WPAD_BUTTON_RIGHT) control("next");
-                else if (down & WPAD_BUTTON_2) control("stop");
+            u32 pressed = pending_buttons;
+            int back = pending_back, combo = pending_combo;
+            pending_buttons = 0;
+            pending_back = pending_combo = 0;
+            if (combo && screen && pressed) {
+                if (pressed & WPAD_BUTTON_LEFT) control("previous");
+                else if (pressed & WPAD_BUTTON_RIGHT) control("next");
+                else if (pressed & WPAD_BUTTON_2) control("stop");
                 else control(!strcmp(play_state, "paused") ? "play" : "pause");
-            } else if (down & WPAD_BUTTON_A) select_item();
-            else if (down & WPAD_BUTTON_2) play_item();
-            else if (down & WPAD_BUTTON_UP) selected = count ? (selected + count - 1) % count : 0;
-            else if (down & WPAD_BUTTON_DOWN) selected = count ? (selected + 1) % count : 0;
-            else if (down & WPAD_BUTTON_1) {
+            } else if (pressed & WPAD_BUTTON_A) select_item();
+            else if (pressed & WPAD_BUTTON_2) play_item();
+            else if (pressed & WPAD_BUTTON_1) {
                 if (!screen) start_job(JOB_DISCOVER, NULL, NULL);
                 else load_list();
-            } else if (screen == 2 && (down & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT))) {
-                int offset = location.offset + (down & WPAD_BUTTON_RIGHT ? PAGE_SIZE : -PAGE_SIZE);
+            } else if (screen == 2 && (pressed & (WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT))) {
+                int offset = location.offset + (pressed & WPAD_BUTTON_RIGHT ? PAGE_SIZE : -PAGE_SIZE);
                 if (offset >= 0 && offset < total) {
                     location.offset = offset;
                     location.selected = 0;
                     load_list();
                 }
-            } else if ((up & WPAD_BUTTON_B) && !b_combo) {
+            } else if (back) {
                 if (screen == 2) {
                     if (depth) location = stack[--depth];
                     else { screen = 1; memset(&location, 0, sizeof(location)); copy(title, sizeof(title), "Music sources"); }
@@ -410,8 +465,28 @@ int main(int argc, char **argv) {
         if (!screen && !count && !job_busy && now >= next_discovery) {
             start_job(JOB_DISCOVER, NULL, NULL);
         }
+        if (stream_fd >= 0) {
+            struct wj_audio_state audio = wj_audio_state();
+            audio_buffered = audio.buffered;
+            if (stream_started && !MP3Player_IsPlaying()) {
+                MP3Player_Stop();
+                stream_started = 0;
+                audio_underruns++;
+                copy(message, sizeof(message), "Refilling audio buffer...");
+            }
+            if (!stream_started) {
+                if (audio.buffered >= WJ_AUDIO_PREBUFFER || (audio.ended && audio.buffered)) {
+                    if (MP3Player_PlayFile(NULL, audio_read, NULL) >= 0) stream_started = 1;
+                    else { stop_audio(); next_stream = now + 3000; }
+                } else if (audio.ended) {
+                    stop_audio();
+                    next_stream = now + 1000;
+                    copy(message, sizeof(message), "Stream ended; reconnecting...");
+                }
+            }
+        }
         if (screen && !job_busy) {
-            if (now >= next_stream && (!stream_started || !MP3Player_IsPlaying())) {
+            if (now >= next_stream && stream_fd < 0) {
                 stop_audio();
                 start_job(JOB_STREAM, NULL, NULL);
             } else if (now >= next_status) {
@@ -430,6 +505,7 @@ int main(int argc, char **argv) {
         if (job == JOB_STREAM && job_result >= 0) wj_close(job_result);
     }
     stop_audio();
+    net_deinit();
     LWP_MutexDestroy(mutex);
     ASND_End();
     return 0;

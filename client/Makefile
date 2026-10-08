@@ -29,7 +29,10 @@ HOST_CFLAGS ?= -O2 -g
 host-test: | build
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c tests/wire_test.c -o build/wire_test
 	./build/wire_test
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/net.c tests/network_probe.c -o build/network_probe
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/wire.c source/net.c source/audio_buffer.c tests/audio_buffer_test.c -o build/audio_buffer_test
+	./build/audio_buffer_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/net.c tests/http_probe.c -o build/http_probe
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/wire.c source/net.c source/audio_buffer.c tests/network_probe.c -o build/network_probe
 package: all
 	python3 ../tools/package-client.py
 clean:

@@ -5,6 +5,12 @@
 #include <string.h>
 #include <stdint.h>
 int main(void) {
+    char display[] = "Don’t ‘stop’ — “music”… \xf0\x9f\x8e\xb5\x1b";
+    wj_display_text(display);
+    assert(!strcmp(display, "Don't 'stop' - \"music\"... ??"));
+    char truncated[] = "end\xe2\x80";
+    wj_display_text(truncated);
+    assert(!strcmp(truncated, "end?"));
     char good[] = "WIIJUKEBOX\t1\nitem\tabc\ttrack\tA%09B%0AC%25%F0%9F%8E%B5\t\n";
     struct wj_document doc;
     assert(!wj_document(good, &doc));
