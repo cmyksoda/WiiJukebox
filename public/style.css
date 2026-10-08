@@ -222,7 +222,8 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
     color: var(--accent-text);
     font-size: 10px;
     font-weight: 800;
-    line-height: 13px;
+    /* 2px past the 17px height: Nunito's digits sit high in the line box. */
+    line-height: 19px;
     text-align: center;
 }
 
@@ -640,7 +641,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #seek.live #seekbar::-webkit-slider-runnable-track { background: repeating-linear-gradient(90deg, var(--accent-soft) 0 10px, var(--tile) 10px 20px); }
 #seek.live #seekbar::-moz-range-track { background: repeating-linear-gradient(90deg, var(--accent-soft) 0 10px, var(--tile) 10px 20px); }
 
-#controls, #modes { display: flex; align-items: center; justify-content: center; gap: 16px; }
+/* Shared columns keep shuffle, stop and repeat under previous, play and next. */
+#controls, #modes { display: grid; grid-template-columns: 56px 76px 56px; place-items: center; justify-content: center; gap: 16px; }
 #np-extras { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 
 /* --- phone transport bar ---------------------------------------------------------------- */
@@ -824,7 +826,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 }
 
 @media (max-width: 380px) {
-    #controls { gap: 10px; }
+    #controls, #modes { grid-template-columns: 50px 68px 50px; gap: 10px; }
     .round { width: 50px; height: 50px; }
     .round.big { width: 68px; height: 68px; }
     .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
