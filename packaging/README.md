@@ -61,7 +61,7 @@ WebKit packages.
   support by downloading yt-dlp, and start at login), then starts the server and
   shows **Connect your Wii**: put the Wii on the same network, open WiiJukebox on it
   (it finds the computer by UDP discovery), or type the address shown (for example
-  `192.168.0.3:4000`). The page also reports whether the server and discovery are
+  `192.168.0.3:4005`). The page also reports whether the server and discovery are
   working. After that the window shows the web UI.
 - **Background.** A tray icon (menu bar icon on a Mac) keeps the server and the music
   going. The first time the window is closed the app asks whether to keep playing in
@@ -77,7 +77,7 @@ WebKit packages.
 - **Menu and tray entries.** Connect your Wii, Copy Wii address, Copy stream address,
   Open in browser, Restart server, Install or update yt-dlp, Start at login, Show
   settings folder, Show server log (`logs/server.log` in the app's data folder).
-- **Errors are pages, not console text.** A busy port shows "Port 4000 is in use" with
+- **Errors are pages, not console text.** A busy port shows "Port 4005 is in use" with
   a free port suggested; one click saves it in the server's `config.json` and
   restarts (the Wii finds the new port by discovery). A server crash shows its last
   lines and a Restart button. A missing FFmpeg shows install commands, a Check again
@@ -86,14 +86,15 @@ WebKit packages.
 
 ### Ports and firewalls
 
-The Wii needs the web port (default TCP 4000) and the discovery port (UDP 4001).
+The Wii needs the web port (default TCP 4005) and the discovery port (default UDP 4005:
+the same number, a different protocol; the two can also be set apart in `config.json`).
 Nothing in the app opens them to the internet; they are for the local network.
 
 | System | What happens | What the app does |
 |---|---|---|
-| Windows | Windows Defender Firewall asks the first time the server listens. Allow, with Private networks ticked. A dismissed question leaves the Wii unable to connect, and a Wi-Fi network marked Public stays blocked. | The Connect page explains this and has **Allow WiiJukebox in Windows Firewall**, which asks for administrator permission once and adds an inbound rule for the program on Private and Domain networks. |
+| Windows | Windows Defender Firewall asks the first time the server listens. Allow, with Private networks ticked. A dismissed question leaves the Wii unable to connect, and a Wi-Fi network marked Public stays blocked. | The Connect page explains this and has **Allow WiiJukebox in Windows Firewall**, which asks for administrator permission once and adds an inbound rule for the program (any TCP or UDP port it uses) on Private and Domain networks. |
 | macOS | If the system firewall is on, macOS asks whether WiiJukebox may accept incoming connections. macOS 15 and later can also ask about local network access. | The first-run page and Connect page name both prompts and where to change them. The app declares `NSLocalNetworkUsageDescription`. |
-| Linux | Most systems allow it. With ufw or firewalld, TCP 4000 and UDP 4001 need to be opened. | The Connect page shows the exact `ufw` and `firewalld` commands for the current ports. |
+| Linux | Most systems allow it. With ufw or firewalld, TCP 4005 and UDP 4005 need to be opened. | The Connect page shows the exact `ufw` and `firewalld` commands for the current ports. |
 
 The Connect page also asks the discovery port the way a Wii does, so a port that is
 taken or blocked on this computer is reported with "type the address on the Wii".
@@ -182,8 +183,11 @@ It starts the app hidden on ports 4680 (web), 4681 (discovery) and 4690 (debuggi
 and checks: the server URL, that the bundled FFmpeg is the one in use, has MP3 and is
 GPL, `/api/status`, `/`, a packaged vendor file, 8 KiB of MP3 from `/stream`, a
 discovery reply, a clean `--quit`, and that the ports are free afterwards. Then it runs
+the server with web and discovery on one port number (the default configuration),
 the first-run flow by clicking the real setup page, the busy-port flow and the
-missing-FFmpeg flow. It exits non-zero if any check fails.
+missing-FFmpeg flow. It exits non-zero if any check fails. The tests use 4680 and 4681
+so they never touch a server on the default port; CI also passes `--default-ports` to run
+the app once with the server's own defaults (4005).
 
 ### Continuous integration
 
