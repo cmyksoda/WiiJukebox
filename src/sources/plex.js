@@ -1,21 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-const { Source } = require('./base');
-const { queueStart } = require('./queue');
+const { QueueSource } = require('./queue');
 
-class PlexSource extends Source {
+class PlexSource extends QueueSource {
     static id = 'plex';
     static label = 'Plex';
     static family = 'pull';
 
-    constructor(config = {}, deps = {}) {
-        super(config, deps);
-        this._queue = [];
-        this._index = -1;
-    }
-
     get capabilities() {
-        return { play: true, pause: true, stop: true, browse: true, search: true,
-            queue: true, next: this._index + 1 < this._queue.length, previous: this._index > 0 };
+        return { play: true, pause: true, stop: true, browse: true, search: true, ...this.queueCapabilities };
     }
 
     _url(path) {
@@ -114,13 +106,12 @@ class PlexSource extends Source {
             }
         } else queue.push(item);
         if (!queue.length) throw new Error('no audio in this selection');
-        this._queue = queue;
-        this._index = queueStart(queue, item);
-        return this._openCurrent();
+        this._queue.load(queue, item);
+        return this._openQueueItem();
     }
 
-    async _openCurrent() {
-        const ref = this._queue[this._index];
+    async _openQueueItem() {
+        const ref = this._queue.current;
         const id = ref?.id.replace(/^track\//, '');
         if (!/^\d+$/.test(id || '')) throw new Error('invalid Plex track');
         const res = await this._call(`/library/metadata/${id}`);
@@ -161,17 +152,7 @@ class PlexSource extends Source {
 
     async reportStopped(track, { position }) { await this._timeline(track, 'stopped', position); }
 
-    async advance(step = 1) {
-        const next = this._index + step;
-        if (next < 0 || next >= this._queue.length) return null;
-        const previous = this._index;
-        this._index = next;
-        try { return await this._openCurrent(); }
-        catch (err) { this._index = previous; throw err; }
-    }
-    async next() { return this.advance(1); }
-    async previous() { return this.advance(-1); }
-    async close() { this._queue = []; this._index = -1; this._setState('ready'); }
+    async close() { this._queue.clear(); this._setState('ready'); }
     async disconnect() { await this.close(); this._setState('idle'); }
 }
 

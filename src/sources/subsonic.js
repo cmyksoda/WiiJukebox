@@ -10,23 +10,20 @@
 // the browsing happens in our WebUI instead.
 
 const crypto = require('crypto');
-const { Source } = require('./base');
-const { queueStart } = require('./queue');
+const { QueueSource } = require('./queue');
 
 // Version we claim to speak. 1.16.1 is the last Subsonic spec release and what
 // Navidrome targets; asking for more just gets rejected by older servers.
 const API_VERSION = '1.16.1';
 const CLIENT_NAME = 'WiiJukebox';
 
-class SubsonicSource extends Source {
+class SubsonicSource extends QueueSource {
     static id = 'subsonic';
     static label = 'Navidrome / Subsonic';
     static family = 'pull';
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
-        this._queue = [];
-        this._queueIndex = -1;
         this._current = null;
     }
 
@@ -35,12 +32,10 @@ class SubsonicSource extends Source {
             play: true,
             pause: true,
             stop: true,
-            next: this._queueIndex + 1 < this._queue.length,
-            previous: this._queueIndex > 0,
             seek: true,
             browse: true,
             search: true,
-            queue: true,
+            ...this.queueCapabilities,
         };
     }
 
@@ -301,21 +296,20 @@ class SubsonicSource extends Source {
             const songs = kind === 'album' ? response.album?.song : response.playlist?.entry;
             // Browsing is paged; a play-container action must still queue every
             // track, in the order supplied by Navidrome.
-            this._queue = (songs || []).map((song) => this._trackItem(song));
-            if (!this._queue.length) throw new Error('nothing playable in that selection');
-            this._queueIndex = queueStart(this._queue, ref);
+            const tracks = (songs || []).map((song) => this._trackItem(song));
+            if (!tracks.length) throw new Error('nothing playable in that selection');
+            this._queue.load(tracks, ref);
             return this._openQueueItem();
         }
 
         // A bare track still forms a queue of one so the control layer has a
         // consistent shape to work with.
-        this._queue = [ref];
-        this._queueIndex = 0;
+        this._queue.load([ref]);
         return this._openQueueItem();
     }
 
     _openQueueItem() {
-        const track = this._queue[this._queueIndex];
+        const track = this._queue.current;
         if (!track) throw new Error('queue exhausted');
         this._current = track;
 
@@ -353,34 +347,13 @@ class SubsonicSource extends Source {
         await this._call('scrobble.view', { id: track.id, time: startedAt, submission: 'true' });
     }
 
-    /** Advance the queue. Returns the next handle, or null at the end. */
-    async advance(step = 1) {
-        const next = this._queueIndex + step;
-        if (next < 0 || next >= this._queue.length) return null;
-        this._queueIndex = next;
-        return this._openQueueItem();
-    }
-
-    async next() {
-        return this.advance(1);
-    }
-
-    async previous() {
-        return this.advance(-1);
-    }
-
-    get queue() {
-        return { items: this._queue, index: this._queueIndex };
-    }
-
     async disconnect() {
         await this.close();
         this._setState('idle');
     }
 
     async close() {
-        this._queue = [];
-        this._queueIndex = -1;
+        this._queue.clear();
         this._current = null;
         this._setState('ready');
     }

@@ -24,9 +24,8 @@
 const { spawn } = require('child_process');
 
 const YOUTUBE_URL = /^https?:\/\/([a-z0-9-]+\.)?(youtube\.com|youtu\.be)\//i;
-const { Source } = require('./base');
 const { splitTitle } = require('./radio');
-const { queueStart } = require('./queue');
+const { QueueSource } = require('./queue');
 
 // How many results a search asks for. Enough to be useful, small enough that
 // the flat listing comes back in a couple of seconds.
@@ -60,15 +59,13 @@ const DEFAULT_BINARY = 'yt-dlp';
 // /best is the fallback for sites that only publish muxed formats.
 const DEFAULT_FORMAT = 'bestaudio/best';
 
-class YtdlpSource extends Source {
+class YtdlpSource extends QueueSource {
     static id = 'ytdlp';
     static label = 'YouTube / SoundCloud';
     static family = 'pull';
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
-        this._queue = [];
-        this._queueIndex = -1;
         this._current = null;
         this._version = null;
         // Every live child process, so close() can kill an extraction that is
@@ -85,15 +82,13 @@ class YtdlpSource extends Source {
     }
 
     get capabilities() {
-        const queued = this._queue.length > 1;
         return {
             play: true,
             pause: true,
             stop: true,
-            next: queued,
-            previous: queued,
             browse: true,
             search: true,
+            ...this.queueCapabilities,
             queue: this._queue.length > 0,
             // The pipeline reports seek itself: finite videos reopen their
             // resolved URL at an offset, while live streams cannot seek.
@@ -275,16 +270,14 @@ class YtdlpSource extends Source {
 
     async disconnect() {
         this._killAll();
-        this._queue = [];
-        this._queueIndex = -1;
+        this._queue.clear();
         this._current = null;
         this._setState('idle');
     }
 
     async close() {
         this._killAll();
-        this._queue = [];
-        this._queueIndex = -1;
+        this._queue.clear();
         this._current = null;
         this._setState('ready');
     }
@@ -433,25 +426,23 @@ class YtdlpSource extends Source {
                 );
             }
 
-            this._queue = this._decoratePlaylist(info, entries
-                .slice(0, MAX_QUEUE)
-                .map((entry) => this._itemFor(entry, entryUrl(entry))));
             // A track picked inside a list (e.g. from the Wii) starts there.
-            this._queueIndex = typeof item === 'object' ? queueStart(this._queue, item) : 0;
+            this._queue.load(this._decoratePlaylist(info, entries
+                .slice(0, MAX_QUEUE)
+                .map((entry) => this._itemFor(entry, entryUrl(entry)))), item);
             return this._openQueueItem();
         }
 
         // A single item: the probe resolved the media URL already, so there is
         // no second round trip to make.
         const track = this._itemFor(info, target);
-        this._queue = [track];
-        this._queueIndex = 0;
+        this._queue.load([track]);
         return this._handleFor(info, track);
     }
 
     /** Resolve the current queue entry and hand the pipeline its audio. */
     async _openQueueItem(depth = 0) {
-        const track = this._queue[this._queueIndex];
+        const track = this._queue.current;
         if (!track) throw new Error('queue exhausted');
 
         // Resolved late, one at a time: see the note at the top of this file.
@@ -474,8 +465,7 @@ class YtdlpSource extends Source {
             if (!nested.length) {
                 throw new Error(`${track.title || 'that link'}: nothing playable inside`);
             }
-            this._queue.splice(this._queueIndex, 1, ...nested);
-            if (this._queue.length > MAX_QUEUE) this._queue.length = MAX_QUEUE;
+            this._queue.expandCurrent(nested, MAX_QUEUE);
             return this._openQueueItem(depth + 1);
         }
 
@@ -504,38 +494,24 @@ class YtdlpSource extends Source {
         };
     }
 
-    /** Advance the queue. Returns the next handle, or null at the end. */
-    async advance(step = 1) {
-        const next = this._queueIndex + step;
-        if (next < 0 || next >= this._queue.length) return null;
-        this._queueIndex = next;
-
-        // One dead video should not end the album. Skip past what will not
-        // resolve, in whichever direction we were already travelling.
-        const direction = step >= 0 ? 1 : -1;
-        for (;;) {
+    /**
+     * One dead video should not end the album. Skip past what will not
+     * resolve, in whichever direction we were already travelling, trying each
+     * track at most once so a queue of dead links under repeat-all cannot spin.
+     */
+    async _move(step) {
+        const onward = step === 'previous' ? 'previous' : 'next';
+        let moved = this._queue[step]();
+        for (let tried = 1; moved; tried++) {
             try {
                 return await this._openQueueItem();
             } catch (err) {
-                const failed = this._queue[this._queueIndex];
+                const failed = this._queue.current;
                 this._warn(`skipping ${failed ? failed.title : 'a track'}: ${err.message}`);
-                const after = this._queueIndex + direction;
-                if (after < 0 || after >= this._queue.length) return null;
-                this._queueIndex = after;
+                moved = tried < this._queue.length && this._queue[onward]();
             }
         }
-    }
-
-    async next() {
-        return this.advance(1);
-    }
-
-    async previous() {
-        return this.advance(-1);
-    }
-
-    get queue() {
-        return { items: this._queue, index: this._queueIndex };
+        return null;
     }
 }
 

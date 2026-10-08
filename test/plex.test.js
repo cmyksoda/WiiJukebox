@@ -41,7 +41,7 @@ test('Plex music browsing, paged queues, search, headers and token containment',
         assert.equal(await source.next(), null);
         assert.ok(await source.previous());
         await source.open({ type: 'album', id: 'album/20', startId: 'track/31', startIndex: 1 });
-        assert.equal(source._index, 1);
+        assert.equal(source.queue.index, 1);
         assert.equal(source._queue.length, 2);
         assert.equal(await source.next(), null);
         assert.equal((await source.search('Song')).items.length, 1);

@@ -10,21 +10,18 @@
 // makes WiiJukebox appear in that menu.
 
 const crypto = require('crypto');
-const { Source } = require('./base');
-const { queueStart } = require('./queue');
+const { QueueSource } = require('./queue');
 
 const CLIENT_NAME = 'WiiJukebox';
 const CLIENT_VERSION = '0.1.0';
 
-class JellyfinSource extends Source {
+class JellyfinSource extends QueueSource {
     static id = 'jellyfin';
     static label = 'Jellyfin';
     static family = 'pull';
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
-        this._queue = [];
-        this._queueIndex = -1;
         this._userId = config.userId || null;
         this._token = config.token || null;
 
@@ -43,12 +40,10 @@ class JellyfinSource extends Source {
             play: true,
             pause: true,
             stop: true,
-            next: this._queue.length > 1,
-            previous: this._queue.length > 1,
             seek: true,
             browse: true,
             search: true,
-            queue: true,
+            ...this.queueCapabilities,
         };
     }
 
@@ -305,18 +300,17 @@ class JellyfinSource extends Source {
 
         if (ref.type === 'album' || ref.type === 'playlist') {
             const { items } = await this.browse({ path: ref.id });
-            this._queue = items.filter((i) => i.type === 'track');
-            if (!this._queue.length) throw new Error('nothing playable in that selection');
-            this._queueIndex = queueStart(this._queue, ref);
+            const tracks = items.filter((i) => i.type === 'track');
+            if (!tracks.length) throw new Error('nothing playable in that selection');
+            this._queue.load(tracks, ref);
         } else {
-            this._queue = [ref];
-            this._queueIndex = 0;
+            this._queue.load([ref]);
         }
         return this._openQueueItem();
     }
 
     _openQueueItem() {
-        const track = this._queue[this._queueIndex];
+        const track = this._queue.current;
         if (!track) throw new Error('queue exhausted');
 
         this._emitMetadata({
@@ -358,28 +352,8 @@ class JellyfinSource extends Source {
         } });
     }
 
-    async advance(step = 1) {
-        const next = this._queueIndex + step;
-        if (next < 0 || next >= this._queue.length) return null;
-        this._queueIndex = next;
-        return this._openQueueItem();
-    }
-
-    async next() {
-        return this.advance(1);
-    }
-
-    async previous() {
-        return this.advance(-1);
-    }
-
-    get queue() {
-        return { items: this._queue, index: this._queueIndex };
-    }
-
     async close() {
-        this._queue = [];
-        this._queueIndex = -1;
+        this._queue.clear();
         this._setState('ready');
     }
 }

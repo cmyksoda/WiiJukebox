@@ -15,7 +15,7 @@ test('queue start preserves duplicate playlist positions and handles changed lis
 test('Jellyfin album selection keeps the queue and starts at the selected track', async () => {
     const source = new JellyfinSource();
     source.browse = async () => ({ items: [{ type: 'track', id: 'one' }, { type: 'track', id: 'two' }] });
-    source._openQueueItem = () => source._queue[source._queueIndex];
+    source._openQueueItem = () => source._queue.current;
     assert.equal((await source.open({ type: 'album', id: 'album/test', startId: 'two', startIndex: 1 })).id, 'two');
     assert.equal(source._queue.length, 2);
     assert.equal((await source.open({ type: 'album', id: 'album/test' })).id, 'one');

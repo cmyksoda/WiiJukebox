@@ -156,7 +156,9 @@ class Source extends EventEmitter {
     async previous() {}
     async seek(_seconds) {}
     async setVolume(_level) {}
+    /** `on` is a boolean; the pipeline calls this before open() and whenever the mode changes. */
     async setShuffle(_on) {}
+    /** `mode` is 'off', 'all' or 'one'. */
     async setRepeat(_mode) {}
 
     // --- Helpers for subclasses ---------------------------------------------
