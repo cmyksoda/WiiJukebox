@@ -20,10 +20,10 @@ function configDir() {
 }
 
 const DEFAULTS = {
-    // Port serving both the WebUI and the audio mount. 4000 matches what the
-    // old bridge used for audio, so existing .pls files keep working.
-    port: 4000,
-    discoveryPort: 4001,
+    // TCP for the WebUI and audio, UDP for discovery: one number, after the
+    // Wii's MX23L4005 chip, so there is just one port to open.
+    port: 4005,
+    discoveryPort: 4005,
 
     // Advertised to the Wii inside the .pls. Detected at boot when unset, but
     // overridable because auto-detection picks the wrong NIC on machines with

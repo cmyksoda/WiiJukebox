@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const dgram = require('node:dgram');
 const { randomUUID } = require('node:crypto');
-const DISCOVERY_PORT = 4001;
+const DISCOVERY_PORT = 4005;
 
 function serverIdentity(config) {
     if (!/^[a-f0-9-]{36}$/.test(config.data.serverId || '')) {

@@ -43,7 +43,7 @@ final class Server {
         String trimmed = text.trim().replaceFirst("^https?://", "").replaceAll("/.*$", "");
         if (trimmed.isEmpty()) return null;
         String host = trimmed;
-        int port = 4000;
+        int port = 4005;
         int colon = trimmed.lastIndexOf(':');
         if (colon > 0 && trimmed.indexOf(':') == colon) {
             host = trimmed.substring(0, colon);

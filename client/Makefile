@@ -9,7 +9,7 @@ CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
 PORTLIBS_PPC := $(DEVKITPRO)/portlibs/ppc
 CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -I$(PORTLIBS_PPC)/include/freetype2 -Ibuild -MMD -MP
-DISCOVERY_PORT ?= 4001
+DISCOVERY_PORT ?= 4005
 # 1 builds the preset tour: presets in order with a counter, for checking them all on hardware.
 # PRESET_DIR embeds only that folder; the label and file name suit a pass that marks keepers.
 PRESET_TOUR ?= 0

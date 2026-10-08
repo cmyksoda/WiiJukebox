@@ -43,8 +43,8 @@ and install over the network from Homebrew Channel with
 `npm ci && npm start`, configure sources in its web UI, then launch the app from
 Homebrew Channel. Do not put upstream service passwords on the SD card.
 
-Allow UDP 4001 and the configured HTTP port (default TCP 4000) on the host's LAN
-interface. Guest Wi-Fi/client isolation or different subnets can block discovery.
+Allow port 4005 on the host's LAN interface, both TCP (the web UI and audio) and
+UDP (discovery). Guest Wi-Fi/client isolation or different subnets can block discovery.
 The prototype supports IPv4. For networks that block broadcast discovery,
 pass an IPv4 address and HTTP port as a launch argument, for example:
 
