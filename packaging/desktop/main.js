@@ -56,6 +56,7 @@ let quitting = false;
 let setupChosen = false;
 let withoutFfmpeg = false;
 let currentPage = 'starting';
+let queue = Promise.resolve();
 const notes = [];
 
 const bg = () => (nativeTheme.shouldUseDarkColors ? '#0d141c' : '#f3f6f9');
@@ -230,7 +231,7 @@ async function startServer() {
         serverUrl = await server.start();
     } catch (err) {
         serverUrl = null;
-        await showStartFailure(err);
+        if (!quitting) await showStartFailure(err);
         return false;
     } finally {
         buildMenus();
@@ -239,8 +240,17 @@ async function startServer() {
     return true;
 }
 
+// Starting and restarting never overlap, so a double click cannot leave two servers fighting over a port.
+function serialized(task) {
+    const run = queue.then(task);
+    queue = run.catch(() => {});
+    return run;
+}
+
+const launch = () => serialized(launchNow);
+
 // Finds the tools, then starts the server and shows whatever comes next: setup, errors or the player.
-async function launch() {
+async function launchNow() {
     tools = await detect(toolDirs(), overrides);
     if (!tools.ffmpeg && !withoutFfmpeg) {
         showMainWindow();
@@ -274,11 +284,11 @@ async function openPlayer() {
     if (serverUrl) await showPlayer();
 }
 
-async function restartServer() {
+const restartServer = () => serialized(async () => {
     await server?.stop();
     serverUrl = null;
-    await launch();
-}
+    await launchNow();
+});
 
 async function beginSetup({ ytdlp, login }) {
     try {

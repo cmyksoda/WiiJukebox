@@ -185,8 +185,11 @@ jobs:
                   Expand-Archive $zip.FullName -DestinationPath "$env:RUNNER_TEMP\portable"
                   node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT --login *>&1 | Tee-Object ../dist/smoke-windows-zip.log
                   $smoke = $LASTEXITCODE
-                  Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run | Format-List WiiJukebox
-                  Remove-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name WiiJukebox -ErrorAction SilentlyContinue
+                  $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+                  foreach ($name in (Get-Item $run).Property) {
+                      $value = (Get-ItemProperty $run).$name
+                      if ($value -like '*WiiJukebox*') { "login item: $name = $value"; Remove-ItemProperty $run -Name $name }
+                  }
                   if ($smoke -ne 0) { exit 1 }
 
             - name: Check the executable's icon and version resources
@@ -214,7 +217,10 @@ jobs:
                   if (-not (Test-Path "$dir\WiiJukebox.exe") -or -not (Test-Path $start)) { throw 'the installer did not install the app and its shortcut' }
                   node scripts/smoke.js "$dir\WiiJukebox.exe" --port $env:SMOKE_PORT --login *>&1 | Tee-Object ../dist/smoke-windows-installed.log
                   $smoke = $LASTEXITCODE
-                  Remove-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name WiiJukebox -ErrorAction SilentlyContinue
+                  $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+                  foreach ($name in (Get-Item $run).Property) {
+                      if ((Get-ItemProperty $run).$name -like '*WiiJukebox*') { Remove-ItemProperty $run -Name $name }
+                  }
                   Start-Process -FilePath "$dir\Uninstall WiiJukebox.exe" -ArgumentList '/S', "_?=$dir" -Wait
                   "uninstalled: $(-not (Test-Path "$dir\WiiJukebox.exe")), start menu shortcut gone: $(-not (Test-Path $start))"
                   if ($smoke -ne 0) { exit 1 }
