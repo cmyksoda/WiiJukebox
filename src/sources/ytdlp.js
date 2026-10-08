@@ -92,11 +92,8 @@ class YtdlpSource extends Source {
             browse: true,
             search: true,
             queue: this._queue.length > 0,
-            // Seek is deliberately absent. Moving within a track would mean
-            // re-resolving the signed URL and handing the pipeline a fresh
-            // handle, which the control endpoint has no way to apply -- it
-            // ignores return values for everything but next/previous. Declaring
-            // it would light up a button that quietly did nothing.
+            // The pipeline reports seek itself: finite videos reopen their
+            // resolved URL at an offset, while live streams cannot seek.
         };
     }
 
@@ -477,7 +474,8 @@ class YtdlpSource extends Source {
         }
 
         this._current = track;
-        this._emitMetadata(metaFor(info, track));
+        const meta = metaFor(info, track);
+        this._emitMetadata(meta);
         this._setState('playing');
 
         return {
@@ -486,6 +484,7 @@ class YtdlpSource extends Source {
             // Several sites, YouTube included, hand back a URL that only works
             // with the user-agent it was issued for.
             headers: info.http_headers || undefined,
+            seekable: meta.duration > 0,
         };
     }
 

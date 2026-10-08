@@ -133,7 +133,7 @@ class PlexSource extends Source {
         this._emitMetadata({ title: meta.title, artist: meta.artist, album: meta.album,
             duration: meta.duration, artwork: null });
         this._setState('playing');
-        return { type: 'uri', uri, headers: { 'X-Plex-Token': this.config.token } };
+        return { type: 'uri', uri, headers: { 'X-Plex-Token': this.config.token }, seekable: true };
     }
 
     async advance(step = 1) {

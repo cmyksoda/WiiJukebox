@@ -149,11 +149,11 @@ class Pacer extends EventEmitter {
      * source detaches so the next source doesn't inherit its leftover audio --
      * without this you'd hear a fragment of the previous track after switching.
      */
-    reset() {
+    reset(positionSeconds = 0) {
         this._chunks = [];
         this._buffered = 0;
         this._priming = true;
-        this._playedBytes = 0;
+        this._playedBytes = alignToFrame(Math.round(positionSeconds * BYTES_PER_SECOND));
     }
 
     finishInput() {

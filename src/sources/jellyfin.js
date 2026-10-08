@@ -339,6 +339,7 @@ class JellyfinSource extends Source {
             type: 'uri',
             uri: url.toString(),
             headers: { Authorization: this._authHeader() },
+            seekable: true,
         };
     }
 

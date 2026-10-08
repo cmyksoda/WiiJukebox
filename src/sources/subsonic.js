@@ -37,7 +37,7 @@ class SubsonicSource extends Source {
             stop: true,
             next: this._queueIndex + 1 < this._queue.length,
             previous: this._queueIndex > 0,
-            seek: false,
+            seek: true,
             browse: true,
             search: true,
             queue: true,
@@ -332,6 +332,7 @@ class SubsonicSource extends Source {
                 format: 'raw',
                 estimateContentLength: 'true',
             }),
+            seekable: true,
         };
     }
 
