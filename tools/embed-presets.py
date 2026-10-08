@@ -7,6 +7,10 @@ root = Path(__file__).resolve().parents[1]
 files = sorted([*(root / 'client/vendor/projectm/presets').glob('*.milk'),
                 *(root / 'client/vendor/projectm/presets-extra').glob('*.milk')], key=lambda p: p.name)
 assert len({p.name for p in files}) == len(files)
+excluded = {line.strip() for line in (root / 'client/vendor/projectm/excluded-presets.txt').read_text().splitlines()
+            if line.strip() and not line.startswith('#')}
+assert excluded <= {p.name for p in files}, excluded - {p.name for p in files}
+files = [p for p in files if p.name not in excluded]
 out = root / 'client/build/presets.cpp'
 with out.open('w') as f:
     f.write('#include "presets.h"\n#include <cstring>\n')

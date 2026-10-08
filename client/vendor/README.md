@@ -12,7 +12,9 @@ initial exploratory copy from the locally modified WiiRadio workspace.
 
 `projectm/UPSTREAM.json` records the original path and SHA-256 of every imported
 file. `python3 tools/verify-projectm.py` checks that the vendored source and 565
-Milkdrop presets remain byte-identical. The engine subset includes original
+Milkdrop presets remain byte-identical. The build skips the 13 listed in
+`projectm/excluded-presets.txt`, which produce NaN or Inf on a host run of the
+engine; the files themselves stay vendored unchanged. The engine subset includes original
 headers/source in libprojectM, Renderer, MilkdropPresetFactory and omptl, plus
 stb_image_aug and the original LGPL license. No local WiiRadio patches or
 precompiled libraries are used.
