@@ -69,7 +69,14 @@
       "maintainer": "WiiJukebox contributors",
       "vendor": "WiiJukebox contributors",
       "synopsis": "Plays your music to the Wii",
-      "description": "WiiJukebox runs a music server on this computer and plays your library, radio, podcasts and streaming links to a Wii over the local network. This package includes FFmpeg."
+      "description": "WiiJukebox runs a music server on this computer and plays your library, radio, podcasts and streaming links to a Wii over the local network. This package includes FFmpeg.",
+      "desktop": {
+        "entry": {
+          "Comment": "Plays your music to the Wii",
+          "Categories": "AudioVideo;Audio;Player;",
+          "Keywords": "Wii;music;jukebox;stream;radio;podcast;"
+        }
+      }
     },
     "appImage": {
       "artifactName": "WiiJukebox-${version}-linux-x64.${ext}"
@@ -80,7 +87,10 @@
     },
     "rpm": {
       "artifactName": "wiijukebox-${version}-1.${arch}.${ext}",
-      "packageName": "wiijukebox"
+      "packageName": "wiijukebox",
+      "fpm": [
+        "--rpm-rpmbuild-define=_build_id_links none"
+      ]
     },
     "win": {
       "target": [

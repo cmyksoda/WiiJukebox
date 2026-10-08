@@ -185,9 +185,13 @@ jobs:
               if: runner.os == 'Linux'
               run: |
                   docker run --rm --shm-size=1g -v "$PWD:/work:ro" -w /work fedora:latest bash -euo pipefail -c '
-                      dnf install -y -q ./packaging/dist/desktop/wiijukebox-*-1.x86_64.rpm nodejs xorg-x11-server-Xvfb xorg-x11-xauth
+                      dnf install -y -q ./packaging/dist/desktop/wiijukebox-*-1.x86_64.rpm glibc-common
+                      missing=$(ldd /opt/WiiJukebox/wiijukebox | grep "not found" || true)
+                      test -z "$missing" || { echo "libraries the rpm does not pull in:"; echo "$missing"; exit 1; }
+                      echo "every shared library resolves from the rpm dependencies alone"
+                      dnf install -y -q nodejs xorg-x11-server-Xvfb xorg-x11-xauth
                       rpm -qi wiijukebox
-                      rpm -ql wiijukebox | grep -E "applications|hicolor|/opt/WiiJukebox/(wiijukebox|chrome-sandbox)$"
+                      rpm -ql wiijukebox | grep -E "applications|hicolor|build-id|/opt/WiiJukebox/(wiijukebox|chrome-sandbox)$"
                       xvfb-run -a node packaging/desktop/scripts/smoke.js /opt/WiiJukebox/wiijukebox --port 4680 --login
                       dnf remove -y -q wiijukebox
                       test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
