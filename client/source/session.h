@@ -5,6 +5,8 @@
 #include "audio_buffer.h"
 
 #define WJ_ART_SIZE 128
+/* The expanded cover; 72 KiB still fits one response buffer. */
+#define WJ_ART_LARGE 192
 #define WJ_MESSAGE_MS 4000
 
 enum wj_view { WJ_VIEW_SERVERS, WJ_VIEW_SOURCES, WJ_VIEW_BROWSE };
@@ -43,14 +45,17 @@ struct wj_session {
     long long seek_until;
     int volume, busy, audio_running, stream_started, underruns;
     struct wj_audio_state audio;
-    unsigned art_version;
-    int has_art;
+    unsigned art_version, large_art_version;
+    int has_art, has_large_art;
 };
 
 void wj_session_init(int argc, char **argv);
 void wj_session_update(void);
 const struct wj_session *wj_session(void);
 const unsigned char *wj_session_art(void);
+const unsigned char *wj_session_large_art(void);
+/* Ask for the WJ_ART_LARGE cover while the expanded view is open. */
+void wj_session_want_large_art(int want);
 void wj_session_select(int index);
 void wj_session_move(int delta);
 void wj_session_act(enum wj_action action, int argument);

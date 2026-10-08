@@ -72,8 +72,8 @@ pause state; radio, live and desktop sources cannot seek.
 
 The artwork key is an opaque hash of the heard track's artwork URL, which
 often carries provider credentials and never leaves the server. The server
-fetches the image, crops it square with FFmpeg and caches sizes 64, 96, 128 and
-160, so the Wii copies the bytes straight into a texture.
+fetches the image, crops it square with FFmpeg and caches sizes 64, 96, 128,
+160 and 192, so the Wii copies the bytes straight into a texture.
 
 Synchronous errors use HTTP 400 and an `error`, message row. Unknown endpoints
 use 404. Async commands expose “Working...”, “Audio ready”, “Paused”, “Resumed”,

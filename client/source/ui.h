@@ -7,7 +7,7 @@
 enum wj_target {
     WJ_TARGET_NONE, WJ_TARGET_ITEM, WJ_TARGET_PAGE_PREVIOUS, WJ_TARGET_PAGE_NEXT, WJ_TARGET_BACK,
     WJ_TARGET_VISUALIZER, WJ_TARGET_PREVIOUS, WJ_TARGET_PAUSE, WJ_TARGET_NEXT, WJ_TARGET_STOP,
-    WJ_TARGET_SEEK
+    WJ_TARGET_SEEK, WJ_TARGET_ART
 };
 
 struct wj_pointer { int valid; float x, y; };
@@ -22,5 +22,8 @@ int wj_ui_seek_at(const struct wj_session *session, float x);
 /* A previewed seek position shown on the bar, or -1 for none. */
 void wj_ui_seek_preview(int position_ms);
 void wj_ui_volume_changed(void);
+/* Opens or closes the large cover view over the dimmed screen. */
+void wj_ui_show_art(int open);
+int wj_ui_art_open(void);
 int wj_ui_grid_columns(enum wj_view view);
 #endif

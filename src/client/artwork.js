@@ -2,7 +2,7 @@
 const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
 
-const SIZES = [64, 96, 128, 160];
+const SIZES = [64, 96, 128, 160, 192];
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 8000;
 

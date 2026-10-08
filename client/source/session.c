@@ -26,6 +26,7 @@
 
 #define DEPTH 16
 #define ART_BYTES (WJ_ART_SIZE * WJ_ART_SIZE * 2)
+#define LARGE_ART_BYTES (WJ_ART_LARGE * WJ_ART_LARGE * 2)
 
 enum job_kind { JOB_NONE, JOB_DISCOVER, JOB_REDISCOVER, JOB_LIST, JOB_STATUS, JOB_CONTROL, JOB_ART };
 enum network_phase { NETWORK_INIT, NETWORK_IP, NETWORK_LOOKUP, NETWORK_SCAN, NETWORK_CLEANUP };
@@ -43,7 +44,10 @@ static long long next_status, next_discovery, next_rediscovery, next_art;
 /* After a transport command, poll quickly until its jump marker arrives. */
 static long long fast_status_until;
 static char art_key[17], art_loaded[17], art_failed[17], art_request[17];
+static char large_loaded[17], large_failed[17];
+static int art_request_size, want_large;
 static unsigned char art[ART_BYTES] ATTRIBUTE_ALIGN(32);
+static unsigned char art_large[LARGE_ART_BYTES] ATTRIBUTE_ALIGN(32);
 static enum wj_action queued;
 static int queued_argument;
 static const char *const not_responding = "Server not responding; retrying...";
@@ -61,6 +65,8 @@ static enum network_phase network_phase;
 
 const struct wj_session *wj_session(void) { return &S; }
 const unsigned char *wj_session_art(void) { return art; }
+const unsigned char *wj_session_large_art(void) { return art_large; }
+void wj_session_want_large_art(int want) { want_large = want; }
 
 static void copy(char *out, size_t size, const char *in) { snprintf(out, size, "%s", in); }
 /* Transient messages fade after a few seconds; held ones stay until replaced
@@ -395,6 +401,14 @@ static void finish_status(struct wj_document *doc) {
 }
 
 static void finish_art(void) {
+    if (art_request_size == WJ_ART_LARGE) {
+        if (job_result == 200 && job_trace.received == LARGE_ART_BYTES) {
+            memcpy(art_large, reply, LARGE_ART_BYTES);
+            copy(large_loaded, sizeof(large_loaded), art_request);
+            S.large_art_version++;
+        } else copy(large_failed, sizeof(large_failed), art_request);
+        return;
+    }
     if (job_result == 200 && job_trace.received == ART_BYTES) {
         memcpy(art, reply, ART_BYTES);
         copy(art_loaded, sizeof(art_loaded), art_request);
@@ -662,6 +676,14 @@ void wj_session_init(int argc, char **argv) {
     start_job(JOB_DISCOVER, NULL, NULL);
 }
 
+static void request_art(int size) {
+    char path[96];
+    copy(art_request, sizeof(art_request), art_key);
+    art_request_size = size;
+    snprintf(path, sizeof(path), "/api/wii/art?key=%s&size=%d", art_key, size);
+    start_job(JOB_ART, "GET", path);
+}
+
 void wj_session_update(void) {
     finish_job();
     static const char *phases[] = { "Initializing", "Reading IP address", "Looking up server", "Searching", "Cleaning up" };
@@ -671,6 +693,7 @@ void wj_session_update(void) {
     S.discovering = S.busy && job == JOB_DISCOVER;
     long long now = wj_milliseconds();
     if (S.message[0] && !S.message_held && now - S.message_at > WJ_MESSAGE_MS) S.message[0] = 0;
+    S.has_large_art = S.has_art && art_key[0] && !strcmp(art_key, large_loaded);
     update_audio();
     if (S.busy) return;
     if (queued) {
@@ -700,10 +723,9 @@ void wj_session_update(void) {
         art_loaded[0] = 0;
         S.art_version++;
     } else if (art_key[0] && strcmp(art_key, art_loaded) && (strcmp(art_key, art_failed) || now >= next_art)) {
-        char path[96];
-        copy(art_request, sizeof(art_request), art_key);
-        snprintf(path, sizeof(path), "/api/wii/art?key=%s&size=%d", art_key, WJ_ART_SIZE);
-        start_job(JOB_ART, "GET", path);
+        request_art(WJ_ART_SIZE);
+    } else if (want_large && S.has_art && strcmp(art_key, large_loaded) && strcmp(art_key, large_failed)) {
+        request_art(WJ_ART_LARGE);
     }
 }
 
