@@ -5,5 +5,5 @@
   <version>0.1.0 prototype</version>
   <release_date>20261008</release_date>
   <short_description>Music from your WiiJukebox server</short_description>
-  <long_description>Native LAN client prototype. Discovers WiiJukebox servers, browses configured music sources and plays their persistent MP3 stream. Press 2 for the upstream WiiRadio projectM visualizer; B returns to browsing. Set up services in the server web UI first. Same LAN required; allow UDP 4001 and the server HTTP port. GPLv3. Music playback tested on Wii; projectM integration is experimental.</long_description>
+  <long_description>Native LAN client prototype. Discovers WiiJukebox servers, browses configured music sources and plays their persistent MP3 stream. Press 2 for the projectM visualizer; B returns to browsing. Set up services in the server web UI first. Same LAN required; allow UDP 4001 and the server HTTP port. GPLv3. Music playback and projectM tested on Wii; this client is experimental.</long_description>
 </app>

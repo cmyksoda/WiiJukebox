@@ -47,6 +47,20 @@ playing the container reference starts at the beginning. Repeated playlist track
 prefer the saved position. If the list changed, the server finds the selected ID
 again or reports that it disappeared. Standalone tracks keep a single-item queue.
 
+The native client's status request adds `audible=1`, `epoch`, `byte` and `played`.
+`byte` is the absolute encoded byte position of its first decoded MP3 frame in
+the current decoder run; `played` is ASND playback milliseconds mapped back to
+the 44.1 kHz stream, excluding initial/underrun output padding. The audio response
+provides `X-WiiJukebox-Epoch` and `X-WiiJukebox-Byte-Start` (the burst's first byte).
+CBR byte positions map through the advertised bitrate. Encoder restarts rotate
+the epoch and reconnect listeners, preventing a stale cursor from matching a
+new encoder run. Missing/unready or mismatched clocks return `queued` with zero
+position while a selection is active. Playback states also include `buffering`.
+
+The server retains a bounded PCM timeline and accounts for the tagless MP3
+codec delay. Old clients omitting `audible` still receive server-side progress.
+This does not add bytes to the MP3 body or change ICY framing.
+
 Synchronous errors use HTTP 400 and an `error`, message row. Unknown endpoints
 use 404. Async commands expose “Working...”, “Audio ready”, “Paused”, “Resumed”,
 “Stopped”, “End of queue” or an error in

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Embed WiiRadio's preset collection so wiiload needs no companion SD files."""
+"""Embed the projectM preset collection so wiiload needs no companion SD files."""
 from pathlib import Path
 import json
 root = Path(__file__).resolve().parents[1]

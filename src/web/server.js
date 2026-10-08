@@ -156,8 +156,7 @@ class WebServer {
             '',
         ].join('\r\n');
 
-        // WiiRadio lists .pls files by filename, so this becomes the entry the
-        // user sees on the Wii. Strip what FAT32 rejects.
+        // Keep exported playlist filenames compatible with FAT32.
         const filename = `${safe(name).replace(/[\\/:*?"<>|]/g, '') || 'stream'}.pls`;
 
         res.writeHead(200, {

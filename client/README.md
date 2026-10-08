@@ -53,7 +53,11 @@ different server. Source settings and favorites remain on the host.
 The audio worker keeps a 64 KiB compressed buffer and starts decoding after
 32 KiB (about two seconds at 128 kbps). The decoder reads memory instead of
 waiting for the network. If it runs dry, playback refills before restarting.
-The bottom row shows buffered KiB and refill count. Navigation movement stays
+The bottom rows show buffered seconds, audio restart count, and transient status.
+An audio restart means the decoder stopped and needed recovery; this does not
+count ordinary background top-ups, or every possible output underrun. Short
+network gaps get a bounded 50 ms wait before the decoder treats them as EOF.
+Navigation movement stays
 responsive during requests; open/back and transport presses wait for the current
 request to finish. Curly quotes and dashes are converted for the ASCII font.
 
@@ -120,7 +124,7 @@ from devkitPro when distributing a linked binary.
 
 ## projectM visualizer
 
-Press **2** to toggle the upstream WiiRadio projectM GX renderer. **B** returns
+Press **2** to toggle the projectM GX renderer. **B** returns
 to the browser. Volume and B+transport work in either view; browser selection
 and page controls are inactive while the visualizer is visible. Presets are
 embedded, so no extra SD assets are needed when using wiiload. Random presets
@@ -135,7 +139,10 @@ stream buffering can still delay what reaches the speakers. Old completion
 messages do not repeatedly replace browser messages.
 
 An ASCII progress bar above HOME shows elapsed and total time; unknown durations
-use `--:--`. Position counts source PCM drained by the server, excludes pause
-and underrun silence, and resets on track changes. It can lead audible Wii
-playback by the stream buffering delay (initially about two seconds); it is
-not a speaker-side clock.
+use `--:--`. The native client sends its first decoded MP3 byte position and
+ASND-consumed sample time with status requests. The server maps that cursor onto
+its PCM timeline, including pauses, source changes and silence. This accounts for
+the compressed buffer, decoder read-ahead and initial output silence. A selected
+track waiting behind buffered audio reads `Queued`, then `Playing` when reached.
+The display updates once per second and does not measure downstream TV latency.
+The native stream format remains 44.1 kHz stereo MP3, resampled to 48 kHz ASND.

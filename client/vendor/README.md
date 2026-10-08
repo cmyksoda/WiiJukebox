@@ -41,9 +41,20 @@ performance.
 ## libogc audio tap
 
 `libogc/mp3player.c` is from devkitPro/libogc tag `v3.1.0`, matching the installed
-library. Its two marked additions include the PCM snapshot header and publish
-already-synthesized samples immediately after `mad_synth_frame`; decoding,
-resampling and ASND output are otherwise unchanged. This avoids synthesizing
-the same MP3 twice merely to drive the visualizer. `libogc/LICENSE` is retained.
+library. Marked additions publish already-synthesized PCM for visualization and
+pair the first decoded MP3 byte position with ASND's sample counter for playback
+timing. Output blocks are zero-padded when short instead of repeating stale
+samples; padding is excluded from the playback clock. Decoder and resampler
+algorithms are unchanged. This avoids synthesizing the same MP3 twice merely to
+drive the visualizer. `libogc/LICENSE` is retained.
 
 Source: https://github.com/devkitPro/libogc/blob/v3.1.0/libmad/mp3player.c
+
+## Original project and asset credits
+
+Built on the work of Scanff, Knarrff and everyone else who worked on
+[WiiRadio](https://github.com/scanff/wiiradio).
+
+The lightning bolt/radio tower icon and the WebUI background were designed by
+TiMeBoMb of the original team. Wii Sans font by
+[NotSoArtisty](https://www.deviantart.com/notsoartisty/art/Wii-Sans-v2-824335667).

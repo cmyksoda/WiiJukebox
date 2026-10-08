@@ -113,7 +113,7 @@ int wj_receive(int fd, void *buffer, int size, int timeout_ms) {
 }
 
 static int open_http(const struct wj_server *server, const char *method, const char *path,
-                     int *status, int *content_length, struct wj_http_trace *trace) {
+                     int *status, int *content_length, struct wj_http_trace *trace, struct wj_stream_clock *clock) {
     struct sockaddr_in addr;
     trace->stage = WJ_HTTP_SOCKET;
     int error = -EINVAL;
@@ -188,6 +188,23 @@ static int open_http(const struct wj_server *server, const char *method, const c
         if (headers[i] >= 'A' && headers[i] <= 'Z') headers[i] += 'a' - 'A';
     }
     if (strstr(headers, "\r\ntransfer-encoding:") || strstr(headers, "\r\nicy-metaint:")) goto fail;
+    if (clock) {
+        *clock = (struct wj_stream_clock){ .byte_start = -1, .bitrate = 128 };
+        const char *names[] = { "\r\nx-wiijukebox-byte-start:", "\r\nx-wiijukebox-epoch:", "\r\nicy-br:" };
+        for (int i = 0; i < 3; i++) {
+            const char *header = strstr(headers, names[i]);
+            if (!header) continue;
+            const char *value = header + strlen(names[i]);
+            char *end;
+            errno = 0;
+            long long parsed = strtoll(value, &end, 10);
+            if (errno || end == value || parsed < 0 || strncmp(end, "\r\n", 2)) goto fail;
+            if (i == 0) clock->byte_start = parsed;
+            else if (i == 1 && parsed > 0 && parsed <= 2147483647) clock->epoch = (int)parsed;
+            else if (i == 2 && parsed > 0 && parsed <= 320) clock->bitrate = (int)parsed;
+            else goto fail;
+        }
+    }
     if (content_length) {
         *content_length = -1;
         char *length_header = strstr(headers, "\r\ncontent-length:");
@@ -211,7 +228,12 @@ fail:
 
 int wj_open(const struct wj_server *server, const char *method, const char *path, int *status) {
     struct wj_http_trace trace = { .expected = -1 };
-    return open_http(server, method, path, status, NULL, &trace);
+    return open_http(server, method, path, status, NULL, &trace, NULL);
+}
+
+int wj_open_audio(const struct wj_server *server, const char *path, int *status, struct wj_stream_clock *clock) {
+    struct wj_http_trace trace = { .expected = -1 };
+    return open_http(server, "GET", path, status, NULL, &trace, clock);
 }
 
 int wj_request(const struct wj_server *server, const char *method, const char *path,
@@ -227,7 +249,7 @@ int wj_request_traced(const struct wj_server *server, const char *method, const 
     if (capacity) body[0] = 0;
     if (capacity < 2) { trace->error = -EINVAL; return trace->error; }
     int status = 0, length = -1;
-    int fd = open_http(server, method, path, &status, &length, trace);
+    int fd = open_http(server, method, path, &status, &length, trace, NULL);
     if (fd < 0) goto done;
     trace->stage = WJ_HTTP_BODY;
     if (length >= 0 && (size_t)length >= capacity) { trace->error = WJ_TOO_LARGE; goto done; }

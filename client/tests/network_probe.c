@@ -61,8 +61,10 @@ int main(int argc, char **argv) {
     CHECK(playing);
     CHECK(!strcmp(doc.rows[0].field[1], !strcmp(source, "subsonic") ? "Tone 01" : "Fixture station"));
     int status = 0;
-    int fd = wj_open(server, "GET", server->mount, &status);
+    struct wj_stream_clock clock;
+    int fd = wj_open_audio(server, server->mount, &status, &clock);
     CHECK(fd >= 0 && status == 200);
+    CHECK(clock.epoch > 0 && clock.byte_start >= 0 && clock.bitrate == 128);
     CHECK(wj_audio_start(fd) == 0);
     FILE *file = fopen(argv[2], "wb");
     CHECK(file);

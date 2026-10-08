@@ -5,8 +5,8 @@
 // encoder ever restarting -- it never sees a format change, so its MP3 output
 // stays one unbroken stream from boot until shutdown.
 //
-// 44.1 kHz stereo s16le is chosen because it is what WiiRadio's decoder expects
-// on the far end, so no resampling happens after the encoder.
+// Server PCM uses 44.1 kHz stereo s16le. The native client subsequently
+// resamples decoded audio to 48 kHz stereo for ASND.
 
 const SAMPLE_RATE = 44100;
 const CHANNELS = 2;
@@ -16,7 +16,7 @@ const BYTES_PER_SAMPLE = 2; // s16le
 const FRAME_BYTES = CHANNELS * BYTES_PER_SAMPLE; // 4
 const BYTES_PER_SECOND = SAMPLE_RATE * FRAME_BYTES; // 176400
 
-// MP3 side, matching what the old bridge produced and WiiRadio was happy with.
+// Default output rate, not a decoder limit.
 const MP3_BITRATE_KBPS = 128;
 
 // ffmpeg arguments describing the PCM interchange format, as an *input*.

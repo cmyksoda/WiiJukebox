@@ -16,10 +16,12 @@ struct wj_http_trace {
 };
 const char *wj_http_stage_name(enum wj_http_stage stage);
 struct wj_server { char ip[16], id[37], name[128], mount[256]; int port; };
+struct wj_stream_clock { long long byte_start; int epoch, bitrate; };
 long long wj_milliseconds(void);
 int wj_discover(struct wj_server *servers, int capacity, const char *target, int port);
 int wj_lookup(struct wj_server *server, const char *endpoint);
 int wj_open(const struct wj_server *server, const char *method, const char *path, int *status);
+int wj_open_audio(const struct wj_server *server, const char *path, int *status, struct wj_stream_clock *clock);
 int wj_receive(int fd, void *buffer, int size, int timeout_ms);
 void wj_close(int fd);
 int wj_request(const struct wj_server *server, const char *method, const char *path,

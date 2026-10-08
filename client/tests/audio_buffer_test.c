@@ -44,12 +44,19 @@ int main(void) {
         usleep(2000);
     }
     assert(gaps > 0);
+    assert(wj_audio_state().consumed == TOTAL);
     pthread_join(writer, NULL);
     wj_audio_stop();
 
     assert(!socketpair(AF_UNIX, SOCK_STREAM, 0, sockets));
     assert(!wj_audio_start(sockets[0]));
     usleep(10000);
+    unsigned char sample;
+    long long wait_start = wj_milliseconds();
+    assert(wj_audio_read_wait(&sample, 1, 50) == 0);
+    assert(wj_milliseconds() - wait_start >= 50 && wj_milliseconds() - wait_start < 200);
+    assert(write(sockets[1], "x", 1) == 1);
+    assert(wj_audio_read_wait(&sample, 1, 100) == 1 && sample == 'x');
     long long start = wj_milliseconds();
     wj_audio_stop();
     assert(wj_milliseconds() - start < 500);

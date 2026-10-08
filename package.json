@@ -1,7 +1,7 @@
 {
   "name": "wiijukebox",
   "version": "0.1.0",
-  "description": "One persistent audio stream for WiiRadio, fed from any source you like",
+  "description": "A Wii music player and server for your library, radio and streaming links",
   "main": "src/main.js",
   "license": "GPL-3.0-only",
   "engines": {

@@ -21,6 +21,7 @@ static pthread_t thread;
 static unsigned char bytes[WJ_AUDIO_CAPACITY];
 static int read_pos, used, stopping, ended, failed;
 static int socket_fd = -1, active;
+static long long consumed;
 
 static void *receive_audio(void *unused) {
     (void)unused;
@@ -67,6 +68,7 @@ int wj_audio_start(int fd) {
 #endif
     LOCK();
     read_pos = used = stopping = ended = failed = 0;
+    consumed = 0;
     socket_fd = fd;
     UNLOCK();
 #ifdef GEKKO
@@ -104,13 +106,27 @@ int wj_audio_read(void *buffer, int size) {
     memcpy((unsigned char *)buffer + first, bytes, n - first);
     read_pos = (read_pos + n) % WJ_AUDIO_CAPACITY;
     used -= n;
+    consumed += n;
     UNLOCK();
     return n;
 }
 
+int wj_audio_read_wait(void *buffer, int size, int wait_ms) {
+    long long deadline = wj_milliseconds() + wait_ms;
+    for (;;) {
+        int n = wj_audio_read(buffer, size);
+        if (n || size <= 0) return n;
+        LOCK();
+        int done = stopping || ended;
+        UNLOCK();
+        if (done || wj_milliseconds() >= deadline) return 0;
+        usleep(2000);
+    }
+}
+
 struct wj_audio_state wj_audio_state(void) {
     LOCK();
-    struct wj_audio_state state = { used, ended, failed };
+    struct wj_audio_state state = { used, ended, failed, consumed };
     UNLOCK();
     return state;
 }

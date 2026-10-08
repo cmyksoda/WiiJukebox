@@ -4,7 +4,7 @@
 // radio stream arrives at roughly real time, a local file decodes far faster
 // than real time, an AirPlay receiver arrives in bursts. The encoder, meanwhile,
 // must be fed at exactly real time forever, because the moment it runs dry or
-// gets overrun the MP3 stream hiccups and WiiRadio drops the connection.
+// gets overrun the MP3 stream hiccups and listeners may drop the connection.
 //
 // So everything funnels through here: push() fills a buffer, and a timer drains
 // exactly BYTES_PER_SECOND into the encoder no matter what. When the buffer runs
@@ -224,14 +224,16 @@ class Pacer extends EventEmitter {
             if (head.length <= remaining) {
                 this._chunks.shift();
                 this._buffered -= head.length;
-                this._write(head);
+                this._write(head, { audio: true, position: this.position });
+                this._playedBytes += head.length;
                 remaining -= head.length;
             } else {
                 // Split mid-chunk, but only ever on a frame boundary -- slicing
                 // between the two bytes of a sample would inject a click.
                 const take = alignToFrame(remaining);
                 if (take < FRAME_BYTES) break;
-                this._write(head.subarray(0, take));
+                this._write(head.subarray(0, take), { audio: true, position: this.position });
+                this._playedBytes += take;
                 this._chunks[0] = head.subarray(take);
                 this._buffered -= take;
                 remaining -= take;
@@ -239,7 +241,6 @@ class Pacer extends EventEmitter {
         }
 
         const played = wanted - remaining;
-        this._playedBytes += played;
         return played;
     }
 
@@ -247,7 +248,7 @@ class Pacer extends EventEmitter {
         let remaining = alignToFrame(bytes);
         while (remaining > 0) {
             const take = Math.min(remaining, this._silence.length);
-            this._write(this._silence.subarray(0, take));
+            this._write(this._silence.subarray(0, take), { audio: false, position: this.position });
             remaining -= take;
         }
     }

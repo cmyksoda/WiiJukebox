@@ -43,6 +43,8 @@ class Encoder extends EventEmitter {
         return Boolean(this._proc && !this._proc.killed);
     }
 
+    get bitrate() { return this._bitrate; }
+
     get writable() {
         return this._writable;
     }
@@ -57,9 +59,8 @@ class Encoder extends EventEmitter {
             '-i', 'pipe:0',
             '-c:a', 'libmp3lame',
             '-b:a', `${this._bitrate}k`,
-            // CBR keeps the bitrate the Wii was told about honest. WiiRadio shows
-            // icy-br in its UI and sizes its buffer from it, so a VBR stream that
-            // drifts above the advertised rate makes it underrun.
+            // CBR keeps the advertised bitrate and byte-based stream clock accurate.
+            // Listeners also use icy-br to estimate their buffered duration.
             '-abr', '0',
             '-reservoir', '0',
             // Nothing downstream reads ID3, and a tag mid-bitstream would just be

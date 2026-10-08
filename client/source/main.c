@@ -22,6 +22,7 @@
 #include "pcm_snapshot.h"
 #include "visualizer.h"
 #include "progress.h"
+#include "playback_clock.h"
 #include "discovery_port.h"
 
 #if WJ_DISCOVERY_PORT < 1 || WJ_DISCOVERY_PORT > 65535
@@ -47,6 +48,7 @@ static int volume = 160;
 static int stream_fd = -1;
 static int stream_started;
 static int audio_buffered, audio_underruns;
+static struct wj_stream_clock stream_clock, job_clock;
 static int storage;
 static long long next_status, next_stream, next_discovery;
 static int stream_failures;
@@ -63,7 +65,7 @@ static int cancel_discovery, network_attempt;
 static long long discovery_started, job_started;
 static struct wj_http_trace job_trace;
 static int pending_command;
-static char previous_lines[26][73];
+static char previous_lines[28][73];
 enum network_phase { NETWORK_INIT, NETWORK_IP, NETWORK_LOOKUP, NETWORK_SCAN, NETWORK_CLEANUP };
 static enum network_phase network_phase;
 static int job_init_deadline;
@@ -156,7 +158,7 @@ static void *run_job(void *unused) {
         }
     } else if (job == JOB_STREAM) {
         int status = 0;
-        result = wj_open(&server, "GET", server.mount, &status);
+        result = wj_open_audio(&server, server.mount, &status, &job_clock);
         if (result >= 0 && status != 200) { wj_close(result); result = -1; }
     } else {
         result = wj_request_traced(&server, job_method, job_path, reply, sizeof(reply), &job_trace);
@@ -177,7 +179,7 @@ static void start_job(enum job_kind kind, const char *method, const char *path) 
         network_attempt++;
         discovery_started = wj_milliseconds();
         copy(network_status, sizeof(network_status), "Initializing network...");
-        copy(message, sizeof(message), "Connecting. 1: restart attempt | HOME: exit");
+        copy(message, sizeof(message), "Connecting...");
     }
     job = kind;
     job_started = wj_milliseconds();
@@ -220,7 +222,7 @@ static s32 audio_read(void *unused, void *buffer, s32 size) {
     int stop = exiting;
     LWP_MutexUnlock(mutex);
     if (stop) return 0;
-    return wj_audio_read(buffer, size);
+    return wj_audio_read_wait(buffer, size, 50);
 }
 
 static void stop_audio(void) {
@@ -256,16 +258,17 @@ static void finish_job(void) {
                 return;
             }
         }
-        if (count) copy(message, sizeof(message), "A: choose server   1: scan again");
+        if (count) message[0] = 0;
         else if (job_result < 0) snprintf(message, sizeof(message),
             "Network/discovery error %d. 1: retry", job_result);
-        else copy(message, sizeof(message), "No server found on your network. 1: search again");
+        else copy(message, sizeof(message), "No server found on your network.");
         return;
     }
     if (job == JOB_STREAM) {
         log_event("stream result=%d elapsed_ms=%lld", job_result, wj_milliseconds() - job_started);
         stream_fd = job_result;
         if (stream_fd >= 0) {
+            stream_clock = job_clock;
             if (wj_audio_start(stream_fd) < 0) {
                 wj_close(stream_fd);
                 stream_fd = -1;
@@ -294,7 +297,7 @@ static void finish_job(void) {
         if (!wj_document(reply, &doc) && doc.count && doc.rows[0].count >= 2 &&
             !strcmp(doc.rows[0].field[0], "error")) {
             copy(message, sizeof(message), doc.rows[0].field[1]);
-        } else snprintf(message, sizeof(message), "Request %s failed (%d); 1: retry, B: back",
+        } else snprintf(message, sizeof(message), "Request %s failed (%d)",
                         wj_http_stage_name(job_trace.stage), job_result);
         return;
     }
@@ -338,18 +341,18 @@ static void finish_job(void) {
     }
     if (wj_menu_parse(&doc, screen == 1, location.offset, &menu)) {
         log_event("menu rejected screen=%d rows=%d offset=%d", screen, doc.count, location.offset);
-        copy(message, sizeof(message), "Invalid list reply; 1: retry, B: back");
+        copy(message, sizeof(message), "Invalid list reply");
         return;
     }
     count = menu.count;
     total = menu.total;
     log_event("menu accepted screen=%d rows=%d items=%d total=%d", screen, doc.count, count, total);
     selected = location.selected < count ? location.selected : 0;
-    if (count) copy(message, sizeof(message), "A: open/play  B: back  2: visualizer");
-    else if (screen == 1) copy(message, sizeof(message), "No configured sources; 1: refresh, B: servers");
+    if (count) message[0] = 0;
+    else if (screen == 1) copy(message, sizeof(message), "No configured sources");
     else if (!strcmp(source, "radio") || !strcmp(source, "ytdlp"))
-        copy(message, sizeof(message), "No saved entries. Add them in the web UI; B: back");
-    else copy(message, sizeof(message), "This folder is empty; 1: refresh, B: back");
+        copy(message, sizeof(message), "No saved entries. Add them in the web UI.");
+    else copy(message, sizeof(message), "This folder is empty.");
 }
 
 static void play_item(int whole_list) {
@@ -359,12 +362,14 @@ static void play_item(int whole_list) {
         ref = location.ref;
     else if (whole_list && strcmp(menu.items[selected].type, "album") &&
              strcmp(menu.items[selected].type, "playlist")) {
-        copy(message, sizeof(message), "Choose an album or playlist first; A plays a track");
+        copy(message, sizeof(message), "Choose an album or playlist first.");
         return;
     }
     char path[256];
     snprintf(path, sizeof(path), "/api/wii/play?source=%s&ref=%s", source, ref);
     copy(message, sizeof(message), "Starting selection...");
+    copy(play_state, sizeof(play_state), "queued");
+    position_ms = 0;
     start_job(JOB_CONTROL, "POST", path);
 }
 
@@ -410,7 +415,7 @@ static void draw_line(int row, const char *format, ...) {
     wj_display_text(text);
     int columns, rows;
     CON_GetMetrics(&columns, &rows);
-    if (row < 1 || row > rows || row > 26) return;
+    if (row < 1 || row >= rows || row > 28) return;
     int width = columns - 1 < 72 ? columns - 1 : 72;
     int length = (int)strlen(text);
     for (int i = 0; i < width; i++) {
@@ -435,18 +440,21 @@ static void draw(void) {
         draw_line(4, "Attempt %d: %s %llds | 1 restart", network_attempt,
                   phases[phase], (wj_milliseconds() - discovery_started) / 1000);
     } else draw_line(4, "%s", network_status);
-    draw_line(5, "%s", "");
     for (int i = 0; i < PAGE_SIZE; i++) {
-        draw_line(6 + i, "%s %.65s", i < count && i == selected ? ">" : " ",
+        draw_line(5 + i, "%s %.65s", i < count && i == selected ? ">" : " ",
                   i < count ? menu.items[i].title : "");
     }
+    draw_line(17, "%s", "");
     if (screen == 2 && total > 0) {
         draw_line(18, "Page %d / %d | %d-%d of %d | Left/right: page",
                   location.offset / PAGE_SIZE + 1, (total - 1) / PAGE_SIZE + 1,
                   count ? location.offset + 1 : 0, location.offset + count, total);
     } else draw_line(18, "%s", "");
-    draw_line(19, "%s", message);
-    draw_line(20, "%.10s  %.57s", play_state, now_playing);
+    draw_line(19, "%s", screen ? "A: open/play | B: back | Up/down: select" : "A: choose server | Up/down: select | 1: search again");
+    char playback_label[24];
+    copy(playback_label, sizeof(playback_label), play_state);
+    if (playback_label[0] >= 'a' && playback_label[0] <= 'z') playback_label[0] -= 'a' - 'A';
+    draw_line(20, "%.10s  %.57s", playback_label, now_playing);
     draw_line(21, "%s", artist);
     char progress[73] = "";
     if (progress_available && strcmp(play_state, "idle")) wj_progress(progress, sizeof(progress), position_ms, duration_ms);
@@ -454,9 +462,11 @@ static void draw(void) {
     draw_line(23, "HOME exit | +/- volume %d%% | 1 refresh/retry", volume * 100 / 255);
     draw_line(24, "Left/right page | B + left/right skip track");
     draw_line(25, "B+1 pause | B+2 stop | B+A play list | 2 visualizer");
-    draw_line(26, "%s | %s | %d KiB | refills %d", job_busy ? "Working" : "Ready",
-              stream_started ? "Playing" : stream_fd >= 0 ? "Buffering" : "Disconnected",
-              audio_buffered / 1024, audio_underruns);
+    int buffered_tenths = audio_buffered * 80 / ((stream_clock.bitrate ? stream_clock.bitrate : 128) * 1000);
+    draw_line(26, "%s | Buffer %d.%ds | Audio restarts %d", stream_fd < 0 ? "Disconnected" :
+              !stream_started ? "Buffering" : "Connected", buffered_tenths / 10, buffered_tenths % 10, audio_underruns);
+    draw_line(27, "%s", message);
+    draw_line(28, "%s", "");
     fflush(stdout);
 }
 
@@ -495,7 +505,7 @@ int main(int argc, char **argv) {
         FILE *file = fopen("sd:/apps/wiijukebox/server.id", "r");
         if (file) { if (fgets(saved_id, sizeof(saved_id), file)) saved_id[strcspn(saved_id, "\r\n")] = 0; fclose(file); }
     }
-    log_event("launch projectm-upstream-1 discovery_port=%d", WJ_DISCOVERY_PORT);
+    log_event("launch audible-clock-1 discovery_port=%d", WJ_DISCOVERY_PORT);
     start_job(JOB_DISCOVER, NULL, NULL);
     long long last_draw = 0;
     int b_combo = 0, visualizer = 0;
@@ -607,7 +617,11 @@ int main(int argc, char **argv) {
             }
             if (!stream_started) {
                 if (audio.buffered >= WJ_AUDIO_PREBUFFER || (audio.ended && audio.buffered)) {
-                    if (MP3Player_PlayFile(NULL, audio_read, NULL) >= 0) stream_started = 1;
+                    wj_mp3_clock_start(stream_clock.byte_start + audio.consumed);
+                    if (MP3Player_PlayFile(NULL, audio_read, NULL) >= 0) {
+                        stream_started = 1;
+                        if (!strcmp(message, "Refilling audio buffer...") || !strcmp(message, "Buffering audio...")) message[0] = 0;
+                    }
                     else { stop_audio(); next_stream = now + 3000; }
                 } else if (audio.ended) {
                     stop_audio();
@@ -621,8 +635,13 @@ int main(int argc, char **argv) {
                 stop_audio();
                 start_job(JOB_STREAM, NULL, NULL);
             } else if (now >= next_status) {
-                next_status = now + (pending_command ? 500 : !strcmp(play_state, "playing") ? 1000 : 3000);
-                start_job(JOB_STATUS, "GET", "/api/wii/status");
+                next_status = now + (pending_command ? 500 : strcmp(play_state, "idle") ? 1000 : 3000);
+                struct wj_playback_clock clock = wj_mp3_clock();
+                char path[180];
+                snprintf(path, sizeof(path), "/api/wii/status?audible=1&epoch=%d&byte=%lld&played=%lld",
+                         stream_clock.epoch, stream_started && clock.ready ? clock.byte : -1,
+                         stream_started && clock.ready ? clock.milliseconds : -1);
+                start_job(JOB_STATUS, "GET", path);
             }
         }
         if (visualizer) {

@@ -8,7 +8,7 @@
 // Only the left-hand side is ever torn down and rebuilt, and the pacer's silence
 // fill covers the gap while that happens. The Wii's connection is therefore
 // never interrupted by a source change -- which matters more than it sounds,
-// because WiiRadio drops back to its station list the moment a stream ends, and
+// because many players disconnect the moment a stream ends, and
 // having to walk back through the Wii's UI on every track change would make the
 // whole thing unusable.
 
@@ -17,15 +17,25 @@ const { Pacer } = require('./pacer');
 const { Encoder } = require('./encoder');
 const { Broadcaster } = require('./broadcaster');
 const { Decoder } = require('./decoder');
+const { PlaybackTimeline } = require('./playback-timeline');
 
 class Pipeline extends EventEmitter {
     constructor({ ffmpegPath = 'ffmpeg', station = {} } = {}) {
         super();
         this._ffmpegPath = ffmpegPath;
 
-        this.broadcaster = new Broadcaster(station);
         this.encoder = new Encoder({ ffmpegPath });
-        this.pacer = new Pacer({ write: (chunk) => this.encoder.write(chunk) });
+        this.broadcaster = new Broadcaster({ ...station, bitrate: this.encoder.bitrate });
+        this.timeline = new PlaybackTimeline();
+        this.pacer = new Pacer({ write: (chunk, timing) => {
+            if (this.encoder.running) this.timeline.write(chunk.length, {
+                generation: this._generation, position: timing.position,
+                metadata: this._nowPlaying,
+                state: timing.audio ? 'playing' : !this._source ? 'idle' : this.pacer.paused ? 'paused'
+                    : timing.position > 0 ? 'buffering' : 'queued',
+            });
+            return this.encoder.write(chunk);
+        } });
 
         // The currently attached source, and the decoder converting its output.
         this._source = null;
@@ -48,6 +58,10 @@ class Pipeline extends EventEmitter {
     }
 
     _wireCore() {
+        this.encoder.on('started', () => {
+            this.timeline.reset();
+            this.broadcaster.resetClock();
+        });
         this.encoder.on('data', (chunk) => this.broadcaster.write(chunk));
         this.encoder.on('warning', (msg) => this.emit('warning', msg));
 
@@ -130,6 +144,19 @@ class Pipeline extends EventEmitter {
 
     get activeSource() {
         return this._source;
+    }
+
+    playbackAt(epoch, byte, playedMs) {
+        const status = this.status;
+        const queued = { ...status, playbackState: status.source ? 'queued' : 'idle',
+            nowPlaying: { ...status.nowPlaying, position: 0 } };
+        if (epoch !== this.broadcaster.epoch || byte < 0 || playedMs < 0) return queued;
+        const heard = this.timeline.at(byte * 8 / this.broadcaster.bitrate + playedMs);
+        if (!heard || (status.source && heard.generation !== this._generation)) return queued;
+        return { ...status, playbackState: heard.state, nowPlaying: {
+            ...heard.metadata, position: heard.metadata.duration > 0
+                ? Math.min(heard.metadata.duration, heard.position) : heard.position,
+        } };
     }
 
     get status() {
@@ -284,7 +311,7 @@ class Pipeline extends EventEmitter {
     _onSourceMetadata = (meta) => {
         this._nowPlaying = { ...this._nowPlaying, ...meta };
 
-        // WiiRadio has one line for this, so collapse artist/title the way every
+        // ICY has one title field, so collapse artist/title the way every
         // other station does. Anything richer only reaches the WebUI.
         const parts = [];
         if (meta.artist) parts.push(meta.artist);

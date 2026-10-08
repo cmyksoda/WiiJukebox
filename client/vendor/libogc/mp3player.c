@@ -21,6 +21,11 @@
 #include "asndlib.h"
 #include "mp3player.h"
 #include "pcm_snapshot.h"
+#include "playback_clock.h"
+
+/* WiiJukebox: MP3 byte origin for the ASND playback clock. */
+static long long clock_read;
+static int clock_frame, clock_valid[3];
 
 static s32 have_samples = 0;
 static u32 mp3_volume = 255;
@@ -130,7 +135,12 @@ static __inline__ s32 buf_get(struct _outbuffer_s *buf,void *data,s32 len)
 	s32 cnt,i;
 
 	if(len>buf_used(buf))
-		len = buf_used(buf);
+	{
+		/* WiiJukebox: never replay stale samples when an output block is short. */
+		s32 available = buf_used(buf);
+		memset((u8*)data + available, 0, len - available);
+		len = available;
+	}
 
 	if(len==0) {
 		LWP_ThreadSignal(thQueue);
@@ -191,7 +201,8 @@ static __inline__ s32 buf_put(struct _outbuffer_s *buf,void *data,s32 len)
 		AUDIO_StartDMA();
 #else
 		have_samples = 0;
-		SND_SetVoice(0,VOICE_STEREO_16BIT,48000,0,(void*)OutputBuffer[CurrentBuffer],ADMA_BUFFERSIZE,mp3_volume,mp3_volume,DataTransferCallback);
+		if(SND_SetVoice(0,VOICE_STEREO_16BIT,48000,0,(void*)OutputBuffer[CurrentBuffer],ADMA_BUFFERSIZE,mp3_volume,mp3_volume,DataTransferCallback)==SND_OK && clock_frame)
+			wj_mp3_clock_begin();
 #endif
 
 		CurrentBuffer = (CurrentBuffer+1)%3;
@@ -275,6 +286,9 @@ bool MP3Player_IsPlaying(void)
 
 static void *StreamPlay(void *arg)
 {
+	clock_read = 0;
+	clock_frame = 0;
+	memset(clock_valid, 0, sizeof(clock_valid));
 	bool atend;
 	u8 *GuardPtr = NULL;
 	struct mad_stream Stream;
@@ -324,6 +338,7 @@ static void *StreamPlay(void *arg)
 
 
 			ReadSize = mp3read(mp3cb_data,ReadStart,ReadSize);
+			if(ReadSize>0) clock_read += ReadSize;
 			if(ReadSize<=0) {
 				GuardPtr = ReadStart;
 				memset(GuardPtr,0,MAD_BUFFER_GUARD);
@@ -336,6 +351,10 @@ static void *StreamPlay(void *arg)
 		}
 
 		while (!mad_frame_decode(&Frame,&Stream) && thr_running) {
+			if(!clock_frame) {
+				wj_mp3_clock_frame(clock_read - (Stream.bufend - Stream.this_frame));
+				clock_frame = 1;
+			}
 			if(mp3filterfunc)
 				mp3filterfunc(&Stream,&Frame);
 
@@ -460,13 +479,15 @@ static void DataTransferCallback(s32 voice)
 	}
 	if(have_samples==1) {
 		if(SND_AddVoice(0,(void*)OutputBuffer[CurrentBuffer],ADMA_BUFFERSIZE)==SND_OK) {
+			wj_mp3_clock_submit(clock_valid[CurrentBuffer]);
 			have_samples = 0;
 			CurrentBuffer = (CurrentBuffer+1)%3;
 		}
 	}
 	if(!(SND_TestPointer(0,(void*)OutputBuffer[CurrentBuffer]) && SND_StatusVoice(0)!=SND_UNUSED)) {
 		if(have_samples==0) {
-			MP3Playing = (buf_get(&OutputRingBuffer,OutputBuffer[CurrentBuffer],ADMA_BUFFERSIZE)>0);
+			clock_valid[CurrentBuffer] = buf_get(&OutputRingBuffer,OutputBuffer[CurrentBuffer],ADMA_BUFFERSIZE);
+			MP3Playing = clock_valid[CurrentBuffer]>0;
 			have_samples = 1;
 		}
 	}

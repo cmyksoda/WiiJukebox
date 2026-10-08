@@ -61,7 +61,7 @@ async function main() {
     console.log('  WiiJukebox is running');
     console.log(`  WebUI    ${url}`);
     console.log(`  Stream   ${url}${config.data.mount}`);
-    console.log(`  Playlist ${url}/playlist.pls  -> WiiRadio compatibility`);
+    console.log(`  Playlist ${url}/playlist.pls  -> compatible audio players`);
     console.log('');
 
     // Restore whatever was playing before the last shutdown, so a restart is

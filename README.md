@@ -82,9 +82,8 @@ SD and rediscovered by identity, so the IP address is not the saved identifier.
 No `.pls` file or IP keyboard is needed for this client. Full controls and current
 limits are in [client/README.md](client/README.md).
 
-**WiiRadio compatibility remains:** download `/playlist.pls` into
-`/apps/radiow/data/pls/`. Its address can become stale after a DHCP change; the
-native discovery flow is the intended replacement.
+The same stream can be opened by other compatible audio players. An optional
+`/playlist.pls` export remains available for those players.
 
 ## Saved links and desktop audio
 
@@ -136,23 +135,19 @@ changes and transport commands are serialized.
 
 The Wii client uses UDP discovery, a bounded versioned text API for browsing and
 metadata, and libogc/libmad for MP3. This first implementation is a text console;
-artwork, a graphical UI, search input and the Wii projectM visualizer remain.
-The existing 565 `.milk` presets are retained for that future work. Browser
-visualization remains available through Butterchurn.
+artwork, a graphical UI and search input remain future work. The native
+projectM visualizer includes 565 presets and has been tested on Wii. Browser
+visualization is available through Butterchurn.
 
-Other open work: physical Wii network/audio testing, Plex/Jellyfin account tests,
+Other open work: extended Wii network/audio testing, Plex/Jellyfin account tests,
 desktop capture validation, receiver protocols, service controls, queue editing,
 and standalone server packaging. The earlier architecture notes are retained in
 [HANDOFF.md](HANDOFF.md).
 
 ## Credits
 
-Built on the work of Scanff, Knarrff and everyone else who worked on
-[WiiRadio](https://github.com/scanff/wiiradio).
-
-The lightning bolt/radio tower icon and the WebUI background were designed by
-TiMeBoMb of the original team. Wii Sans font by
-[NotSoArtisty](https://www.deviantart.com/notsoartisty/art/Wii-Sans-v2-824335667).
+Original source and asset credits are retained in the
+[third-party notices](client/vendor/README.md).
 
 Visualizer presets via [Butterchurn](https://github.com/jberg/butterchurn);
 integration approach follows the feishin fork's merge strategy.
@@ -162,4 +157,4 @@ is a good source of stations to try.
 
 ## License
 
-GPL-3.0, inherited from wiiradio-stream-bridge.
+GPL-3.0. Third-party credits and original license notices are retained.

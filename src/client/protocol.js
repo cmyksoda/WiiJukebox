@@ -48,9 +48,16 @@ class WiiProtocol {
                 rows = this.registry.describe().filter((s) => s.configured).map((s) =>
                     ['source', s.id, s.label, s.state]);
             } else if (req.method === 'GET' && action === 'status') {
-                const s = this.pipeline.status;
+                let s = this.pipeline.status;
+                if (url.searchParams.has('audible')) {
+                    const epoch = Number(url.searchParams.get('epoch') || 0);
+                    const byte = Number(url.searchParams.get('byte') ?? -1);
+                    const played = Number(url.searchParams.get('played') ?? -1);
+                    if (![epoch, byte, played].every(Number.isSafeInteger)) throw new Error('invalid playback clock');
+                    s = this.pipeline.playbackAt(epoch, byte, played);
+                }
                 rows = [['status', s.nowPlaying.title, s.nowPlaying.artist,
-                    s.paused ? 'paused' : (s.source ? 'playing' : 'idle'), s.source?.label || '',
+                    s.playbackState || (s.paused ? 'paused' : (s.source ? 'playing' : 'idle')), s.source?.label || '',
                     Object.entries(s.capabilities).filter(([, enabled]) => enabled).map(([key]) => key).join(',')],
                     ['progress', Math.floor((s.nowPlaying.position || 0) * 1000),
                         Math.floor((s.nowPlaying.duration || 0) * 1000)],

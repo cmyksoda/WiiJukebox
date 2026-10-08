@@ -1,4 +1,4 @@
-# WiiRadio's projectM 2.0.1 GX port, built from the preserved source snapshot.
+# The projectM 2.0.1 GX port, built from the preserved source snapshot.
 PM := vendor/projectm
 PM_DIRS := $(PM) $(PM)/Renderer $(PM)/MilkdropPresetFactory
 PM_CPP := $(foreach dir,$(PM_DIRS),$(wildcard $(dir)/*.cpp))
@@ -20,7 +20,7 @@ build/presets.o: build/presets.cpp source/presets.h
 	$(CXX) -std=gnu++11 -O2 $(MACHDEP) -Isource -c $< -o $@
 build/visualizer.o: source/visualizer.cpp
 	$(CXX) -std=gnu++11 -Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-unused-parameter $(PM_FLAGS) -Isource -c $< -o $@
-build/mp3player.o: vendor/libogc/mp3player.c source/pcm_snapshot.h
+build/mp3player.o: vendor/libogc/mp3player.c source/pcm_snapshot.h source/playback_clock.h
 	$(CC) -O2 $(MACHDEP) -I$(LIBOGC_INC) -I$(LIBOGC_INC)/ogc -I$(LIBOGC_INC)/ogc/machine -Isource -c $< -o $@
 -include $(PM_OBJECTS:.o=.d) build/visualizer.d
 

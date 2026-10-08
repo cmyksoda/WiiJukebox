@@ -3,7 +3,7 @@
 // The old bridge needed a real Icecast container because it juggled up to 20
 // mountpoints. With exactly one persistent mount that whole dependency
 // collapses into this file: an HTTP server that speaks the SHOUTcast/ICY dialect
-// WiiRadio expects, and fans the encoder's MP3 bitstream out to every listener.
+// ICY clients expect, and fans the encoder's MP3 bitstream out to every listener.
 //
 // Dropping Icecast is what makes the "single executable, no Docker" goal
 // reachable -- there is no second process left to orchestrate.
@@ -17,10 +17,11 @@
 
 const { EventEmitter } = require('events');
 const http = require('http');
+const { randomInt } = require('node:crypto');
 const { MP3_BITRATE_KBPS } = require('./format');
 
 // Bytes of audio between metadata blocks. 16000 is what Icecast and SHOUTcast
-// both default to and what WiiRadio is known to handle; there is no upside to
+// both default to and existing ICY clients support; there is no upside to
 // being clever here.
 const METAINT = 16000;
 
@@ -77,8 +78,8 @@ class Broadcaster extends EventEmitter {
     /**
      * @param {object} [opts]
      * @param {string} [opts.mount]    path listeners connect to
-     * @param {string} [opts.name]     station name, shown in WiiRadio's UI
-     * @param {string} [opts.genre]    fills WiiRadio's $GENRE menu line
+     * @param {string} [opts.name]     station name shown to compatible players
+     * @param {string} [opts.genre]    genre advertised to compatible players
      */
     constructor({
         mount = '/stream',
@@ -97,6 +98,8 @@ class Broadcaster extends EventEmitter {
         this._clients = new Set();
         this._burst = [];
         this._burstBytes = 0;
+        this._audioBytes = 0;
+        this.epoch = randomInt(1, 2147483647);
 
         // Current metadata, and a dirty flag so a block is emitted once per
         // change rather than repeatedly.
@@ -154,6 +157,8 @@ class Broadcaster extends EventEmitter {
             'icy-br': String(this.bitrate),
             'icy-sr': '44100',
             'icy-pub': '0',
+            'X-WiiJukebox-Epoch': String(this.epoch),
+            'X-WiiJukebox-Byte-Start': String(this._audioBytes - this._burstBytes),
         };
         if (metaint) headers['icy-metaint'] = String(metaint);
 
@@ -228,6 +233,7 @@ class Broadcaster extends EventEmitter {
      */
     write(chunk) {
         if (!chunk || !chunk.length) return;
+        this._audioBytes += chunk.length;
 
         this._rememberBurst(chunk);
 
@@ -300,7 +306,7 @@ class Broadcaster extends EventEmitter {
     }
 
     /**
-     * Set the now-playing text WiiRadio displays. Takes effect at each listener's
+     * Set the now-playing text ICY clients display. Takes effect at each listener's
      * next metaint boundary.
      */
     setMetadata({ title, url } = {}) {
@@ -313,7 +319,7 @@ class Broadcaster extends EventEmitter {
         this.emit('metadata', { title: this._title, url: this._url });
     }
 
-    /** Station-level identity, shown in WiiRadio's station list. */
+    /** Station-level identity, advertised to ICY clients. */
     setStationInfo({ name, genre, description } = {}) {
         if (name != null) this.name = icySafe(name);
         if (genre != null) this.genre = icySafe(genre);
@@ -322,6 +328,13 @@ class Broadcaster extends EventEmitter {
 
     close() {
         for (const client of [...this._clients]) this._dropClient(client);
+    }
+
+    resetClock() {
+        this.close();
+        this._burst = [];
+        this._burstBytes = this._audioBytes = 0;
+        this.epoch = randomInt(1, 2147483647);
     }
 }
 

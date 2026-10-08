@@ -2,7 +2,7 @@
 //
 // The whole design rests on one claim: a listener can connect once and keep
 // receiving unbroken MP3 while sources are swapped underneath. If that is
-// wrong, WiiRadio drops to its station list on every track change and the
+// wrong, a player drops its connection on every track change and the
 // project's entire premise fails. So this test asserts it directly rather than
 // trusting the architecture.
 //
@@ -63,7 +63,7 @@ class ToneSource extends Source {
 }
 
 /**
- * An ICY listener that records what it receives, exactly as WiiRadio would:
+ * An ICY listener that records what it receives, as a compatible music player would:
  * requests metadata, then walks the metaint framing separating audio from
  * metadata blocks.
  */
@@ -196,7 +196,7 @@ async function main() {
     check('ICY headers returned', /200/.test(listener.headers), listener.headers.split('\r\n')[0]);
     check('icy-metaint advertised', listener.metaint === 16000, `metaint=${listener.metaint}`);
     check(
-        'icy-br advertised (WiiRadio sizes its buffer from this)',
+        'icy-br advertised (clients estimate buffered duration from this)',
         /icy-br:\s*128/i.test(listener.headers),
     );
     check('icy-name advertised', /icy-name:\s*SmokeTest/i.test(listener.headers));
