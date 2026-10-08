@@ -73,11 +73,23 @@ wire. Client display sanitization is separate from parsing.
 
 ## Audio
 
-GET the discovered mount without `Icy-MetaData: 1`. The existing broadcaster
-returns 128 kbps, 44.1 kHz stereo MP3, close-delimited and without chunk framing.
-The client rejects chunked or ICY-interleaved responses. Header reads stop exactly
-at CRLFCRLF, preserving the first audio bytes. The socket stays connected across
-source changes, pause, stop and queue transitions. Disconnects start retries.
+GET the discovered mount without `Icy-MetaData: 1`. The broadcaster returns
+constant-bitrate stereo MP3, close-delimited and without chunk framing. The
+format is a server setting (`audio.bitrate`, `audio.sampleRate`; default 256
+kbps at 48 kHz) advertised in `icy-br` and `icy-sr`; clients size buffers from
+`icy-br`. The client rejects chunked or ICY-interleaved responses. Header reads
+stop exactly at CRLFCRLF, preserving the first audio bytes. The socket stays
+connected across source changes, pause, stop and queue transitions.
+
+A new listener receives the last four seconds of audio at once. The server keeps
+fifteen seconds of history: a reconnecting client may append
+`?epoch=E&from=B`, where B is the absolute byte after the last one it holds.
+If E is the current epoch and B is still in the history, the response starts at
+exactly B and `X-WiiJukebox-Byte-Start` equals B; otherwise it is the normal
+burst and the client must start a new decoder run. Old servers ignore the query
+and always send the burst. A listener with more than thirty seconds of audio
+queued in the server and kernel is disconnected; the server also enables TCP
+keepalive.
 
 The protocol assumes a trusted LAN. UUIDs and nonce echo prevent accidental
 mismatches, not a malicious LAN peer. There is no controller authentication.

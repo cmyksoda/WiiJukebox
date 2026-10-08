@@ -41,22 +41,30 @@ advertised by discovery and does not need to be compiled into the client.
 
 Select the server name and match its eight-character ID prefix to the web UI.
 The complete UUID is saved in `sd:/apps/wiijukebox/server.id`. On future launches
-only that remembered server is auto-selected. Failed stream connections trigger
-another discovery attempt after three retries; the remembered UUID can then
-resolve to a different IP. Discovery retries every five seconds while a saved
-server is absent. **This ID is an identifier, not authentication or a secret.**
+only that remembered server is auto-selected. After three failed audio or status
+attempts the client rediscovers in the background, every ten seconds, and moves
+to the remembered UUID's new address without leaving the current screen.
+Discovery retries every five seconds while a saved server is absent at startup.
+**This ID is an identifier, not authentication or a secret.**
 
 Without writable SD, selection works for that run but is not saved. Returning
 from the source screen to the server chooser lets you explicitly select a
 different server. Source settings and favorites remain on the host.
 
-The audio worker keeps a 64 KiB compressed buffer and starts decoding after
-32 KiB (about two seconds at 128 kbps). The decoder reads memory instead of
-waiting for the network. If it runs dry, playback refills before restarting.
-The bottom rows show buffered seconds, audio restart count, and transient status.
-An audio restart means the decoder stopped and needed recovery; this does not
-count ordinary background top-ups, or every possible output underrun. Short
-network gaps get a bounded 50 ms wait before the decoder treats them as EOF.
+The audio thread owns the stream connection and a 384 KiB compressed buffer.
+Sizes are durations at the advertised bitrate: decoding starts after two seconds
+of audio, and the server's four-second burst is the normal buffer depth. If the
+connection drops or stalls for five seconds, the thread reconnects (0.25, 0.5,
+1, 2, 2, then 3 seconds apart) and asks for the exact byte it stopped at, so a
+short Wi-Fi gap continues without skipping or repeating audio. A gap the server
+no longer holds, or a server restart, starts a fresh decoder run. After an
+underrun, more than six seconds of backlog is trimmed to four, and more than
+nine seconds while playing reconnects at the live edge, so recovery never
+leaves controls lagging far behind. The decoder reads memory instead of waiting
+for the network; short gaps get a bounded 50 ms wait before it treats them as
+EOF. The bottom rows show connection state, stream bitrate, buffered seconds,
+audio restarts and transient status. Status polling backs off to eight seconds
+while the server is unreachable and keeps the last song on screen.
 Navigation movement stays
 responsive during requests; open/back and transport presses wait for the current
 request to finish. Curly quotes and dashes are converted for the ASCII font.
@@ -145,4 +153,15 @@ its PCM timeline, including pauses, source changes and silence. This accounts fo
 the compressed buffer, decoder read-ahead and initial output silence. A selected
 track waiting behind buffered audio reads `Queued`, then `Playing` when reached.
 The display updates once per second and does not measure downstream TV latency.
-The native stream format remains 44.1 kHz stereo MP3, resampled to 48 kHz ASND.
+
+The stream defaults to 48 kHz stereo MP3 at 256 kbps. ASND plays 48 kHz without
+resampling; mp3player's converter repeats or drops whole samples, so 44.1 kHz
+streams lose detail on the Wii. The server's `config.json` can restore the
+original format without rebuilding the client:
+
+```json
+"audio": { "bitrate": 128, "sampleRate": 44100 }
+```
+
+Restart the server after changing it. The client adapts its buffers and clock to
+whatever the stream advertises.

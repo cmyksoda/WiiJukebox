@@ -35,7 +35,7 @@ test('native C networking talks to the live server and receives decodable MP3', 
     try {
         const output = path.join(tmp, 'received.mp3');
         const { stdout } = await run('./client/build/network_probe', [String(udp.port), output], { timeout: 15000 });
-        assert.match(stdout, /MP3 stream and stop passed/);
+        assert.match(stdout, /MP3 stream, exact resume and stop passed/);
         const probe = await run('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_name,sample_rate,channels', '-of', 'json', output]);
         const audio = JSON.parse(probe.stdout).streams[0];
         assert.deepEqual(audio, { codec_name: 'mp3', sample_rate: '48000', channels: 2 });

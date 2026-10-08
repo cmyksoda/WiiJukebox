@@ -7,6 +7,20 @@
 #include <string.h>
 #include <unistd.h>
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "failed: %s\n", #x); return 1; } } while (0)
+
+static const struct wj_server *probe_server;
+static struct wj_stream_clock first_clock;
+static int opens;
+
+static int open_probe(const char *query, struct wj_stream_clock *clock) {
+    char path[320];
+    snprintf(path, sizeof(path), "%s%s", probe_server->mount, query);
+    int status = 0;
+    int fd = wj_open_audio(probe_server, path, &status, clock);
+    if (fd >= 0 && status != 200) { wj_close(fd); return -1; }
+    if (fd >= 0 && !opens++) first_clock = *clock;
+    return fd;
+}
 int main(int argc, char **argv) {
     CHECK(argc == 3 || argc == 4);
     const char *source = argc == 4 ? argv[3] : "radio";
@@ -60,30 +74,48 @@ int main(int argc, char **argv) {
     }
     CHECK(playing);
     CHECK(!strcmp(doc.rows[0].field[1], !strcmp(source, "subsonic") ? "Tone 01" : "Fixture station"));
-    int status = 0;
-    struct wj_stream_clock clock;
-    int fd = wj_open_audio(server, server->mount, &status, &clock);
-    CHECK(fd >= 0 && status == 200);
-    CHECK(clock.epoch > 0 && clock.byte_start >= 0 && clock.bitrate == 256);
-    CHECK(wj_audio_start(fd) == 0);
+    probe_server = server;
+    CHECK(wj_audio_start(open_probe) == 0);
     FILE *file = fopen(argv[2], "wb");
     CHECK(file);
     int received = 0;
     // The 4-second burst at 256 kbps precedes the selection; read past it.
     int target_bytes = !strcmp(source, "subsonic") ? 256000 : 192000;
+    static unsigned char saved[256000];
+    long long first = -1;
     long long deadline = wj_milliseconds() + 12000;
     while (received < target_bytes) {
         CHECK(wj_milliseconds() < deadline);
+        if (first < 0) {
+            if (!wj_audio_state().buffered) { usleep(1000); continue; }
+            first = wj_audio_begin_decode(0);
+        }
         unsigned char audio[4096];
-        int n = wj_audio_read(audio, sizeof(audio));
-        if (!n) { CHECK(!wj_audio_state().ended); usleep(1000); continue; }
+        int n = wj_audio_read(audio, target_bytes - received < 4096 ? target_bytes - received : 4096);
+        if (!n) { usleep(1000); continue; }
         CHECK(fwrite(audio, 1, n, file) == (size_t)n);
+        memcpy(saved + received, audio, n);
         received += n;
         CHECK(wj_request(server, "GET", "/api/wii/status", body, sizeof(body)) == 200);
     }
     fclose(file);
+    CHECK(opens == 1 && first_clock.epoch > 0 && first_clock.byte_start == first && first_clock.bitrate == 256);
+    // A reconnect within the same epoch continues at the exact byte requested.
+    int status = 0;
+    struct wj_stream_clock resumed;
+    char resume[320];
+    snprintf(resume, sizeof(resume), "%s?epoch=%d&from=%lld", server->mount, first_clock.epoch, first + 1000);
+    int fd = wj_open_audio(server, resume, &status, &resumed);
+    CHECK(fd >= 0 && status == 200 && resumed.byte_start == first + 1000 && resumed.epoch == first_clock.epoch);
+    for (int checked = 0; checked < 4000;) {
+        unsigned char audio[4000];
+        int n = wj_receive(fd, audio, 4000 - checked, 3000);
+        CHECK(n > 0 && !memcmp(audio, saved + 1000 + checked, n));
+        checked += n;
+    }
+    wj_close(fd);
     wj_audio_stop();
     CHECK(wj_request(server, "POST", "/api/control/stop", body, sizeof(body)) == 200);
-    puts("C client discovery, browsing, selection, status, MP3 stream and stop passed");
+    puts("C client discovery, browsing, selection, status, MP3 stream, exact resume and stop passed");
     return 0;
 }

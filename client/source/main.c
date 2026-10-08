@@ -32,7 +32,7 @@
 #define PAGE_SIZE WJ_PAGE_SIZE
 #define DEPTH 16
 
-enum job_kind { JOB_NONE, JOB_DISCOVER, JOB_LIST, JOB_STATUS, JOB_CONTROL, JOB_STREAM };
+enum job_kind { JOB_NONE, JOB_DISCOVER, JOB_REDISCOVER, JOB_LIST, JOB_STATUS, JOB_CONTROL };
 struct location { char ref[64], type[24], title[257]; int offset, selected; };
 static struct wj_server servers[WJ_SERVERS], server;
 static struct wj_menu menu;
@@ -45,13 +45,13 @@ static char saved_id[37];
 static int count, selected, total, server_count, depth;
 static int screen; // 0: servers, 1: sources, 2: source contents
 static int volume = 160;
-static int stream_fd = -1;
-static int stream_started;
-static int audio_buffered, audio_underruns;
-static struct wj_stream_clock stream_clock, job_clock;
+static int audio_running, stream_started;
+static int audio_underruns;
+static struct wj_audio_state audio;
+static int decode_epoch;
 static int storage;
-static long long next_status, next_stream, next_discovery;
-static int stream_failures;
+static long long next_status, next_discovery, next_rediscovery;
+static int status_failures;
 static mutex_t mutex;
 static lwp_t worker;
 static int job_busy, job_done, job_result;
@@ -66,6 +66,7 @@ static long long discovery_started, job_started;
 static struct wj_http_trace job_trace;
 static int pending_command;
 static char previous_lines[28][73];
+static const char *const not_responding = "Server not responding; retrying...";
 enum network_phase { NETWORK_INIT, NETWORK_IP, NETWORK_LOOKUP, NETWORK_SCAN, NETWORK_CLEANUP };
 static enum network_phase network_phase;
 static int job_init_deadline;
@@ -137,10 +138,30 @@ static int initialize_network(void) {
     return result;
 }
 
+/* Rediscovery finds the remembered server's new address without leaving the
+   current screen; the audio thread reads `server` under the same mutex. */
+static int rediscover(void) {
+    struct wj_server found[WJ_SERVERS];
+    int count;
+    if (direct_address[0]) count = wj_lookup(&found[0], direct_address) ? 0 : 1;
+    else count = wj_discover(found, WJ_SERVERS, "255.255.255.255", WJ_DISCOVERY_PORT);
+    LWP_MutexLock(mutex);
+    int moved = -1;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(found[i].id, server.id)) continue;
+        moved = strcmp(found[i].ip, server.ip) || found[i].port != server.port;
+        server = found[i];
+    }
+    LWP_MutexUnlock(mutex);
+    return count < 0 ? count : moved;
+}
+
 static void *run_job(void *unused) {
     (void)unused;
     int result;
-    if (job == JOB_DISCOVER) {
+    if (job == JOB_REDISCOVER) {
+        result = rediscover();
+    } else if (job == JOB_DISCOVER) {
         job_ip[0] = 0;
         job_direct = 0;
         job_network_result = initialize_network();
@@ -156,12 +177,11 @@ static void *run_job(void *unused) {
                 result = wj_discover(servers, WJ_SERVERS, "255.255.255.255", WJ_DISCOVERY_PORT);
             }
         }
-    } else if (job == JOB_STREAM) {
-        int status = 0;
-        result = wj_open_audio(&server, server.mount, &status, &job_clock);
-        if (result >= 0 && status != 200) { wj_close(result); result = -1; }
     } else {
-        result = wj_request_traced(&server, job_method, job_path, reply, sizeof(reply), &job_trace);
+        LWP_MutexLock(mutex);
+        struct wj_server target = server;
+        LWP_MutexUnlock(mutex);
+        result = wj_request_traced(&target, job_method, job_path, reply, sizeof(reply), &job_trace);
     }
     LWP_MutexLock(mutex);
     job_result = result;
@@ -203,16 +223,42 @@ static void load_list(void) {
     start_job(JOB_LIST, "GET", path);
 }
 
+static int open_stream(const char *query, struct wj_stream_clock *clock) {
+    LWP_MutexLock(mutex);
+    struct wj_server target = server;
+    LWP_MutexUnlock(mutex);
+    char path[sizeof(target.mount) + 64];
+    snprintf(path, sizeof(path), "%s%s", target.mount, query);
+    int status = 0;
+    long long started = wj_milliseconds();
+    int fd = wj_open_audio(&target, path, &status, clock);
+    if (fd >= 0 && status != 200) { wj_close(fd); fd = -1; }
+    log_event("stream result=%d resume=%d byte=%lld elapsed_ms=%lld", fd, query[0] != 0,
+              fd >= 0 ? clock->byte_start : -1, wj_milliseconds() - started);
+    return fd;
+}
+
+static void stop_audio(void) {
+    MP3Player_Stop();
+    wj_audio_stop();
+    audio_running = stream_started = 0;
+    memset(&audio, 0, sizeof(audio));
+}
+
 static void choose_server(int index) {
+    stop_audio();
+    LWP_MutexLock(mutex);
     server = servers[index];
+    LWP_MutexUnlock(mutex);
     save_server();
     screen = 1;
     selected = 0;
     count = 0;
     depth = 0;
-    next_stream = 0;
-    stream_failures = 0;
+    status_failures = 0;
     copy(title, sizeof(title), "Music sources");
+    audio_running = !wj_audio_start(open_stream);
+    if (!audio_running) copy(message, sizeof(message), "Could not start the audio connection");
     load_list();
 }
 
@@ -225,12 +271,32 @@ static s32 audio_read(void *unused, void *buffer, s32 size) {
     return wj_audio_read_wait(buffer, size, 50);
 }
 
-static void stop_audio(void) {
-    wj_audio_stop();
-    MP3Player_Stop();
-    stream_fd = -1;
-    stream_started = 0;
-    audio_buffered = 0;
+/* Keeps the decoder fed: restarts it after underruns or non-contiguous
+   reconnects, and trims or resyncs when a backlog would add latency. */
+static void update_audio(void) {
+    if (!audio_running) return;
+    audio = wj_audio_state();
+    int target = wj_audio_bytes(WJ_AUDIO_TARGET_MS, audio.bitrate);
+    if (stream_started && audio.stale) {
+        MP3Player_Stop();
+        stream_started = 0;
+    } else if (stream_started && !MP3Player_IsPlaying()) {
+        MP3Player_Stop();
+        stream_started = 0;
+        audio_underruns++;
+        log_event("underrun count=%d connected=%d buffered=%d", audio_underruns, audio.connected, audio.buffered);
+        copy(message, sizeof(message), "Refilling audio buffer...");
+    } else if (stream_started && audio.buffered > wj_audio_bytes(WJ_AUDIO_RESYNC_MS, audio.bitrate)) {
+        log_event("resync buffered=%d bitrate=%d", audio.buffered, audio.bitrate);
+        wj_audio_resync();
+    }
+    if (stream_started || audio.buffered < wj_audio_bytes(WJ_AUDIO_PREBUFFER_MS, audio.bitrate)) return;
+    long long byte = wj_audio_begin_decode(audio.buffered > target * 3 / 2 ? target : 0);
+    wj_mp3_clock_start(byte);
+    if (MP3Player_PlayFile(NULL, audio_read, NULL) < 0) return;
+    stream_started = 1;
+    decode_epoch = audio.epoch;
+    if (!strcmp(message, "Refilling audio buffer...") || !strcmp(message, "Buffering audio...")) message[0] = 0;
 }
 
 static void finish_job(void) {
@@ -264,28 +330,28 @@ static void finish_job(void) {
         else copy(message, sizeof(message), "No server found on your network.");
         return;
     }
-    if (job == JOB_STREAM) {
-        log_event("stream result=%d elapsed_ms=%lld", job_result, wj_milliseconds() - job_started);
-        stream_fd = job_result;
-        if (stream_fd >= 0) {
-            stream_clock = job_clock;
-            if (wj_audio_start(stream_fd) < 0) {
-                wj_close(stream_fd);
-                stream_fd = -1;
-            } else copy(message, sizeof(message), "Buffering audio...");
+    if (job == JOB_REDISCOVER) {
+        log_event("rediscover result=%d", job_result);
+        if (job_result > 0) {
+            snprintf(message, sizeof(message), "Server found at %s", server.ip);
+            status_failures = 0;
+            next_status = 0;
         }
-        next_stream = wj_milliseconds() + 3000;
-        if (stream_fd < 0) {
-            stream_failures++;
-            copy(message, sizeof(message), "Audio disconnected; retrying...");
-            if (stream_failures >= 3) {
-                screen = 0;
-                count = 0;
-                next_discovery = 0;
-                copy(title, sizeof(title), "Finding remembered server...");
-            }
-        } else stream_failures = 0;
         return;
+    }
+    if (job == JOB_STATUS && job_result != 200) {
+        // Keep the last known song on screen and poll less often while the
+        // server is away, instead of replacing the message every second.
+        if (++status_failures == 2) copy(message, sizeof(message), not_responding);
+        int delay = 1000 << (status_failures < 4 ? status_failures : 3);
+        next_status = wj_milliseconds() + delay;
+        log_event("status failure count=%d stage=%s error=%d", status_failures,
+                  wj_http_stage_name(job_trace.stage), job_trace.error);
+        return;
+    }
+    if (job == JOB_STATUS) {
+        if (!strcmp(message, not_responding)) message[0] = 0;
+        status_failures = 0;
     }
     if (job == JOB_LIST || job_result != 200) {
         log_event("http job=%d stage=%s error=%d status=%d bytes=%d expected=%d elapsed_ms=%lld",
@@ -462,9 +528,13 @@ static void draw(void) {
     draw_line(23, "HOME exit | +/- volume %d%% | 1 refresh/retry", volume * 100 / 255);
     draw_line(24, "Left/right page | B + left/right skip track");
     draw_line(25, "B+1 pause | B+2 stop | B+A play list | 2 visualizer");
-    int buffered_tenths = audio_buffered * 80 / ((stream_clock.bitrate ? stream_clock.bitrate : 128) * 1000);
-    draw_line(26, "%s | Buffer %d.%ds | Audio restarts %d", stream_fd < 0 ? "Disconnected" :
-              !stream_started ? "Buffering" : "Connected", buffered_tenths / 10, buffered_tenths % 10, audio_underruns);
+    int buffered_tenths = (int)((long long)audio.buffered * 80 / ((audio.bitrate ? audio.bitrate : 128) * 1000));
+    char connection[48];
+    if (!audio_running) copy(connection, sizeof(connection), "Disconnected");
+    else if (!audio.connected) snprintf(connection, sizeof(connection), "Reconnecting (%d)", audio.failures);
+    else copy(connection, sizeof(connection), stream_started ? "Connected" : "Buffering");
+    draw_line(26, "%s | %d kbps | Buffer %d.%ds | Audio restarts %d", connection, audio.bitrate,
+              buffered_tenths / 10, buffered_tenths % 10, audio_underruns);
     draw_line(27, "%s", message);
     draw_line(28, "%s", "");
     fflush(stdout);
@@ -606,40 +676,18 @@ int main(int argc, char **argv) {
         if (!screen && !count && !job_busy && now >= next_discovery) {
             start_job(JOB_DISCOVER, NULL, NULL);
         }
-        if (stream_fd >= 0) {
-            struct wj_audio_state audio = wj_audio_state();
-            audio_buffered = audio.buffered;
-            if (stream_started && !MP3Player_IsPlaying()) {
-                MP3Player_Stop();
-                stream_started = 0;
-                audio_underruns++;
-                copy(message, sizeof(message), "Refilling audio buffer...");
-            }
-            if (!stream_started) {
-                if (audio.buffered >= WJ_AUDIO_PREBUFFER || (audio.ended && audio.buffered)) {
-                    wj_mp3_clock_start(stream_clock.byte_start + audio.consumed);
-                    if (MP3Player_PlayFile(NULL, audio_read, NULL) >= 0) {
-                        stream_started = 1;
-                        if (!strcmp(message, "Refilling audio buffer...") || !strcmp(message, "Buffering audio...")) message[0] = 0;
-                    }
-                    else { stop_audio(); next_stream = now + 3000; }
-                } else if (audio.ended) {
-                    stop_audio();
-                    next_stream = now + 1000;
-                    copy(message, sizeof(message), "Stream ended; reconnecting...");
-                }
-            }
-        }
+        update_audio();
         if (screen && !job_busy) {
-            if (now >= next_stream && stream_fd < 0) {
-                stop_audio();
-                start_job(JOB_STREAM, NULL, NULL);
+            int lost = audio.failures >= 3 || status_failures >= 3;
+            if (lost && now >= next_rediscovery) {
+                next_rediscovery = now + 10000;
+                start_job(JOB_REDISCOVER, NULL, NULL);
             } else if (now >= next_status) {
                 next_status = now + (pending_command ? 500 : strcmp(play_state, "idle") ? 1000 : 3000);
                 struct wj_playback_clock clock = wj_mp3_clock();
                 char path[180];
                 snprintf(path, sizeof(path), "/api/wii/status?audible=1&epoch=%d&byte=%lld&played=%lld",
-                         stream_clock.epoch, stream_started && clock.ready ? clock.byte : -1,
+                         decode_epoch, stream_started && clock.ready ? clock.byte : -1,
                          stream_started && clock.ready ? clock.milliseconds : -1);
                 start_job(JOB_STATUS, "GET", path);
             }
@@ -658,10 +706,7 @@ int main(int argc, char **argv) {
     LWP_MutexLock(mutex);
     exiting = 1;
     LWP_MutexUnlock(mutex);
-    if (job_busy) {
-        LWP_JoinThread(worker, NULL);
-        if (job == JOB_STREAM && job_result >= 0) wj_close(job_result);
-    }
+    if (job_busy) LWP_JoinThread(worker, NULL);
     stop_audio();
     wj_visualizer_leave(framebuffer);
     wj_visualizer_shutdown();

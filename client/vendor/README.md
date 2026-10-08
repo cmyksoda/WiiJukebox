@@ -42,8 +42,8 @@ performance.
 
 `libogc/mp3player.c` is from devkitPro/libogc tag `v3.1.0`, matching the installed
 library. Marked additions publish already-synthesized PCM for visualization and
-pair the first decoded MP3 byte position with ASND's sample counter for playback
-timing. Output blocks are zero-padded when short instead of repeating stale
+pair the first decoded MP3 byte position and sample rate with ASND's sample
+counter for playback timing. Output blocks are zero-padded when short instead of repeating stale
 samples; padding is excluded from the playback clock. Decoder and resampler
 algorithms are unchanged. This avoids synthesizing the same MP3 twice merely to
 drive the visualizer. `libogc/LICENSE` is retained.
