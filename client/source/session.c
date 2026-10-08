@@ -312,23 +312,6 @@ static void update_audio(void) {
     if (!strcmp(S.message, "Refilling audio buffer...")) S.message[0] = 0;
 }
 
-static unsigned parse_capabilities(const char *list) {
-    static const struct { const char *name; unsigned flag; } names[] = {
-        { "play", WJ_CAN_PLAY }, { "pause", WJ_CAN_PAUSE }, { "stop", WJ_CAN_STOP },
-        { "next", WJ_CAN_NEXT }, { "previous", WJ_CAN_PREVIOUS }, { "seek", WJ_CAN_SEEK },
-    };
-    unsigned flags = 0;
-    while (*list) {
-        size_t length = strcspn(list, ",");
-        for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
-            if (strlen(names[i].name) == length && !strncmp(list, names[i].name, length)) flags |= names[i].flag;
-        }
-        list += length;
-        if (*list) list++;
-    }
-    return flags;
-}
-
 static void finish_discovery(void) {
     log_event("init attempt=%d result=%d deadline=%d discover=%d elapsed_ms=%lld",
               S.attempt, job_network_result, job_init_deadline, job_result,
@@ -381,7 +364,10 @@ static void finish_status(struct wj_document *doc) {
             copy(S.song, sizeof(S.song), row->field[1]);
             copy(S.artist, sizeof(S.artist), row->field[2]);
             copy(S.state, sizeof(S.state), row->field[3]);
-            S.capabilities = row->count >= 6 ? parse_capabilities(row->field[5]) : 0;
+            S.capabilities = row->count >= 6 ? wj_capabilities(row->field[5]) : 0;
+        } else if (row->count == 3 && !strcmp(row->field[0], "modes")) {
+            // A pressed button shows its new mode at once; the server's answer waits for the command to end.
+            if (!pending_command) wj_modes(row, &S.shuffle, &S.repeat);
         } else if (row->count == 4 && !strcmp(row->field[0], "jump")) {
             int id, epoch;
             long long byte = strtoll(row->field[3], NULL, 10);
@@ -508,6 +494,12 @@ static void control(const char *action) {
     start_job(JOB_CONTROL, "POST", path);
 }
 
+static void set_mode(const char *action, const char *value) {
+    char path[96];
+    snprintf(path, sizeof(path), "/api/wii/control?action=%s&value=%s", action, value);
+    start_job(JOB_CONTROL, "POST", path);
+}
+
 static void play_item(int whole_list) {
     if (!S.count || S.view != WJ_VIEW_BROWSE) return;
     const char *ref = S.menu.items[S.selected].ref;
@@ -601,6 +593,18 @@ static void perform(enum wj_action action, int argument) {
     case WJ_ACT_NEXT: if (browsing) control("next"); break;
     case WJ_ACT_STOP: if (browsing) control("stop"); break;
     case WJ_ACT_PAUSE: if (browsing) control(!strcmp(S.state, "paused") ? "play" : "pause"); break;
+    case WJ_ACT_SHUFFLE:
+        if (!browsing || !(S.capabilities & WJ_CAN_SHUFFLE)) break;
+        S.shuffle = !S.shuffle;
+        set_mode("shuffle", S.shuffle ? "on" : "off");
+        break;
+    case WJ_ACT_REPEAT: {
+        static const char *const names[] = { "off", "all", "one" };
+        if (!browsing || !(S.capabilities & WJ_CAN_REPEAT)) break;
+        S.repeat = (S.repeat + 1) % 3;
+        set_mode("repeat", names[S.repeat]);
+        break;
+    }
     case WJ_ACT_SEEK: {
         if (!browsing) break;
         char path[96];

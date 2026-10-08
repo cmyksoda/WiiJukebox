@@ -58,6 +58,38 @@ int wj_document(char *body, struct wj_document *doc) {
     return 0;
 }
 
+unsigned wj_capabilities(const char *list) {
+    static const struct { const char *name; unsigned flag; } names[] = {
+        { "play", WJ_CAN_PLAY }, { "pause", WJ_CAN_PAUSE }, { "stop", WJ_CAN_STOP },
+        { "next", WJ_CAN_NEXT }, { "previous", WJ_CAN_PREVIOUS }, { "seek", WJ_CAN_SEEK },
+        { "shuffle", WJ_CAN_SHUFFLE }, { "repeat", WJ_CAN_REPEAT },
+    };
+    unsigned flags = 0;
+    while (*list) {
+        size_t length = strcspn(list, ",");
+        for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+            if (strlen(names[i].name) == length && !strncmp(list, names[i].name, length)) flags |= names[i].flag;
+        }
+        list += length;
+        if (*list) list++;
+    }
+    return flags;
+}
+
+int wj_modes(const struct wj_row *row, int *shuffle, enum wj_repeat *repeat) {
+    static const char *const repeats[] = { "off", "all", "one" };
+    if (row->count != 3 || strcmp(row->field[0], "modes")) return -1;
+    int on;
+    if (wj_number(row->field[1], 0, 1, &on)) return -1;
+    for (int i = 0; i < 3; i++) {
+        if (strcmp(row->field[2], repeats[i])) continue;
+        *shuffle = on;
+        *repeat = (enum wj_repeat)i;
+        return 0;
+    }
+    return -1;
+}
+
 int wj_number(const char *text, int minimum, int maximum, int *value) {
     char *end;
     errno = 0;
