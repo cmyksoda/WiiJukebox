@@ -11,8 +11,13 @@ const { YtdlpSource } = require('./ytdlp');
 
 const { DesktopSource } = require('./desktop');
 const { PlexSource } = require('./plex');
+const { SpotifySource } = require('./spotify');
+const { findExecutable } = require('./receiver');
 
-const REGISTRY = [RadioSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource, DesktopSource];
+const REGISTRY = [
+    RadioSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
+    SpotifySource, DesktopSource,
+];
 
 class SourceRegistry {
     constructor(config, deps = {}) {
@@ -46,6 +51,9 @@ class SourceRegistry {
         if (id === 'subsonic') return Boolean(cfg.url && cfg.username);
         if (id === 'jellyfin') return Boolean(cfg.url && (cfg.token || cfg.username));
         if (id === 'plex') return Boolean(cfg.url && cfg.token);
+        // Receivers are offered once their program is installed; until then the
+        // settings screen explains how to get it.
+        if (id === 'spotify') return Boolean(findExecutable(cfg.binary || SpotifySource.binaryName));
         return false;
     }
 

@@ -214,6 +214,26 @@ class WebServer {
                 return this._json(res, 200, { ok: true });
             }
 
+            // Source-specific panels: current state (GET) and one-off steps such as
+            // signing in (POST), implemented by sources that define info()/action().
+            if (req.method === 'GET' && action === 'info') {
+                const source = this.registry.get(id);
+                return this._json(res, 200, source.info ? source.info() : {});
+            }
+
+            if (req.method === 'POST' && action === 'action' && rest[2]) {
+                const source = this.registry.get(id);
+                if (typeof source.action !== 'function') {
+                    return this._json(res, 404, { error: `${source.label} has no such action` });
+                }
+                try {
+                    const body = await this._readBody(req);
+                    return this._json(res, 200, await source.action(rest[2], body));
+                } catch (err) {
+                    return this._json(res, 400, { error: err.message });
+                }
+            }
+
             if (req.method === 'POST' && action === 'connect') {
                 try {
                     await this.registry.connect(id);

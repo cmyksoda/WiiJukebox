@@ -42,7 +42,9 @@ async function main() {
 
     pipeline.start();
 
-    const registry = new SourceRegistry(config, { serverId: serverIdentity(config) });
+    const registry = new SourceRegistry(config, {
+        serverId: serverIdentity(config), pipeline, configDir: config.dir,
+    });
     const web = new WebServer({
         pipeline,
         registry,

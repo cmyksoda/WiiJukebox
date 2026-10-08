@@ -49,6 +49,9 @@ const DEFAULTS = {
         // elsewhere, `format` overrides the selector, and `extraArgs` passes
         // flags straight through (--cookies-from-browser, --proxy).
         ytdlp: { binary: '', format: '', extraArgs: [], links: [] },
+        // Receivers: `binary` points at librespot / shairport-sync when they are
+        // not on PATH.
+        spotify: { binary: '', deviceName: 'WiiJukebox', bitrate: 320, normalise: false, extraArgs: [] },
     },
 
     // Last source/item, restored at boot so the stream comes back by itself
