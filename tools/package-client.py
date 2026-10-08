@@ -3,12 +3,14 @@
 """Package only the experimental client runtime and license, never server config."""
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
+import json
 import os
 
 root = Path(__file__).resolve().parents[1]
 portlibs = Path(os.environ.get("DEVKITPRO", "/opt/devkitpro")) / "portlibs/ppc/licenses"
 app = root / "client/dist/apps/wiijukebox"
-output = root / "client/dist/WiiJukebox-client-0.1.0-experimental.zip"
+version = json.loads((root / "package.json").read_text())["version"]
+output = root / f"client/dist/WiiJukebox-{version}-wii.zip"
 licenses = {
     "licenses/projectM-LGPL.txt": root / "client/vendor/projectm/LICENSE.txt",
     "licenses/omptl-LGPL.txt": root / "client/vendor/projectm/omptl/License.txt",
@@ -31,7 +33,7 @@ for name in files:
         raise SystemExit(f"Missing {name}; build the client first")
 # The SD card archive unpacks at the card's root; the Homebrew Channel's wiiload
 # install wants the app folder itself at the top of the zip.
-layouts = {output: "apps/wiijukebox", output.with_name("WiiJukebox-client-wiiload.zip"): "wiijukebox"}
+layouts = {output: "apps/wiijukebox", output.with_name(f"WiiJukebox-{version}-wii-wiiload.zip"): "wiijukebox"}
 for path, folder in layouts.items():
     with ZipFile(path, "w", ZIP_DEFLATED) as archive:
         for name in files:
