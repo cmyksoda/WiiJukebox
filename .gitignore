@@ -12,3 +12,13 @@ client/dist/apps/wiijukebox/THIRD_PARTY.txt
 
 # Local project notes and assistant settings.
 /project-notes/
+
+# Packaging outputs and tool state.
+/packaging/dist/
+/packaging/android/build/
+/packaging/android/app/build/
+/packaging/android/.gradle/
+/packaging/android/local.properties
+/packaging/desktop/node_modules/
+/packaging/desktop/out/
+/packaging/desktop/app/

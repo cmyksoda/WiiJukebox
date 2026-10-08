@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="surface">#F3F6F9</color>
+    <color name="card">#FFFFFF</color>
+    <color name="edge">#CCD5DE</color>
+    <color name="text">#263340</color>
+    <color name="dim">#647383</color>
+    <color name="accent">#0A78AE</color>
+    <color name="accent_soft">#D9F0FC</color>
+    <color name="icon_background">#1AA5E8</color>
+</resources>

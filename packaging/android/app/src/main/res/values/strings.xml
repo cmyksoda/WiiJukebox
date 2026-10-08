@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WiiJukebox</string>
+    <string name="choose_title">Choose a server</string>
+    <string name="choose_hint">Servers on this Wi-Fi network appear here.</string>
+    <string name="searching">Looking for servers…</string>
+    <string name="none_found">No WiiJukebox server answered. Check that the server is running and that this phone is on the same Wi-Fi network (guest networks often block discovery).</string>
+    <string name="scan_again">Scan again</string>
+    <string name="enter_address">Enter address</string>
+    <string name="address_title">Server address</string>
+    <string name="address_hint">192.168.0.3:4000</string>
+    <string name="connect">Connect</string>
+    <string name="cancel">Cancel</string>
+    <string name="unreachable">Could not reach %1$s.</string>
+    <string name="switch_server">Choose another server</string>
+    <string name="retry">Try again</string>
+    <string name="invalid_address">Enter an address such as 192.168.0.3:4000.</string>
+</resources>
