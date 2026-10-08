@@ -4,4 +4,5 @@
 struct wj_preset { const char *name, *text; };
 extern const struct wj_preset wj_presets[];
 extern const unsigned wj_preset_count;
+int wj_preset_index(const char *name);
 #endif

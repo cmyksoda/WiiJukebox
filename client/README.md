@@ -135,9 +135,10 @@ from devkitPro when distributing a linked binary.
 
 Press **2** to toggle the projectM GX renderer. **B** returns
 to the browser. Volume and B+transport work in either view; browser selection
-and page controls are inactive while the visualizer is visible. Presets are
-embedded, so no extra SD assets are needed when using wiiload. Random presets
-change every 25 seconds with a 5-second blend. Original upstream notices and
+and page controls are inactive while the visualizer is visible. 626 presets are
+embedded, so no extra SD assets are needed when using wiiload. Each entry starts
+on "Aderrasi - Agitator.milk", as WiiRadio did; random presets then change every
+25 seconds with a 5-second blend. Original upstream notices and
 source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
 
 The browser shows `Page X / Y` and the visible item range. Network connection

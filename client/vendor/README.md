@@ -21,12 +21,31 @@ The original engine uses LGPL-2.1-or-later notices; Scanff's GX wrapper is marke
 GPL. omptl retains its LGPL notice and the bundled stb image decoder is public
 domain. Preset names preserve the original creator credits.
 
+## Added projectM 2.0.1 presets
+
+`projectm/presets-extra/` holds 61 more MilkDrop 1.x presets, byte-identical to
+`projectM-complete-2.0.1-Source.tar.gz` from
+<https://sourceforge.net/projects/projectm/files/2.0.1/>. The archive's SHA-256
+(`c7e474002d718a9ef440e5eb99a2f84792e9bf0ceab3715aaa438e94c9a45fff`) matches
+SourceForge's published checksum, and its preset folders also matched the local
+WiiRadio-era copy byte for byte. `projectm/EXTRA.json` records each file's path
+in the archive and its SHA-256; `tools/verify-projectm.py` checks both manifests.
+
+They were chosen from the archive's MilkDrop 1.x folders after removing anything
+already embedded (by content or name), MilkDrop 2 shader presets, user textures
+and textured shapes. Every candidate was then loaded alone in the host engine
+for 600 frames: presets whose equations the 2.0.1 parser dropped, that produced
+NaN or infinity, or whose median frame cost or load heap exceeded the embedded
+set's 90th/95th percentile were rejected. Host timings are x86 measurements
+used only for comparison with the existing set, not Broadway performance.
+
 WiiJukebox-specific integration:
 
-- `client/source/visualizer.cpp`: GX/VI setup, separate visualizer framebuffers,
-  toggle/back lifecycle, PCM feed, and random 25-second changes with 5-second
-  blends. This replaces the WiiRadio application/SDL wrapper, not the renderer.
-- `tools/embed-presets.py`: embeds the original preset files for wiiload.
+- `client/source/visualizer.cpp`: GX/VI setup, toggle/back lifecycle, PCM feed,
+  and random 25-second changes with 5-second blends. Like WiiRadio, it starts on
+  "Aderrasi - Agitator.milk", now on every entry. This replaces the WiiRadio
+  application/SDL wrapper, not the renderer.
+- `tools/embed-presets.py`: embeds the original and added preset files for wiiload.
 - `tools/projectm-embedded-loader.py`: adds an in-memory alternative to
   `MilkdropPreset::loadPresetFile` in a generated build copy. The pristine
   upstream file remains unchanged.
