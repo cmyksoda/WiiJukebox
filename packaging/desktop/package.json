@@ -63,7 +63,7 @@
         "AppImage"
       ],
       "category": "AudioVideo",
-      "icon": "build/icon.png",
+      "icon": "build/icons",
       "executableName": "wiijukebox",
       "artifactName": "WiiJukebox-${version}-linux-${arch}.${ext}",
       "syncDesktopName": true,

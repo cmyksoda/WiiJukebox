@@ -3,7 +3,7 @@
 """Builds the desktop app's icons from the jukebox mark in public/images/jukebox.svg.
 
 Needs Inkscape and Pillow. Usage: python3 scripts/make-icons.py
-Writes build/ (icon.png, icon.ico, icon.icns), assets/ (window and tray icons) and ui/jukebox.svg.
+Writes build/ (icon.png, icons/, icon.ico, icon.icns), assets/ (window and tray icons) and ui/jukebox.svg.
 """
 from pathlib import Path
 import re
@@ -66,6 +66,10 @@ def main():
     flat = tile(0, 230, 770)
     render(flat, 1024, build / "icon.png")
     render(flat, 512, assets / "icon.png")
+    # Linux packages install these sizes into the icon theme; hicolor has no 1024 pixel folder.
+    (build / "icons").mkdir(exist_ok=True)
+    for size in (16, 24, 32, 48, 64, 128, 256, 512):
+        render(flat, size, build / "icons" / f"{size}x{size}.png")
 
     with tempfile.TemporaryDirectory() as tmp:
         ico_sizes = [16, 24, 32, 48, 64, 128, 256]
