@@ -154,7 +154,7 @@ jobs:
               if: runner.os == 'Linux'
               working-directory: packaging/desktop
               run: |
-                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x86_64.AppImage --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-linux.log
+                  xvfb-run -a node scripts/smoke.js ../dist/desktop/WiiJukebox-*-linux-x86_64.AppImage --port "$SMOKE_PORT" --login 2>&1 | tee ../dist/smoke-linux.log
                   exit "${PIPESTATUS[0]}"
 
             # Linux: the .deb installed for real, running with Chromium's sandbox and the installed menu entry.
@@ -169,7 +169,7 @@ jobs:
               run: |
                   sudo apt-get install -y ../dist/desktop/WiiJukebox-*-linux-amd64.deb
                   ls -l /opt/WiiJukebox/chrome-sandbox /usr/share/applications/wiijukebox.desktop
-                  SMOKE_SANDBOX=1 xvfb-run -a node scripts/smoke.js /opt/WiiJukebox/wiijukebox --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-linux-deb.log
+                  SMOKE_SANDBOX=1 xvfb-run -a node scripts/smoke.js /opt/WiiJukebox/wiijukebox --port "$SMOKE_PORT" --login 2>&1 | tee ../dist/smoke-linux-deb.log
                   status="${PIPESTATUS[0]}"
                   sudo apt-get remove -y wiijukebox-desktop
                   test ! -e /opt/WiiJukebox/wiijukebox && echo "removed cleanly"
@@ -183,8 +183,11 @@ jobs:
               run: |
                   $zip = Get-ChildItem ../dist/desktop/WiiJukebox-*-win-x64.zip | Select-Object -First 1
                   Expand-Archive $zip.FullName -DestinationPath "$env:RUNNER_TEMP\portable"
-                  node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT *>&1 | Tee-Object ../dist/smoke-windows-zip.log
-                  if ($LASTEXITCODE -ne 0) { exit 1 }
+                  node scripts/smoke.js "$env:RUNNER_TEMP\portable\WiiJukebox.exe" --port $env:SMOKE_PORT --login *>&1 | Tee-Object ../dist/smoke-windows-zip.log
+                  $smoke = $LASTEXITCODE
+                  Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run | Format-List WiiJukebox
+                  Remove-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name WiiJukebox -ErrorAction SilentlyContinue
+                  if ($smoke -ne 0) { exit 1 }
 
             - name: Check the executable's icon and version resources
               if: runner.os == 'Windows'
@@ -209,8 +212,9 @@ jobs:
                   $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'WiiJukebox.lnk'
                   "installed: $(Test-Path "$dir\WiiJukebox.exe"), start menu shortcut: $(Test-Path $start), desktop shortcut: $(Test-Path $desktop)"
                   if (-not (Test-Path "$dir\WiiJukebox.exe") -or -not (Test-Path $start)) { throw 'the installer did not install the app and its shortcut' }
-                  node scripts/smoke.js "$dir\WiiJukebox.exe" --port $env:SMOKE_PORT *>&1 | Tee-Object ../dist/smoke-windows-installed.log
+                  node scripts/smoke.js "$dir\WiiJukebox.exe" --port $env:SMOKE_PORT --login *>&1 | Tee-Object ../dist/smoke-windows-installed.log
                   $smoke = $LASTEXITCODE
+                  Remove-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name WiiJukebox -ErrorAction SilentlyContinue
                   Start-Process -FilePath "$dir\Uninstall WiiJukebox.exe" -ArgumentList '/S', "_?=$dir" -Wait
                   "uninstalled: $(-not (Test-Path "$dir\WiiJukebox.exe")), start menu shortcut gone: $(-not (Test-Path $start))"
                   if ($smoke -ne 0) { exit 1 }
@@ -250,7 +254,7 @@ jobs:
               if: runner.os == 'macOS'
               working-directory: packaging/desktop
               run: |
-                  node scripts/smoke.js "$RUNNER_TEMP/mac-arm64/WiiJukebox.app" --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-macos-arm64.log
+                  node scripts/smoke.js "$RUNNER_TEMP/mac-arm64/WiiJukebox.app" --port "$SMOKE_PORT" --login 2>&1 | tee ../dist/smoke-macos-arm64.log
                   exit "${PIPESTATUS[0]}"
 
             - name: Smoke test the Intel app under Rosetta

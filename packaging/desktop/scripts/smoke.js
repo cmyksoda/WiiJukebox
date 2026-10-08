@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // End-to-end check of a packaged app, run hidden. Ports: <port> web, <port>+1 discovery, <port>+10 debugging.
-// Usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64]
+// Usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login]
+// --login also ticks "start at login", which changes the system's login items; remove them afterwards.
 
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const dgram = require('node:dgram');
@@ -14,13 +15,14 @@ const args = process.argv.slice(2);
 const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const target = args.find((arg, index) => !arg.startsWith('--') && !args[index - 1]?.startsWith('--'));
 if (!target) {
-    console.error('usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64]');
+    console.error('usage: node scripts/smoke.js <app executable or .app> [--port 4680] [--arch x86_64] [--login]');
     process.exit(2);
 }
 const PORT = Number(option('--port', 4680));
 const DISCOVERY_PORT = PORT + 1;
 const DEBUG_PORT = PORT + 10;
 const ARCH = option('--arch', null);
+const LOGIN = args.includes('--login');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let failures = 0;
@@ -268,10 +270,11 @@ async function checkFirstRun() {
         client = await pageClient();
         const shown = await until('the welcome panel', () => client.evaluate("document.querySelector('[data-panel=welcome]')?.hidden === false"), 30000);
         check('welcome panel is visible', shown);
-        await client.evaluate("document.querySelector('#opt-ytdlp').checked = false; document.querySelector('#opt-login').checked = false; document.querySelector('#begin').click(); true");
+        await client.evaluate(`document.querySelector('#opt-ytdlp').checked = false; document.querySelector('#opt-login').checked = ${LOGIN}; document.querySelector('#begin').click(); true`);
 
         const state = await app.waitState('the connect page', (s) => s.page === 'connect' && s.serverUrl);
         check('setup started the server and marked itself done', state.setupDone === true && state.serverUrl === `http://127.0.0.1:${PORT}/`);
+        if (LOGIN) check('start at login was registered with the system', state.openAtLogin === true);
         check('settings.json was saved', JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8')).setupDone === true);
         const status = await get(`${state.serverUrl}api/status`);
         check('server answers after setup', status.status === 200);

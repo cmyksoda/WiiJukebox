@@ -77,6 +77,7 @@ function writeState() {
         resources: process.resourcesPath,
         page: currentPage,
         setupDone: settings.get('setupDone'),
+        openAtLogin: autostart.isEnabled(),
         serverUrl,
         ffmpeg: tools?.ffmpeg || null,
         ytdlp: tools?.ytdlp || null,
