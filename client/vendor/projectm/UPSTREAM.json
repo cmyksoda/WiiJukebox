@@ -1,0 +1,2830 @@
+{
+  "repository": "https://github.com/scanff/wiiradio",
+  "commit": "58461f3e228912372051429edcc4fe3c90644657",
+  "files": {
+    "PresetFactory.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetFactory.cpp",
+      "sha256": "3d24040f913a99db1790b1607d9eaf6ed69547f2de0e1c56acbc94d1aa673b28"
+    },
+    "projectM.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/projectM.hpp",
+      "sha256": "e5f8c59047a355c739c3b9a32a50edb9c733f2736f1c3a0c3bd85b10e47d7a60"
+    },
+    "lvtoprojectM.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/lvtoprojectM.h",
+      "sha256": "6470f7a9ea3549c3437bdc767466a3bdb85496a9f1f48abf6b3bd10b42c1aa47"
+    },
+    "RandomNumberGenerators.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/RandomNumberGenerators.hpp",
+      "sha256": "3870c5e285d79fbd435a88183ff10ce86784dff9ada30e18939c135b06f6661f"
+    },
+    "PresetLoader.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetLoader.cpp",
+      "sha256": "40f6e0960ad007e093e133e7b82033bb39866823f3d9430af66e42d3fc326165"
+    },
+    "fftsg.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/fftsg.cpp",
+      "sha256": "ae3574ea5cce0a0232be76ecce16fbc723832ed839fdce45ad87caab966a65fc"
+    },
+    "PresetLoader.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetLoader.hpp",
+      "sha256": "d474b948a9637a6f959e860f3ca5af14de312329df50f624f681c4da745efdb9"
+    },
+    "global_gx.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/global_gx.cpp",
+      "sha256": "d4fb24c98b4f998846755436dba6db23b7325c9b2f831cf77724268a55ed5943"
+    },
+    "carbontoprojectM.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/carbontoprojectM.h",
+      "sha256": "9c5bb8c234946666a2a3578e664bc8635a7a0ec8adaac155feff3459a1b9c7e7"
+    },
+    "glError.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/glError.h",
+      "sha256": "b163e8fccbac6ff6fe08a5424f545683f2d81c1d690eae6d6f65e6e003e08124"
+    },
+    "event.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/event.h",
+      "sha256": "6a6e4914bda329788539b7d8582b3fe60a34b19c18eda778b1e32efb17284822"
+    },
+    "sdltoprojectM.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/sdltoprojectM.h",
+      "sha256": "166f618581cbc55d0575130864d30dfce63b53039a1a4f7de105c07727cfda00"
+    },
+    "PipelineMerger.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PipelineMerger.hpp",
+      "sha256": "299b422b0947bb8a33c354edb0dc2e0ff7b50ea34e09be1f6b4cb058361ab87b"
+    },
+    "KeyHandler.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/KeyHandler.hpp",
+      "sha256": "7711af3972afda9fb3464d03476665744729b9de4bbd2f9df980600a1ba735da"
+    },
+    "PresetChooser.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetChooser.hpp",
+      "sha256": "1d7803613b26ba9d0c34e2f8606752399b4d3019544f2e62399a6ba6681a017d"
+    },
+    "ConfigFile.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/ConfigFile.h",
+      "sha256": "877ef413e97cd69abd6bf7b4963f70d2ccf7dd108938af88e9bb77be1537063c"
+    },
+    "PresetFactoryManager.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetFactoryManager.cpp",
+      "sha256": "d46e67bf4f1acc87e6d9cc8f2f7eb30bedf16dc63325f06ce41395bb117e6b20"
+    },
+    "LICENSE.txt": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/LICENSE.txt",
+      "sha256": "885a03f54b157961236f46843e79972abfcd6890b6cbb368bc7eca328ff95a12"
+    },
+    "timer.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/timer.cpp",
+      "sha256": "4ec187c951f8dad8b4f3051edee68ea289c7dc6b586f24d593060580296035dd"
+    },
+    "timer.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/timer.h",
+      "sha256": "7739ff1213f560d797c2fc18265367ce65fa326f2b46e09612e95749935bb072"
+    },
+    "global_gx.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/global_gx.h",
+      "sha256": "b8efb26522f969367f6e651647e4fcdc137832142a560878c67cb4fef320a242"
+    },
+    "TimeKeeper.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/TimeKeeper.hpp",
+      "sha256": "0138fcc79761cad78b8f1fdd76da6800f8ee18a73b1f097b8b78fbb9768eeec0"
+    },
+    "PCM.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PCM.hpp",
+      "sha256": "833b8f3d85521ae41462c6b0fda12086b8e5c3c49312b478315aafbf18e9452a"
+    },
+    "fatal.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/fatal.h",
+      "sha256": "a4fe112bdd34a615013a11d79c0da22ae5b5d8bbbca8cf791b961e560c239aba"
+    },
+    "wipemalloc.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/wipemalloc.h",
+      "sha256": "c8f11b321e303c38e2071805122315a32996be0a6264dcb7456870cd474537e8"
+    },
+    "KeyHandler.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/KeyHandler.cpp",
+      "sha256": "3b61d681fc5905d7d4763dd1086064dd3af5742ddb2b4c34551c8c2b3e28d03b"
+    },
+    "Common.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Common.hpp",
+      "sha256": "9bdba9bbe8582b73c82bc9f7d50e7db9afaaf33a551872d9ba7fa4787c110737"
+    },
+    "TimeKeeper.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/TimeKeeper.cpp",
+      "sha256": "0fafbf04d47b04418c82a18fe122cf8bba638725013fd3882a7875d6f975d521"
+    },
+    "PresetChooser.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetChooser.cpp",
+      "sha256": "ad73f2d1fd5ebfd075750e332047d63c2d1a0c816a7b96817ffe74c5b2ae806b"
+    },
+    "PresetFactory.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetFactory.hpp",
+      "sha256": "fbd57eb43214acce1649385d332774f4646bc1166870366f7feacae357b8c6e7"
+    },
+    "PCM.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PCM.cpp",
+      "sha256": "a5f31a1cbc6583130fe4744d60c1bab28246b0292b7fecd7d1a7dafc8be77421"
+    },
+    "Preset.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Preset.cpp",
+      "sha256": "f5b0ad7f3775af389051f8e837fb9c5434e136d3a9ff61aa9a8c839bc7061a81"
+    },
+    "projectM.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/projectM.cpp",
+      "sha256": "b26004b0b8c66eabb6c337eee22f26901869c246104a2e199ca9b9e83940089c"
+    },
+    "fftsg.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/fftsg.h",
+      "sha256": "058e244aca140056ac2f48bee13adcda6e6b61ad4bd8e39a5e42ff90b8b3b815"
+    },
+    "wipemalloc.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/wipemalloc.cpp",
+      "sha256": "5db5bc06360021a1ed415b12f565d04b5e60b2c42b71b2aace3199e77a9850b9"
+    },
+    "IdleTextures.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/IdleTextures.hpp",
+      "sha256": "02ebc77e39af9b22552d59946154b714de9408f6e663d53f1741add99161bb61"
+    },
+    "PipelineMerger.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PipelineMerger.cpp",
+      "sha256": "bdf3d48db29027a53842fc83eebfcc2bf41c7ee0e2bb6a231f468eb18514c6ba"
+    },
+    "PresetFactoryManager.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/PresetFactoryManager.hpp",
+      "sha256": "a49a8b61efc2271bea744a29e16c7b48b2e1eebc05fd9f4984c777960beaefe0"
+    },
+    "resource.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/resource.h",
+      "sha256": "cbad0ebe08f89426a029d8256e4df4af3ff0feff469054ffe9ef620c4f212a4b"
+    },
+    "dlldefs.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/dlldefs.h",
+      "sha256": "fce76ce7090cee103c4357140a1390a29db362a489d693c35bacdfccfd64ca53"
+    },
+    "ConfigFile.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/ConfigFile.cpp",
+      "sha256": "27ffbb1dc5d1e7b25a27ab0ca3080a1de707c4ba248baa0180349cb43b8bb787"
+    },
+    "Preset.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Preset.hpp",
+      "sha256": "e03a1fd2f32cc7e331a2ff41fb22201f473c03c8087615abf6d04179a6ce3059"
+    },
+    "HungarianMethod.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/HungarianMethod.hpp",
+      "sha256": "d223fbfb3fffdab5925932b0ad9a01235811fd8204f33e834ccd5aa3e5f88e9e"
+    },
+    "presets/Geiss - Planet 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Planet 1.milk",
+      "sha256": "25acc8edf07e1360d9b1dfc105b04db7f2d07a96c9276536fae8e1219e67dca8"
+    },
+    "presets/Krash - Framed Geometry.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Framed Geometry.milk",
+      "sha256": "1534cda3c59f1e182be7899938baca5e0a7b7e4cc408af1bb8b87980a6b7382e"
+    },
+    "presets/Geiss - Warp Of Dali 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Warp Of Dali 2.milk",
+      "sha256": "252289288e95935c8e58b44ed9d4734b096146233e4e21040d6a0c115211ed8f"
+    },
+    "presets/StudioMusic & Unchained - Entity.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic & Unchained - Entity.milk",
+      "sha256": "ada8c4ebeaac758fd4e6b7cb45b3bcc3f7b9d181bd3cd6480557afa325b329d1"
+    },
+    "presets/Aderrasi - Antique Abyss.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Antique Abyss.milk",
+      "sha256": "873b9f70deb36346ffe562ce3a07cd671df65a5cb40ca98c54eb419468f4b86b"
+    },
+    "presets/Rovastar & Geiss - Bipolar 2 (Vectrip Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Bipolar 2 (Vectrip Mix).milk",
+      "sha256": "07ce071bf8601a49d04d77abc03031167ff3e9159ccd5b5e230de58abd2210cc"
+    },
+    "presets/Rovastar - Altars Of Harlequin's Maddess.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Harlequin's Maddess.milk",
+      "sha256": "054960c985774afad70d753ccb9a9cd43a6bcfbfadea391321981c3bb2a6e508"
+    },
+    "presets/Zylot - Color Of Music.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Color Of Music.milk",
+      "sha256": "31138b63293b69da1070ea54c3f7c9a3eceab314da7e0f33ba3b6d1ac94fbd79"
+    },
+    "presets/Zylot & Krash - Extremophile.milk": {
+      "upstream_path": "data/projectm/presets/Zylot & Krash - Extremophile.milk",
+      "sha256": "2c3608ba918b849f7f3afcddef97fed7d94d0e25e56af8bb90c95d25865f66ac"
+    },
+    "presets/Geiss - Waterfall.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Waterfall.milk",
+      "sha256": "4d959763b9b4d1450cf808cd37bb256895e882a7df5cebb75a1551d26b4b0cb5"
+    },
+    "presets/Unchained - ventilation.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - ventilation.milk",
+      "sha256": "890550e6378dbc7f0ca19078c58dcb7d18d3991313c005429fd8fe74f43b271a"
+    },
+    "presets/Unchained - Jaded Emotion.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Jaded Emotion.milk",
+      "sha256": "b91dbd6fa090d0a83a80f478aea8827ce45bd92b37bac49bd5f8dc82bd56aa8f"
+    },
+    "presets/Fvese - A Blur.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - A Blur.milk",
+      "sha256": "f32256eddd5bc6875d89d392e8503338b1bf43b3cd67d9652bf8df467861f0d6"
+    },
+    "presets/Rovastar - Space.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Space.milk",
+      "sha256": "ebd7afbb29b119ccec3ff14d8864e348af90eefc5c866bab49818e61b0896a4c"
+    },
+    "presets/Rovastar - Chapel Of Ghouls.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Chapel Of Ghouls.milk",
+      "sha256": "2b7f3671e353db1e6518ce3af9120cbef37aa95e00272bb3dbd31c2001c16faf"
+    },
+    "presets/StudioMusic - It's Only Make Believe.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic - It's Only Make Believe.milk",
+      "sha256": "7794d9d768734264d7102b5d5dfe8d0c92f5c2bc7e585a0e5c4c31add1679439"
+    },
+    "presets/Rovastar - Mosaics Of Ages.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Mosaics Of Ages.milk",
+      "sha256": "03d3aa5f9affa9b72cc9b25ee5c88ee55115d2d8b8f153c24abc43f4bffcaa29"
+    },
+    "presets/Idiot - What Shall Come.milk": {
+      "upstream_path": "data/projectm/presets/Idiot - What Shall Come.milk",
+      "sha256": "c4f696584f65b1a53d5451df9f81c06d816b0912972d7a720dd74732ae231f79"
+    },
+    "presets/Aderrasi - Flowing Form.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Flowing Form.milk",
+      "sha256": "b230f65594dd1f1579c4bbdab4a9998d68ef2a961e65bb6db1212df5a6732a34"
+    },
+    "presets/Rovastar & Fvese - Stranger Minds.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Fvese - Stranger Minds.milk",
+      "sha256": "c7874e3543bb067f792fbf608d747f9ba261c05737d243128b1c9250ee4ba517"
+    },
+    "presets/Geiss - Journey.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Journey.milk",
+      "sha256": "c787635182230c4f516fa0bd4acdfc2d0522c85459804840fbade16531186512"
+    },
+    "presets/Rovastar - Attacking Freedom.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Attacking Freedom.milk",
+      "sha256": "1d1aef2c4d91088307a93dcc7dfe4ea9a71a0099b71dbdc5c54b4bcf93963cdd"
+    },
+    "presets/Rovastar - Hyperspace.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Hyperspace.milk",
+      "sha256": "35cef8e8037109d27663cf54585b7498a905a3044b02a81891dfcceffc5e4983"
+    },
+    "presets/Unchained - Free to Feel (Valium Remix).milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Free to Feel (Valium Remix).milk",
+      "sha256": "2d405a3f94db121550a4314932f1617cec71d11aee6f8a5255e2098a9ad7c5cf"
+    },
+    "presets/Krash & Rovastar - Switching Polygons.milk": {
+      "upstream_path": "data/projectm/presets/Krash & Rovastar - Switching Polygons.milk",
+      "sha256": "87388d4a0ebee65440d0547759c67ca65b008d570c14503a0e5a00205645538e"
+    },
+    "presets/Krash & Illusion - Spiral Movement.milk": {
+      "upstream_path": "data/projectm/presets/Krash & Illusion - Spiral Movement.milk",
+      "sha256": "1268586e3a6176d1ff3ef92d723ffecaae79c6fd62636a0ec922fb8fe6433347"
+    },
+    "presets/Unchained - Making a Science of It 4.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Making a Science of It 4.milk",
+      "sha256": "936021e4c21520966ab0e334eee53fb545ff46861ff0dc8ede43fe2fc7493eab"
+    },
+    "presets/Aderrasi - Chromatic Abyss (The Other Side).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Chromatic Abyss (The Other Side).milk",
+      "sha256": "706bfb0887a8c32bffb9128481b93b784dfef3b2ff035cbd17dd01dd3ae5b441"
+    },
+    "presets/Zylot - Inside The Planar Portal.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Inside The Planar Portal.milk",
+      "sha256": "ac7669483c979c5f10c2e8a4cfe2b3b040be85fed7d6a99ad30c5ee81e57d81e"
+    },
+    "presets/Phat+fiShbRaiN+Eo.S_Mandala_Chasers_remix - www.eos4life.com.milk": {
+      "upstream_path": "data/projectm/presets/Phat+fiShbRaiN+Eo.S_Mandala_Chasers_remix - www.eos4life.com.milk",
+      "sha256": "94a64d118ad77324d54f2f826d3408e9aaef9ab4b51a41dc9045b28be935b5dd"
+    },
+    "presets/Rovastar - Inner Thoughts (Clouded Judgement Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Inner Thoughts (Clouded Judgement Mix).milk",
+      "sha256": "48db019566ca61b243ed0fcec10fb8756caaffa4195d60d6bc95521f0fbcc77c"
+    },
+    "presets/Rovastar & Zylot - Narell's Fever.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Zylot - Narell's Fever.milk",
+      "sha256": "5a362c130e03924f34bb028b87a3e3072cf8b637cf77ac736f8f0dd07c731ebf"
+    },
+    "presets/Geiss - Pistons.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Pistons.milk",
+      "sha256": "3618e3b278fb592c9e9e2249774e4cc160cf7edb6a71a20cd4c2085584b40dc3"
+    },
+    "presets/Geiss - Churn.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Churn.milk",
+      "sha256": "27867f7b264cccf7363b27fdb14505c7d497667c2feb57d48f7b61e0b9b872e0"
+    },
+    "presets/Geiss - Julia Fractal 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Julia Fractal 2.milk",
+      "sha256": "e81a776a9995b7360eb00572f472e8221ce23294f9082990b51b0d12084d341e"
+    },
+    "presets/Geiss - Heavenly 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Heavenly 2.milk",
+      "sha256": "40243043adb95a64a6913ee6918df03bd92bd8b100ee982fe100257fe9d0786c"
+    },
+    "presets/Geiss & Rovastar - Tokamak (Naked Intrusion Mix).milk": {
+      "upstream_path": "data/projectm/presets/Geiss & Rovastar - Tokamak (Naked Intrusion Mix).milk",
+      "sha256": "651abe61ad3e442c632e7999ab18fad118e21e706c2601e1edbf6b606f5c21d9"
+    },
+    "presets/Geiss - Bright Fiber Matrix 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bright Fiber Matrix 2.milk",
+      "sha256": "4d82b5211d3bd2db20a27cfb21b6c7ac4ed17df5520bae6ba5c4a1ce1088a7d7"
+    },
+    "presets/Geiss - Monotone Ripples.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Monotone Ripples.milk",
+      "sha256": "21a3d231acb3b80a33a8ed1d70f33329f95d3263e78d8c11ffae389e4e69c973"
+    },
+    "presets/Aderrasi - Contortion (Xenomorph Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Contortion (Xenomorph Mix).milk",
+      "sha256": "05afe92cf468778f5b3a04391c23d8bd3f77a51c6feda8cb2ee74f96e9a2bdcb"
+    },
+    "presets/Krash - Dynamic Borders 1.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Dynamic Borders 1.milk",
+      "sha256": "9d42abaf247dde70c0fa6586abc6b9a091bab30aa1523c870d7f3a06e03d5fb0"
+    },
+    "presets/Rovastar & Krash - Cerebral Demons.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Krash - Cerebral Demons.milk",
+      "sha256": "1d0c51fa804ebadce5a6aa1eefc5df049436f1156ac37842be6d20b1791dd92a"
+    },
+    "presets/Illusion & Rovastar - Snowflake Delight.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Rovastar - Snowflake Delight.milk",
+      "sha256": "e86fe5f6dd04e7a4de5a6ec27099500154e0844094d302ca95beaa30337db94f"
+    },
+    "presets/Telek - Lost Star (Flash).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Lost Star (Flash).milk",
+      "sha256": "260dc3c8d2b0b9a663fbd28b296454b5ddb9db376161cd796649ff6e885a2d1f"
+    },
+    "presets/Geiss - Mega Swirl 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Mega Swirl 1.milk",
+      "sha256": "a14dbca80f12816e676ca151034295e0eaf7f6fcf91b45bb9df45ba057f22195"
+    },
+    "presets/Geiss - Three Kinds Of Amphetamines.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Three Kinds Of Amphetamines.milk",
+      "sha256": "8ea3153b2cb6c1ce7a7d16fd66594e57bacaee7c5cb5a97866744c3bec0e7877"
+    },
+    "presets/Zylot - Mixing Pot.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Mixing Pot.milk",
+      "sha256": "0c2bc9bd77da71c22e8e71f69f61d3d5ebbb8cdd48928c93d9698f6e145bf41c"
+    },
+    "presets/Eo.S.+Phat - Arm_upgrades - transformer.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S.+Phat - Arm_upgrades - transformer.milk",
+      "sha256": "fbb7bd46b53c623f9cef7365f102955101cdba16a266dc5add7731662f361d6e"
+    },
+    "presets/Unchained - Jaundice.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Jaundice.milk",
+      "sha256": "bdbb986854a5437a01341f4ad553d9eab93c87619dd8016231aacc77744acc75"
+    },
+    "presets/Geiss - Dynamic Swirls 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Dynamic Swirls 1.milk",
+      "sha256": "9793cf41b5ed046de7444edd37a91b9422a108726feb17fc16de50825b7affa5"
+    },
+    "presets/Rovastar - Inner Thoughts (Frantic Thoughts Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Inner Thoughts (Frantic Thoughts Mix).milk",
+      "sha256": "57da695f6a158571fe3c09058d9c23bec0e7208bf088c1c9321c5d45a90c07e4"
+    },
+    "presets/Aderrasi - Potion of Spirits.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Potion of Spirits.milk",
+      "sha256": "e4f67540ac63e5129f46d63df5bd94d2a4ecce5bbae1b78f320782cc6257b4d2"
+    },
+    "presets/che - terracarbon stream.milk": {
+      "upstream_path": "data/projectm/presets/che - terracarbon stream.milk",
+      "sha256": "7eb1172126fd3e824572a5b22fdc09d98e56b522a7e96eb1f1fce750d73c2924"
+    },
+    "presets/EMPR - Random - Turbulence Sandwich.milk": {
+      "upstream_path": "data/projectm/presets/EMPR - Random - Turbulence Sandwich.milk",
+      "sha256": "fa6e09f4dfa7a921ecf258f94a758e6ea6ddb9168efc550b0d5ea07c8dd5ea41"
+    },
+    "presets/Geiss - Starfish 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Starfish 2.milk",
+      "sha256": "a587be2c27c11c373dedfcffffbe76a500d49863e9df9bd898a1ac1f37f5bd46"
+    },
+    "presets/Geiss - Tube.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Tube.milk",
+      "sha256": "46ccc047662cdd9fc836fa680d3b1aa7ca8a4d2cb2d32e6215d4d30c4c64a177"
+    },
+    "presets/Zylot - Wisps.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Wisps.milk",
+      "sha256": "6005d9889cf8fe792ba277e68f717e6720ba4a6baac85d0d28d249e16e795335"
+    },
+    "presets/StudioMusic - Numerosity.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic - Numerosity.milk",
+      "sha256": "a43eeeba444e341507b6673ae36fad03c6b4e79bc1ed4e1c06ce2031fa755b62"
+    },
+    "presets/Rovastar - Kalideostars (Altars Of Madness MIx).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Kalideostars (Altars Of Madness MIx).milk",
+      "sha256": "a718c3b3e01330828009e6009cab103fde6b42fef9582b4d663b35f7b0348863"
+    },
+    "presets/Telek - Flicker (@xis).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Flicker (@xis).milk",
+      "sha256": "30ca326f2f2ac1c498a37e89633a7185a37008031d28f296ca584660495eca20"
+    },
+    "presets/Eo.S. - repeater 15 - kaleidoscope b.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - repeater 15 - kaleidoscope b.milk",
+      "sha256": "a737b238e2fcb03904b90ca71e8862fabfd7543e36b4af1356cc41de9b04af81"
+    },
+    "presets/Rovastar & Zylot - Sea Of Zigrot.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Zylot - Sea Of Zigrot.milk",
+      "sha256": "fb57a08ddd4e0e5b804fb48e52ef7b5374790cc2a9864652b382168f8afd2578"
+    },
+    "presets/Rovastar - Biohazard Warning.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Biohazard Warning.milk",
+      "sha256": "09aa93b56894477b945899ff9c83e79eae158f31fef9c2bd6cdcb8c8a76ff81f"
+    },
+    "presets/Rovastar - Altars Of Harlequin's Madness (Dark Disorder Mix.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Harlequin's Madness (Dark Disorder Mix.milk",
+      "sha256": "b18e158e3cc0ca4e5c8c8ece6261714737f161242c1ca3b46e387fb75e24c620"
+    },
+    "presets/Zylot - Azirphaeli's Mirror.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Azirphaeli's Mirror.milk",
+      "sha256": "78cd18ff10781b78cb7be4efc84bd8f72f4944ee5f3049b2ec75eed21ca4fd71"
+    },
+    "presets/Zylot - Puddle Of Music.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Puddle Of Music.milk",
+      "sha256": "588589fa6123ec39ca37c5c146771aeb9185decc6cd4058ce8ba663df03e4e03"
+    },
+    "presets/Geiss - High Dynamic Range.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - High Dynamic Range.milk",
+      "sha256": "4edf0fcf9838a08931a31757612d64ad0f7e67a4bef199b1eb88b8b880735323"
+    },
+    "presets/Aderrasi - Bitterfeld (Crystal Border Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Bitterfeld (Crystal Border Mix).milk",
+      "sha256": "375b1ce1a9f51c57766868b5e897cbeff7ec7062ccf1bcac60128931b18677bd"
+    },
+    "presets/Unchained - Custom Gramatix (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Custom Gramatix (Remix).milk",
+      "sha256": "d1da77bf471106f4a0c0e76f3657aaa79c07a8b6e1b3a515bc84e365998441aa"
+    },
+    "presets/Geiss - Flower Blossom.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Flower Blossom.milk",
+      "sha256": "376bb047f1a6ee058a7bb60d639aac105778a667a23d132de6edd56563566b9d"
+    },
+    "presets/Rovastar - Cosmic Mosaic (Active Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Cosmic Mosaic (Active Mix).milk",
+      "sha256": "25a7a38df05bbbaa4b222e1819e5916be7cb3e0152e1595a5595fa1ccc9c00c8"
+    },
+    "presets/Zylot - Rush.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Rush.milk",
+      "sha256": "c7ea3c0159863cde949deae62cc50abd1bfd24b5c6591cbab00d973028cafb13"
+    },
+    "presets/Rovastar - Oozing Resistance.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Oozing Resistance.milk",
+      "sha256": "6b9a7b87fd8a6d0f6055cc1d73826d59dcca734caf2d8e5930aeb6099c13ba5b"
+    },
+    "presets/Zylot - The Deeper.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - The Deeper.milk",
+      "sha256": "3bb97be731d26fded1ebd6b328f305dd7d40843d75ec7800bbb4bb0ef963aaef"
+    },
+    "presets/Bmelgren - Pentultimate Nerual Slipstream (Tweak 2).milk": {
+      "upstream_path": "data/projectm/presets/Bmelgren - Pentultimate Nerual Slipstream (Tweak 2).milk",
+      "sha256": "8c70290ea80beae3949414d8b1f9c3d4d1e8fad3fc75ad4f5932ece0dea41c1f"
+    },
+    "presets/Geiss - Octopus Fat and Ever Changing.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Octopus Fat and Ever Changing.milk",
+      "sha256": "a8278ad7ff8e3eba7ab52a22fefae00c0f5970fb45a3aa3e5214a307fccac6a9"
+    },
+    "presets/EMPR - Random - Changing Polyevolution.milk": {
+      "upstream_path": "data/projectm/presets/EMPR - Random - Changing Polyevolution.milk",
+      "sha256": "25418d2983396c88ae0a0b6d42ad650fc9f3f4d3442fbe3643dbdcf562d47cae"
+    },
+    "presets/Unchained - Bad Karma Oddnezz Style.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Bad Karma Oddnezz Style.milk",
+      "sha256": "51e7073f3f68f00b836a655f2b9f3a37816176cac0686781a25f9e66a0cf0dc3"
+    },
+    "presets/Aderrasi - Airs (Windy Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Airs (Windy Mix).milk",
+      "sha256": "86b16b7c55765c9fd9e559fd6c0dc2d4897b09c44ebc1ba7e5548d1985508025"
+    },
+    "presets/Unchained - Beat Demo (Demonology Mix).milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo (Demonology Mix).milk",
+      "sha256": "6bd8cee200efbcbfd5cdd1fd6904e90f7aee3bf501d882b57cd88d2c90eb1758"
+    },
+    "presets/Rovastar - Solarized Space.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Solarized Space.milk",
+      "sha256": "5084f3b4f0e0282f6461f65337530f65e812d1e1cd4d76d2e7f919ccb7592f08"
+    },
+    "presets/Idiot - 9-7-02 (Remix) (sustain fixed).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - 9-7-02 (Remix) (sustain fixed).milk",
+      "sha256": "fae83d3aae9b33811f5c270facd849abf3f62b9c6de6b40e26bca5fc1656fa09"
+    },
+    "presets/Zylot & Mstress - Celebrate.milk": {
+      "upstream_path": "data/projectm/presets/Zylot & Mstress - Celebrate.milk",
+      "sha256": "4616101a256c6cd8726e12c5a5b3c5421ec1ba65c8f2f4515e92cf2442af2635"
+    },
+    "presets/Geiss - Cosmic Dust 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Cosmic Dust 1.milk",
+      "sha256": "279126da05b9f22ca942bf26648ae598f9be6aab26ea2d4d9af16ba66baa63fc"
+    },
+    "presets/Rovastar - Explosive Minds.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Explosive Minds.milk",
+      "sha256": "7ab39beea30b3627885e68d85d6eb058e277e2c8a6beb9a08a279036cc157a91"
+    },
+    "presets/EvilJim - Follow the ball.milk": {
+      "upstream_path": "data/projectm/presets/EvilJim - Follow the ball.milk",
+      "sha256": "e0f467aacd488ad2aa11096acfe12922fa248e041d770a0200b66b410552caae"
+    },
+    "presets/Rovastar & Geiss - Dynamic Swirls 3 (Broken Destiny Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Dynamic Swirls 3 (Broken Destiny Mix).milk",
+      "sha256": "3961613928cbba35df262bbd6cf5ff1b42a88d98e5b2f576022a946e410f5ecd"
+    },
+    "presets/Idiot - Texture Boxes (Remix 2).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - Texture Boxes (Remix 2).milk",
+      "sha256": "fce9427b09d0510a9edb76b52c49e23bde733671af43540edf122f3ca18c67fd"
+    },
+    "presets/Krash - War Machine (Shifting Complexity Mix).milk": {
+      "upstream_path": "data/projectm/presets/Krash - War Machine (Shifting Complexity Mix).milk",
+      "sha256": "6355279e4707c000aee03a84e5261c5c3d3a64cb03687a02b4f2ab448646b9fe"
+    },
+    "presets/Rozzor and Zylot - Associative Order.milk": {
+      "upstream_path": "data/projectm/presets/Rozzor and Zylot - Associative Order.milk",
+      "sha256": "2f554e18e434a4879f1956eae6ef8d4e1a0a4fb1d88612c35a802dc00b88b076"
+    },
+    "presets/Rovastar - Inner Thoughts (Strange Cargo Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Inner Thoughts (Strange Cargo Mix).milk",
+      "sha256": "1955ea2e0c7fd73b07e8a128f0a869eb566ab87a4aa3022acc2d1ef0a060d08f"
+    },
+    "presets/Geiss - Mega Swirl 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Mega Swirl 2.milk",
+      "sha256": "38a3cc4ce3707f2e98d7e0ccf3a7e71a5dda6fe78746b37cf39661445f915303"
+    },
+    "presets/Rovastar - Hyperspace (Frozen Rapture Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Hyperspace (Frozen Rapture Mix).milk",
+      "sha256": "1294cdec7668c9e0a8c2c2c207de9e068cc1f77339a7c03393fe1afd40b4eb44"
+    },
+    "presets/Rovastar & Fvese - Paranormal Static.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Fvese - Paranormal Static.milk",
+      "sha256": "19dbbd09cb952ddf47fe2d427cc0debbd29b4ff56e307e7e27fe2a0a3379ddbf"
+    },
+    "presets/Rovastar & Rocke - Sugar Spun Sister.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Rocke - Sugar Spun Sister.milk",
+      "sha256": "5a4fe7e7ee5cbb199633c5cfbb7654cd69813f14b6a91b787d9120d10124bf94"
+    },
+    "presets/Aderrasi - Crystal Storm.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Crystal Storm.milk",
+      "sha256": "104600830e4ea5f625ac03519ccc8653412c02135e89fcfd7859d3d71d6ac7b6"
+    },
+    "presets/Krash - Digital Flame.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Digital Flame.milk",
+      "sha256": "dc5055c7960f82ab7d48390caf89b735519fffe51acf1b48527da03e90e8067a"
+    },
+    "presets/Mstress & Juppy - Dancer.milk": {
+      "upstream_path": "data/projectm/presets/Mstress & Juppy - Dancer.milk",
+      "sha256": "dafc87fed2c39fdcb12c76374f484cee9d5e4c4a7f7ded904a33c4ffbd1b6b04"
+    },
+    "presets/Telek - Directive Swagger (Spectral Inferno) (fix...) maybe.milk": {
+      "upstream_path": "data/projectm/presets/Telek - Directive Swagger (Spectral Inferno) (fix...) maybe.milk",
+      "sha256": "5727b38cf20121868780e1463e0795b2018394cf9dda0f009471dfc2e46ae077"
+    },
+    "presets/Rovastar - Fractopia (Galaxy Swirl Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Fractopia (Galaxy Swirl Mix).milk",
+      "sha256": "6e4ad9a9f70742481e1201e2d17667ad56022ecf1d4f20e733cac44e8b049f9a"
+    },
+    "presets/che - adela the flower.milk": {
+      "upstream_path": "data/projectm/presets/che - adela the flower.milk",
+      "sha256": "f6ba301b43ea0f1e8c5af7a59387c0fdf958a08d7c397a85136acc768c2b6b3a"
+    },
+    "presets/Rovastar & Che - Adela The Flower (Altars Of Madness Mix 2).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Che - Adela The Flower (Altars Of Madness Mix 2).milk",
+      "sha256": "609644136f9c1e1541f2c2a3aef7ebf078c377a598ebe44fd7fc7f093a904c2c"
+    },
+    "presets/Rovastar - Altars Of Madness 2 (Frozen Time Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness 2 (Frozen Time Mix).milk",
+      "sha256": "6be27d23502c686c069080aefb8edd9cf8f457821fdc7d021da406f7ab461033"
+    },
+    "presets/Telek - Spiral Tabletop (New and Improved!).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Spiral Tabletop (New and Improved!).milk",
+      "sha256": "8150b6670abe2edbb902fcc28273f0a70fe040dce4a1490aa3d57a69638b5acc"
+    },
+    "presets/Studio Music and Unchained - Rapid Alteration.milk": {
+      "upstream_path": "data/projectm/presets/Studio Music and Unchained - Rapid Alteration.milk",
+      "sha256": "f9e3211c81580d38677524abc18d45501c913085ba4b51594a43d2657db2e91c"
+    },
+    "presets/Geiss - Space Voyage.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Space Voyage.milk",
+      "sha256": "bc01d3f3491191443b46c6ad062defeaec20eb9ca7ee2bac5363602e11a7d758"
+    },
+    "presets/Telek - Recirculate (Cool).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Recirculate (Cool).milk",
+      "sha256": "2b989f0b72a4acd4dd9d958658a3a7be361fc2bcb762f1a15d5de18e84cbb44e"
+    },
+    "presets/Rovastar - Harlequin's Delight (Endless Tunnel Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Delight (Endless Tunnel Mix).milk",
+      "sha256": "8e796dd35ea9533142de2fbd36180eb843b91fccd5e603b6a9970d4914f517c8"
+    },
+    "presets/Aderrasi - Causeway Of Dreams (Nightmare Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Causeway Of Dreams (Nightmare Mix).milk",
+      "sha256": "a1a99d35140c4c7e67f97fa40f31adab7b9f4ead9b0c7cb63270d9d9475bb97d"
+    },
+    "presets/Unchained - All You Can Eat.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - All You Can Eat.milk",
+      "sha256": "17e0cad25bf50cb3c2d05d68eebec331f5a87282e29b8cbeff4ea5a88d400432"
+    },
+    "presets/Unchained - Deeper Logic.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Deeper Logic.milk",
+      "sha256": "ee804baf8c34ba6241a6a3e84986e3b723eb8be37bad2d7eeb9c8509c4ed277e"
+    },
+    "presets/Geiss - Swirlie 3.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirlie 3.milk",
+      "sha256": "a2c17d0e5100059795f95e801d04e62d1f9af85d5aff0523de0f83701715a93d"
+    },
+    "presets/Telek - Slow Shift Matrix (Ethereal Drift).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Slow Shift Matrix (Ethereal Drift).milk",
+      "sha256": "7e7bb03763ebef2824fea0f9a3e1d14c028d88ea8a4ee5ed25896626fc647c3b"
+    },
+    "presets/idiot - Sinful Code (unchained style).milk": {
+      "upstream_path": "data/projectm/presets/idiot - Sinful Code (unchained style).milk",
+      "sha256": "1d9bdf084164ef1b2c1fa4e5bd013f2e5ef01ec1874e3f4ffa6ad5b849afd5d8"
+    },
+    "presets/Rovastar - The Chaos Of Colours.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - The Chaos Of Colours.milk",
+      "sha256": "ef959d4c98393867396a13f99bf1df010698281c3a7361bf468843cc11b517a7"
+    },
+    "presets/Rovastar & Geiss - Dynamic Swirls 3 (Poltergiest Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Dynamic Swirls 3 (Poltergiest Mix).milk",
+      "sha256": "41d4d37baae34a4e9b25bf6dec37c41a56faff55d0dbbe59b46689f5fd4127fa"
+    },
+    "presets/Geiss - Dynamic Swirls 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Dynamic Swirls 2.milk",
+      "sha256": "511c7bb23ef3fe49bcfbfc9f6c59fe45293dede93efb3c09f756d30d5debbd00"
+    },
+    "presets/Idiot - MOTIVATION!.milk": {
+      "upstream_path": "data/projectm/presets/Idiot - MOTIVATION!.milk",
+      "sha256": "52f38c61abb3d3c906be11cf50c1434da164a5117bbe561fc1e10316b8156929"
+    },
+    "presets/Zylot - S Pulse Virus.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - S Pulse Virus.milk",
+      "sha256": "b29d403ad2da1befc91d5b56e921f33beba663b512b6794ea0106062766b3249"
+    },
+    "presets/Geiss - Bipolar 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bipolar 2.milk",
+      "sha256": "06242fbd6ece5ed9ee958cf44a1b53f0b83d75c9a352be10304f1209cc287623"
+    },
+    "presets/fiShbRaiN - blueprint.milk": {
+      "upstream_path": "data/projectm/presets/fiShbRaiN - blueprint.milk",
+      "sha256": "5b1dcb5b841181f44d45676802506f917870cde948c5ce4fa87d46fe58a90f0c"
+    },
+    "presets/Rozzor and che - Inside the House of nil.milk": {
+      "upstream_path": "data/projectm/presets/Rozzor and che - Inside the House of nil.milk",
+      "sha256": "5d47a7a9a1118701b252468a1033334ddf227eaf4b0c015f615781cfa037ec16"
+    },
+    "presets/Geiss - Davod The Pod.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Davod The Pod.milk",
+      "sha256": "9f944a32301714d466c770134fe0cfdbd39bc8edaf1eb96c09e02e336656947a"
+    },
+    "presets/CrystalHigh - mad ravetriping.milk": {
+      "upstream_path": "data/projectm/presets/CrystalHigh - mad ravetriping.milk",
+      "sha256": "3923bd0eae83fb26869fc875dfc2d56d7a10ecc5931d6a030f856d1dcc1766d8"
+    },
+    "presets/Geiss - De La Moutard 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - De La Moutard 1.milk",
+      "sha256": "c1c96d98b9abd258e6eac6856cb22aad607a4ef3f1ee90e6c7762d08571b09f3"
+    },
+    "presets/Rovastar - Timeless Voyage.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Timeless Voyage.milk",
+      "sha256": "4163ab868f9ed34edb519cb2612e09fbb2f5554204ebc355297f911d84e28b94"
+    },
+    "presets/Telek EMPR - Scanner - Trust me I've got a Melways.milk": {
+      "upstream_path": "data/projectm/presets/Telek EMPR - Scanner - Trust me I've got a Melways.milk",
+      "sha256": "b035b033c194b192c670bf4f9fc66073f5171e157f22e416b60827dfb876b7a7"
+    },
+    "presets/Aderrasi - Agitator.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Agitator.milk",
+      "sha256": "14c038c96b64080ebee7bd763084f4819467121557f33a6efe2e54bb36631ee3"
+    },
+    "presets/Unchained - French Clothing.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - French Clothing.milk",
+      "sha256": "778509c35e4286665fd0026a01a0c642a76a47e4b33adbcff9a0672770b4eee4"
+    },
+    "presets/Unchained - Shaping The Grid.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Shaping The Grid.milk",
+      "sha256": "83a742b8e16abfd411c87c016524a61cae9a16f4d0bf0865e7388035a91ec3e3"
+    },
+    "presets/Krash & Rovastar - Cerebral Demons - Phat + Eo.S. hall of ghouls Remix.milk": {
+      "upstream_path": "data/projectm/presets/Krash & Rovastar - Cerebral Demons - Phat + Eo.S. hall of ghouls Remix.milk",
+      "sha256": "99a9c28397643e27bd1b21788d33fd18ba2c96d34a403ec8e8a272a391f3bda8"
+    },
+    "presets/Unchained - Cartoon Factory.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Cartoon Factory.milk",
+      "sha256": "e609ee2bfacdd0be07426aea3b41bc9e320de136d21fa9cf560218a6ead28024"
+    },
+    "presets/Krash & Rovastar - A Million Miles from Earth (Ripple Mix).milk": {
+      "upstream_path": "data/projectm/presets/Krash & Rovastar - A Million Miles from Earth (Ripple Mix).milk",
+      "sha256": "8762d803b29bf8ee989c094576b0368f4417be45ac5d97d6bb007794b76cd3d1"
+    },
+    "presets/idiot - Nucleus.milk": {
+      "upstream_path": "data/projectm/presets/idiot - Nucleus.milk",
+      "sha256": "b7dae36203446735cd5c450cba883fd56365b6b51b2e95cef50520a72b0c8ead"
+    },
+    "presets/Rovastar & Krash - Flowing Synergy.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Krash - Flowing Synergy.milk",
+      "sha256": "7faeed29d8b0ceb37c923333c43272e97595e1c569f90d00bb96207de2bc9216"
+    },
+    "presets/Redi Jedi - acid in your brain.milk": {
+      "upstream_path": "data/projectm/presets/Redi Jedi - acid in your brain.milk",
+      "sha256": "9800a9865b93fb428abe9c006e6ef70c831352e97cadeda42e2d435a0fc11ea7"
+    },
+    "presets/Geiss - Mega Swirl 3.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Mega Swirl 3.milk",
+      "sha256": "6b6a47cdb9ba703a4937d5296ec3a97dc8aec5ca751d4b400017f5b0e140c9e7"
+    },
+    "presets/Geiss - Flotsam.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Flotsam.milk",
+      "sha256": "0492890d618d6d284032f262780d14868aae0741b12425c0fd9310b147f173fd"
+    },
+    "presets/Unchained - Housed In A Childish Mind.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Housed In A Childish Mind.milk",
+      "sha256": "634ee96858547a4b24b587e2662f61c85fe254bea19d3a79165a43058e08a1d2"
+    },
+    "presets/Geiss - Surface.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Surface.milk",
+      "sha256": "be528fc1c38c584b7ae831da6508dad48222ce4e0c409a78edb3d0a31d274dfd"
+    },
+    "presets/Aderrasi - Contortion.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Contortion.milk",
+      "sha256": "73f857209b5dbf8695110b3b0f008e1e58845a692e790be3873ee209859e9ce2"
+    },
+    "presets/Unchained - Resistance.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Resistance.milk",
+      "sha256": "b6d9dfc8e1603067ce2242cb275c96edeb553d16a213a67b8bbbab14a7d6628f"
+    },
+    "presets/Geiss - Swirlie 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirlie 2.milk",
+      "sha256": "d6c441d0b7b2e9df6fc5012e302863c75c398f277a8d44d8a8ed446d0e740fe8"
+    },
+    "presets/Illusion - Figure Eight.milk": {
+      "upstream_path": "data/projectm/presets/Illusion - Figure Eight.milk",
+      "sha256": "dc8d877b17884125a530e36cb040aeb891e196a507190cebf65c2f5cdc3ce4bc"
+    },
+    "presets/Rovastar & Geiss - Dynamic Swirls 3 (Smoke Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Dynamic Swirls 3 (Smoke Mix).milk",
+      "sha256": "e99967284815cf6363f046ae68dc3ab3e400c725a1758a71a44ffa80700e807b"
+    },
+    "presets/Aderrasi - Brakefreak.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Brakefreak.milk",
+      "sha256": "a20c90daf3607e2036fb351f8d515187a5a8e63dc26f3bf93a5ed0cd8d2cdc70"
+    },
+    "presets/Geiss - Blasto.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Blasto.milk",
+      "sha256": "ca8f8f5cc3e997f0cb495962a9d4e3eb12f322bba664fe230c8ff4ef4048fea0"
+    },
+    "presets/Geiss & Rovastar - Notions Of Tonality 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss & Rovastar - Notions Of Tonality 2.milk",
+      "sha256": "f939aca803146323727be129b8ca287cc11147f269c54b69e7593a4783ee3e25"
+    },
+    "presets/Rovastar - Dreamcatcher.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Dreamcatcher.milk",
+      "sha256": "26dfd6889fdfa9535f2ad97a941bd9e1f29be105fb9c479a0352a85f3d4b4b5b"
+    },
+    "presets/Geiss - Two-Pointed Pulsagon.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Two-Pointed Pulsagon.milk",
+      "sha256": "df01b544ec43219e9ff6af3093d0abb5a77f909ba3231dd7e93915092c3a5b01"
+    },
+    "presets/Unchained & Rovastar - For The Seagull.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - For The Seagull.milk",
+      "sha256": "373b2ce258d3ef51ee8b7fcb83a89ea44a285b2e2468c69509364c39fd55a5cd"
+    },
+    "presets/Rovastar & Geiss - Ice Planet.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Ice Planet.milk",
+      "sha256": "9e995666fa7a7f4eb7d7d5d78307474deba4fd64f51bf423ccedeaf5f305daa5"
+    },
+    "presets/Aderrasi - Songflower (Moss Posy).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Songflower (Moss Posy).milk",
+      "sha256": "de587935101f0989f410f08c2c3cca31f8c82a1c9ced4a8cec22e84a1180942c"
+    },
+    "presets/Idiot - Cortex (Spiritual Visions Mix).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - Cortex (Spiritual Visions Mix).milk",
+      "sha256": "bbb939127589a7f8ae9e11c127460c38b0274458518fe8941480af59aa5ec575"
+    },
+    "presets/Geiss - Bonfire.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bonfire.milk",
+      "sha256": "7f37fd4fd7999e66a204712cf1d04450eaaacbb112f63f96536d532ad4d679bc"
+    },
+    "presets/Aderrasi - Making Time (Swamp Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Making Time (Swamp Mix).milk",
+      "sha256": "a315f6ff23072c3e6ba2d0cd8b2a5bc65eedd01d225fd9bac67ff1a33f2656f2"
+    },
+    "presets/nil - Cid and Lucy.milk": {
+      "upstream_path": "data/projectm/presets/nil - Cid and Lucy.milk",
+      "sha256": "a3705a072d17deb4d047910315797d505e1369a008a55f4687aed016db0bcf23"
+    },
+    "presets/Idiot - Typomatic (Remix 2).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - Typomatic (Remix 2).milk",
+      "sha256": "0f282c036bbcc7d2784cf0968a9f4586f4ecb1b2df23ff9a0da38bc4a49794bf"
+    },
+    "presets/Rozzor & Rovastar - Oozing Resistance (Waveform Mod).milk": {
+      "upstream_path": "data/projectm/presets/Rozzor & Rovastar - Oozing Resistance (Waveform Mod).milk",
+      "sha256": "a2225a60bce9c4cc3a5c14e6e969149ccdd038bbeaad14180db579afe7ee70d5"
+    },
+    "presets/Fvese - Quicksand.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - Quicksand.milk",
+      "sha256": "5fb01ca64fca134a372fa6019bb4ade64693fb05784afb96f279d415210b5e8a"
+    },
+    "presets/Zylot - Crystal Ball (Magical Reaction Mix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Crystal Ball (Magical Reaction Mix).milk",
+      "sha256": "79bc5575acfc786d6e74660be998662b35627a18b337dddea0035a75c86fcf37"
+    },
+    "presets/Fvese - simple.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - simple.milk",
+      "sha256": "b048e8269ec23fd3e0a1202c37597e36fe95d5ed68970f9655e28c79076e3629"
+    },
+    "presets/Krash - 3D Shapes Demo 2.milk": {
+      "upstream_path": "data/projectm/presets/Krash - 3D Shapes Demo 2.milk",
+      "sha256": "b662b49fb46217dbc360e475b350890cf99ec03e0870ec0a4d8d002a510672fb"
+    },
+    "presets/Geiss - Tornado.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Tornado.milk",
+      "sha256": "53545a9f91c76d5c5aeac76153462fbed78a69650fd56e936b41280ed546ca58"
+    },
+    "presets/Eo.S. + Phat - chasers 18 hallway.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. + Phat - chasers 18 hallway.milk",
+      "sha256": "1b1b65624e7bc32560a31a7797e9842dcc3def0325c9c9bff1f57132c5b96c64"
+    },
+    "presets/Geiss - Four Kinds of Amphetamines.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Four Kinds of Amphetamines.milk",
+      "sha256": "9f085db5e6515139d7c7b8a85c1f31d42a35bc1e4160cac338d5c80262e83efe"
+    },
+    "presets/Idiot - Texture Boxes (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - Texture Boxes (Remix).milk",
+      "sha256": "3471671860bf8fd36ab72f443c9ce40e0d7f22448852ce6fcc3a612f96a7bea3"
+    },
+    "presets/Geiss - Inkblot.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Inkblot.milk",
+      "sha256": "4fb3e569bab8c684a6ce3babfa098c2bc4c8655cad663b73f29299a0c8b81cd8"
+    },
+    "presets/StudioMusic & Unchained - Minor Alteration.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic & Unchained - Minor Alteration.milk",
+      "sha256": "dda1aced4c4f965631290035237c39cf59faf7fd62191dcf9086079f48d88d0f"
+    },
+    "presets/Bmelgren & Krash - Rainbow Orb Peacock (Lonely Signal Gone .milk": {
+      "upstream_path": "data/projectm/presets/Bmelgren & Krash - Rainbow Orb Peacock (Lonely Signal Gone .milk",
+      "sha256": "60525bbd4d01e1958387891711cf79a118e108b993b371072188c64fc8831834"
+    },
+    "presets/Geiss - Galaxy 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Galaxy 1.milk",
+      "sha256": "8a0d79d95c73d85ffe63acd8d31fbc931956313a5b8083f29ac32e84edac9788"
+    },
+    "presets/Fvese - Stand Still!.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - Stand Still!.milk",
+      "sha256": "3299cb2a3cfb4f0c95ca2f8ef85edaeef0609c54cd7153d41822ae9e96d5f84a"
+    },
+    "presets/Rovastar & Geiss - Octoplasm.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Octoplasm.milk",
+      "sha256": "59a0814e8ee99452966af3fcdbec6ad27f660f0a76154f4756ad393327e0766b"
+    },
+    "presets/Geiss - Fiberglass.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Fiberglass.milk",
+      "sha256": "6192eb721086881fda40cdd7440edd29ae7ecb9dac2f5d12f3e0383806af6a27"
+    },
+    "presets/Rovastar and Unchained - Braindance Visions.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar and Unchained - Braindance Visions.milk",
+      "sha256": "e70b4b6a2f44098f7198a6eba2f133c15b784c9901eb63402bdbd4157ddeeefc"
+    },
+    "presets/Geiss - Heavenly 3.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Heavenly 3.milk",
+      "sha256": "9ebf7cda7c84e45e146534c1015d911b81482801ed2605fe605f7006d3a11ad3"
+    },
+    "presets/Geiss - Space Voyage (High-Warp).milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Space Voyage (High-Warp).milk",
+      "sha256": "7d84e7f56a797f6b52e856c7a5238f1c387a99533d506d8c64a14dccd9fdbe2d"
+    },
+    "presets/Rovastar - Harlequin's Dynamic Fractal (Crazed Spiral Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Dynamic Fractal (Crazed Spiral Mix).milk",
+      "sha256": "625875b0237259146f293e4fc00c57cd8a187283ed3bca2a9dbbc519d5d0edb6"
+    },
+    "presets/Geiss - The Fatty Lumpkin Sunkle Tweaker.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - The Fatty Lumpkin Sunkle Tweaker.milk",
+      "sha256": "bc975541d7ea96cbc9d3087b535f58b787957de5d1b4f4a0f6bf3b2bbd0b576f"
+    },
+    "presets/Krash and Rovastar - Rainbow Orb.milk": {
+      "upstream_path": "data/projectm/presets/Krash and Rovastar - Rainbow Orb.milk",
+      "sha256": "97a1272bd96e5fb7ea76382e1156fc682d2295ed63ed21c3966886fbff767c06"
+    },
+    "presets/Illusion - Heavenly Eye.milk": {
+      "upstream_path": "data/projectm/presets/Illusion - Heavenly Eye.milk",
+      "sha256": "50f17df2c54fbca4d0ce946a2c40bd23a32f23259167f4cf2321108a7bd2e158"
+    },
+    "presets/Geiss - Hovering.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Hovering.milk",
+      "sha256": "3235560f444a852ed7900c719f9769a9789c17c026fb400de61fb15aa3e3c5b4"
+    },
+    "presets/Geiss - Planet 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Planet 2.milk",
+      "sha256": "fc949a93643e49110ec437756c23caf66aa2c81d51090ae0569d5e06d8478c15"
+    },
+    "presets/Unchained - Games With Light & Sound.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Games With Light & Sound.milk",
+      "sha256": "3e6f4789b4dbabf46d59e25c991f35e052b788c7248d6d8e6376b6c2d5531585"
+    },
+    "presets/Zylot & Aderrasi - Oceanic Bassograph (New Jersey Shore Mix.milk": {
+      "upstream_path": "data/projectm/presets/Zylot & Aderrasi - Oceanic Bassograph (New Jersey Shore Mix.milk",
+      "sha256": "548b67746c4e23ca8edf0c02bd6d2be2a97344b43a5007748251d52fcc5447ee"
+    },
+    "presets/Geiss - Music Box.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Music Box.milk",
+      "sha256": "f374689c1b3cbf3b9eb538a9853bdedeb164edd43b53caa5f245fe38b4f4666b"
+    },
+    "presets/Geiss - Sound And The Fury.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Sound And The Fury.milk",
+      "sha256": "b0f22bc955c905d9c20666ed2a0d3ce5b1920f162345e5b525db03fcf149f6c3"
+    },
+    "presets/illusion & studio music - charged bliss.milk": {
+      "upstream_path": "data/projectm/presets/illusion & studio music - charged bliss.milk",
+      "sha256": "a041b74a1a4cedf531abb1f53c3e24683bb1c4ddf8038cf55242e8915c931f07"
+    },
+    "presets/Unchained & Rovastar - Wormhole Pillars.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Wormhole Pillars.milk",
+      "sha256": "7a631b35281979cd90aaf681cc3ef6a463f6f110f943f0733c8e30aa6b06da04"
+    },
+    "presets/Unchained - Non-Professional Music Analyzer.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Non-Professional Music Analyzer.milk",
+      "sha256": "b7cf983e9381c230a797a7984fbca112b0db357b749cc30905bae8a580e3c5cc"
+    },
+    "presets/Eo.S. - glowsticks v2 05 and proton lights (+Krash's beat code) _Phat_remix02b.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - glowsticks v2 05 and proton lights (+Krash's beat code) _Phat_remix02b.milk",
+      "sha256": "27c653f6f41baa16482feef37db91d43a2f4415b2861118815f3d63210dec246"
+    },
+    "presets/Geiss - Shift.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Shift.milk",
+      "sha256": "30d25a91426a27fdbe7094cfaa36a586669da9eb2be21733a89fc27cca324038"
+    },
+    "presets/Geiss - Volume Zoom.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Volume Zoom.milk",
+      "sha256": "812cd1b0d4b03b044349f3dca6cc160743cc8cc927cc4a69d108965f94523526"
+    },
+    "presets/TEcHNO and SandStorm - Psychodelic Highway.milk": {
+      "upstream_path": "data/projectm/presets/TEcHNO and SandStorm - Psychodelic Highway.milk",
+      "sha256": "429d0c641272a101baed494b0537f78117929d7aa3e5c3fd5585d3e7db584ec2"
+    },
+    "presets/Zylot - Block Of Sound (Fractal Construction Mix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Block Of Sound (Fractal Construction Mix).milk",
+      "sha256": "daf7060d89c0238cdc7e151671c1035beceb64851482852a2dc4894a6e66c4fa"
+    },
+    "presets/Unchained - Unified Drag 2.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Unified Drag 2.milk",
+      "sha256": "ec536c374babd109b069d679a8ab03fe5c3424ccbe110a2354e794013a6b2e5c"
+    },
+    "presets/Rovastar - VooV's Movement.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - VooV's Movement.milk",
+      "sha256": "51f1cb0b9ad1f4350d54edac8c7647e3efd310220c0778778bbf099b4f65c47d"
+    },
+    "presets/Geiss - Swirlie 5.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirlie 5.milk",
+      "sha256": "aabfb2be19e54fdd5431fafaad3732896adcc76d453e1a7a7da7bc0313ada1b0"
+    },
+    "presets/Rovastar & StudioMusic - Twisted Spider Web.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & StudioMusic - Twisted Spider Web.milk",
+      "sha256": "9886a2eb37b09e48a188cac96848ab42114fba2a8960bee0cd05c8685887aea0"
+    },
+    "presets/Rovastar and Krash - Hallucinogenic Pyramids (Extra Beat Ti.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar and Krash - Hallucinogenic Pyramids (Extra Beat Ti.milk",
+      "sha256": "db5466da2c9fb6c591f55170926bebe71cf93aedfc3700d0273c278f4eb9e9a6"
+    },
+    "presets/Geiss - Diffraction.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Diffraction.milk",
+      "sha256": "c71acfcd10cf3e87f9681771309e11e7b262d6b65b7a2200f8ca07fcbc797fce"
+    },
+    "presets/Geiss - Toy.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Toy.milk",
+      "sha256": "3e0b21aa97ccb0735c44e13ebb3e7d1da358f277df86330bebd9a5ae99d48fe4"
+    },
+    "presets/Idiot & Rovastar - Altars Of Madness 2 (X.42 Mix).milk": {
+      "upstream_path": "data/projectm/presets/Idiot & Rovastar - Altars Of Madness 2 (X.42 Mix).milk",
+      "sha256": "2630a8a6e4951c12d750086c09a209a59608f6f20db93704c339dcc583b2484b"
+    },
+    "presets/Geiss - Constant Velocity.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Constant Velocity.milk",
+      "sha256": "2b587bef821541eb4779bb45571425407bfdb135e569d6868fcf44ce6c871190"
+    },
+    "presets/Geiss - Feedback 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Feedback 2.milk",
+      "sha256": "24e9098da1141af87b61e21711fe7784065d7f4293f52da6274cd517bbb03aa0"
+    },
+    "presets/Unchained & Illusion - Dual Wave 3.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Illusion - Dual Wave 3.milk",
+      "sha256": "efc469cc33a59280c55701d639cef78c081f5a436c5ed53b222e39be6c0b5ad8"
+    },
+    "presets/Telek - Flicker.milk": {
+      "upstream_path": "data/projectm/presets/Telek - Flicker.milk",
+      "sha256": "6c369e9a3a32ce5313b616945ba10febf91feacd7355aad0bec1a2c58c65fd60"
+    },
+    "presets/Geiss - Quasilinear Submanifolds.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Quasilinear Submanifolds.milk",
+      "sha256": "b5f327e5e2acfedb720aeb97726fdefb8aff9eeec75e6df36655833520222809"
+    },
+    "presets/Rovastar & Fvese - Deadly Flower.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Fvese - Deadly Flower.milk",
+      "sha256": "5473d51ad328727213c38b0d838236d192239fb203b476e5c4ccdf53ed547883"
+    },
+    "presets/Rovastar - Pandora's Volcano.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Pandora's Volcano.milk",
+      "sha256": "af751081ab05c89949eeb6d900d9b75f27ee7ee44852ec5b58050016648d7d0c"
+    },
+    "presets/Geiss - Downward Spiral.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Downward Spiral.milk",
+      "sha256": "170e5d973ab274c92f68c3ecf2a5d95572ff29d9806d7efb869efdbb09d820cd"
+    },
+    "presets/Unchained - Beat Demo 10.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo 10.milk",
+      "sha256": "50e5fa7c79aad974d56c40c2295a04641972e05253bae1adabc01a5618ad39bc"
+    },
+    "presets/Rovastar & Illusion - Shifting Sphere.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Illusion - Shifting Sphere.milk",
+      "sha256": "ae1e2e2d6d321a004511206e0b2ca3b123ec2ec571def5108b88f0d71f4b82fe"
+    },
+    "presets/Mstress - Acoustic Nerve Impulses (Under Drug Effetcs (Hypn.milk": {
+      "upstream_path": "data/projectm/presets/Mstress - Acoustic Nerve Impulses (Under Drug Effetcs (Hypn.milk",
+      "sha256": "570f8981ab6956119f6eaaaa907387077ae1615237b75455394010514e56f308"
+    },
+    "presets/Eo.S. - heater core C_Phat's_on route_mix+beam.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - heater core C_Phat's_on route_mix+beam.milk",
+      "sha256": "912e5badc291539950ea7b1316f58297b268e0577dc15f64abbd8a9bcff0bb18"
+    },
+    "presets/Aderrasi - Floater Society.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Floater Society.milk",
+      "sha256": "0387c917f01848136326ff4f8036ecea0bfe08b082701f875a7c51c2cae12f01"
+    },
+    "presets/Rovastar & Fvese - Mosaic Waves.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Fvese - Mosaic Waves.milk",
+      "sha256": "979e86dcfebe189536df6378d2dffc1268e9e90e4f688f00f549f9b8836a52e6"
+    },
+    "presets/Geiss - Greenland.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Greenland.milk",
+      "sha256": "316b5f5422d98661e60283a95335278fdf84b64a698c5deb63589586ce87a6f4"
+    },
+    "presets/TobiasWolfBoi - Cataract.milk": {
+      "upstream_path": "data/projectm/presets/TobiasWolfBoi - Cataract.milk",
+      "sha256": "54776a35b1cdb22bf1841613057f6a8a23e51845767855840a444340fd1ddede"
+    },
+    "presets/Rozzor and Rovastar - Altars Of Madness 3 (ooze tweak with .milk": {
+      "upstream_path": "data/projectm/presets/Rozzor and Rovastar - Altars Of Madness 3 (ooze tweak with .milk",
+      "sha256": "8b379f704278bbf6d03c266b2f26b7bc41915a4f174735e532652683f72022dd"
+    },
+    "presets/Zylot - Block Of Sound (Abstract Architecture Mix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Block Of Sound (Abstract Architecture Mix).milk",
+      "sha256": "affd13f0cdc64dfaca67ad7c8e67b1bcbafa98ec95b1359bc0a872eddbfe4f45"
+    },
+    "presets/StudioMusic & Unchained - State Of Discretion.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic & Unchained - State Of Discretion.milk",
+      "sha256": "610678b9c666080fc8da49752fabf44ae3950f552717132afa5f1dde7c1d945a"
+    },
+    "presets/Rovastar & Geiss - Dynamic Swirls 3 (Smoking Delusion Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Dynamic Swirls 3 (Smoking Delusion Mix).milk",
+      "sha256": "4fe8cabbb8b2c6aa0521773ecb9a08c705dc52a2434f40c4aab1ea94a2cbe4e8"
+    },
+    "presets/Unchained - Ghostlight Whisper.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Ghostlight Whisper.milk",
+      "sha256": "2770eb0ca4440f8c16643af3608b0476cfb1efbd03512464705b300d16d0b6dd"
+    },
+    "presets/Rovastar - Touchdown on Mars (Detailed Pictures Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Touchdown on Mars (Detailed Pictures Mix).milk",
+      "sha256": "f0b64234dc55675175cb8326a1dc1c474028cdb428f8c370da42a987dd4693c3"
+    },
+    "presets/Geiss - Three And A Half Kinds Of Amphetamines.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Three And A Half Kinds Of Amphetamines.milk",
+      "sha256": "4cce64d83510202da9bc20a6c3ffb145019338dca4b92fcfff50f49a0e089fa9"
+    },
+    "presets/Geiss - Rocket.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Rocket.milk",
+      "sha256": "192a1a24ea2a7d9a51f1fb1de964efe8471bf41ee4c557773980547fb39d6d79"
+    },
+    "presets/Geiss - Sinews 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Sinews 1.milk",
+      "sha256": "0dacd902dcbda3c3726eb00900757ee7b9db4ae3e776d84664b628eea16fbe12"
+    },
+    "presets/Geiss - Tokamak.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Tokamak.milk",
+      "sha256": "0e5ae634f299985a393883397e9b5c514435397e19c4fff8e28af619b5cbedfe"
+    },
+    "presets/Geiss - Cycloid 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Cycloid 1.milk",
+      "sha256": "d79a7d65f0d9e1a92ae78d67cb64d784f4dda8b5bd8bb729c4850aa58902c7de"
+    },
+    "presets/Rovastar & Rocke - Headspin.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Rocke - Headspin.milk",
+      "sha256": "cfe51b8f18d0a45130567699938654dcdba53d1d71ea03a6dad1c112cf09a6c9"
+    },
+    "presets/Unchained - Picture Of Poison.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Picture Of Poison.milk",
+      "sha256": "10c275550fe017ce9bac59897c3c79550768bb6d093882ddfd3add0c3d1a1bd6"
+    },
+    "presets/Rovastar & Telek - Altars of Madness (Rolling Oceans Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Telek - Altars of Madness (Rolling Oceans Mix).milk",
+      "sha256": "7a096d9d222d1f026b459c4044883c141a3482df51c57a1b4bf4c17c95ba0353"
+    },
+    "presets/Geiss - Heavenly 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Heavenly 1.milk",
+      "sha256": "e38b1012d3a55e89661939291e392b0787917d70756398206f37863da2f0cd37"
+    },
+    "presets/Zylot - Tangent Universe (Collapsed With Artifact Mix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Tangent Universe (Collapsed With Artifact Mix).milk",
+      "sha256": "1450f2d1caa9a8e5228dce8d690eb8f99acb41bf5b7638e99440f45e93b99f80"
+    },
+    "presets/Unchained - Working the Grid.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Working the Grid.milk",
+      "sha256": "c73641577d2f98e0ee825333de883587a60ac2a884376762c927a53166c5e374"
+    },
+    "presets/Aderrasi - Bow To Gravity.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Bow To Gravity.milk",
+      "sha256": "42081ea31f9d854ad6df3455d3934515e244730a0802dae623d253bea6d83ff7"
+    },
+    "presets/Rovastar - Harlequin's Dynamic Fractal 2.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Dynamic Fractal 2.milk",
+      "sha256": "c1e02e317e4b2108788060d817b7ed38ff00d69f23c6487b2f5923ef4105a435"
+    },
+    "presets/Zylot and Rovastar - Iouo Stone Morphic Fusion.milk": {
+      "upstream_path": "data/projectm/presets/Zylot and Rovastar - Iouo Stone Morphic Fusion.milk",
+      "sha256": "61c0a37349f3285f594af25bc0781dd032bf211dfa1b50136ea90b0a3846c327"
+    },
+    "presets/Geiss - Casino.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Casino.milk",
+      "sha256": "6f38a02bb4413af255e870335aa3b4927f2cc2e5f38776591f0bddb3774e3ef5"
+    },
+    "presets/Unchained - In Memory Of Peg.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - In Memory Of Peg.milk",
+      "sha256": "5d59b5581a50ad6543316e0c22a21018bcfa2424a4fd4a318533cf51577e02bd"
+    },
+    "presets/Illusion & Unchained - Re-Enter Homeworld.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Unchained - Re-Enter Homeworld.milk",
+      "sha256": "2a3d66a33fab2b4f7a71dae3099c798a42e8fa2bedae52f992e20014a1586c40"
+    },
+    "presets/Geiss - Supernova 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Supernova 1.milk",
+      "sha256": "c5d210041d7f8d8e2b841aca2569a4b230c13bb3efeb1811775d7c1ef05c8609"
+    },
+    "presets/Geiss - Julia Fractal 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Julia Fractal 1.milk",
+      "sha256": "08de77c3c97a7b5e5f73d000a1d32cfa0f7fddad3705e1c205216f155dd798c2"
+    },
+    "presets/Unchained & Che - Oddnezz 4 (Done it again).milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Che - Oddnezz 4 (Done it again).milk",
+      "sha256": "25a175e221778cf88ea081b1eb80f4b64c243e9d15bea86259cb9fd5b77e6631"
+    },
+    "presets/Rovastar - Halcyon Dreams 3.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Halcyon Dreams 3.milk",
+      "sha256": "b201cb9aab4df987048f767457c4fd2aaf82aa1c4902eafbbadf8bc27ad7ea9d"
+    },
+    "presets/Geiss - Luz.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Luz.milk",
+      "sha256": "924e515dfc9926523a7ede021635e15947ec6df214f2c86bff06c7c888d4f7a8"
+    },
+    "presets/Rovastar - Omnipresence Resurrection (Raw Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Omnipresence Resurrection (Raw Mix).milk",
+      "sha256": "2a9c63926de74bde201c6f08940e5c8b4e7dfd5e29353ecee306ef868066f5f2"
+    },
+    "presets/Rovastar - Chemical Spirituality.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Chemical Spirituality.milk",
+      "sha256": "cf64cd741a8e44e1b5257d53ac14d67273531a837d1531cf2e9174e78f2e24b1"
+    },
+    "presets/PieturP - triptrap_(ultimate-trip-mix).milk": {
+      "upstream_path": "data/projectm/presets/PieturP - triptrap_(ultimate-trip-mix).milk",
+      "sha256": "7b69ba5613dc8ecebf2859b5eb1a79396b650046cd9141b791723e7805f64432"
+    },
+    "presets/Unchained - Painful Plasma (Multi-Wave Mirrored Rage) -- Ro.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Painful Plasma (Multi-Wave Mirrored Rage) -- Ro.milk",
+      "sha256": "516c2ed4a0c27baaca0802d906c1289a099270c6121f5cee7e376100d9e05def"
+    },
+    "presets/Telek - Target Practice (tracking retreat slide).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Target Practice (tracking retreat slide).milk",
+      "sha256": "55536fc1c2e13f4a856de0b6ff948ff8e4865cd2ebbbcba2dbcf77df42f28132"
+    },
+    "presets/Krash & Rovastar - Altars Of Madness (Mad Ocean Mix).milk": {
+      "upstream_path": "data/projectm/presets/Krash & Rovastar - Altars Of Madness (Mad Ocean Mix).milk",
+      "sha256": "f9301867a48d32574a14e71d64dac84779edd686322148484f0bc1c8ccb49886"
+    },
+    "presets/Fvese & Idiot24-7 - Rearview Mirror.milk": {
+      "upstream_path": "data/projectm/presets/Fvese & Idiot24-7 - Rearview Mirror.milk",
+      "sha256": "b2c4dc4b866e0bb0c6a7fb54fedcb095038c2da2f5940f20b141665e801bb83b"
+    },
+    "presets/Geiss - Warp Of Dali Bright.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Warp Of Dali Bright.milk",
+      "sha256": "13b270027f4101e66c39102bb9901f4284cf94a5aaa0e26d6b05c9f52f3cb533"
+    },
+    "presets/Geiss and Rovastar - The Chaos Of Colours (sprouting diment.milk": {
+      "upstream_path": "data/projectm/presets/Geiss and Rovastar - The Chaos Of Colours (sprouting diment.milk",
+      "sha256": "ef965078dd5316e52b724eeb0efc8c1ae7e03832aa37a3716e18d76a6b7269f5"
+    },
+    "presets/Rovastar & StudioMusic - More Cherished Desires.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & StudioMusic - More Cherished Desires.milk",
+      "sha256": "77bb05e13ff8e8555591025dbb156401653fcb30ef0c90e91d19743aa741f933"
+    },
+    "presets/Krash & Rovastar - Cerebral Demons (Distant Memory Mix).milk": {
+      "upstream_path": "data/projectm/presets/Krash & Rovastar - Cerebral Demons (Distant Memory Mix).milk",
+      "sha256": "a08684c5a1c426c79e33f6eb10360710e2033c87e68d038f0ad2f5322b5271a3"
+    },
+    "presets/nil - Disco Comet.milk": {
+      "upstream_path": "data/projectm/presets/nil - Disco Comet.milk",
+      "sha256": "f48844ce45db21a8bf90add2fd0582ec6d574d9f40f82aac33a97e396f8fcfb0"
+    },
+    "presets/Rovastar - Hallucinogenic Pyramids (Beat Time Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Hallucinogenic Pyramids (Beat Time Mix).milk",
+      "sha256": "a4beaa3ac30492c5ac5772720815c41bf61b6867f9cd91fa41e4aa1b63bc3210"
+    },
+    "presets/Geiss - Serpent.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Serpent.milk",
+      "sha256": "177ece8efe99bd60119c98a21a5a33b352e4b3ee4404cc7e296e6423b7ed9d28"
+    },
+    "presets/Fvese - Lifesavor Anyone.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - Lifesavor Anyone.milk",
+      "sha256": "57b848f2e16a4858eb728bc56cb3bc1026ad9cdf3bbe9eb3a00da83c060c3d64"
+    },
+    "presets/Rovastar & Geiss - Dynamic Swirls 3 (Mysticial Awakening Mi.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Dynamic Swirls 3 (Mysticial Awakening Mi.milk",
+      "sha256": "c8a04ca02b0fefec7cd6f894fd87c17beb1b40c51e73ae43b2d725509c42c11b"
+    },
+    "presets/Geiss - Microcosm.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Microcosm.milk",
+      "sha256": "23c79909b4cea60775ce2ac1e21724b71eae8c05f1bfd6ff5e5e5816262a58e3"
+    },
+    "presets/nil - Singularity in My Oscilloscope.milk": {
+      "upstream_path": "data/projectm/presets/nil - Singularity in My Oscilloscope.milk",
+      "sha256": "53fec91823f4227e345ec3022e95ba85b8c656938a1fa55b37dc3c8460197678"
+    },
+    "presets/Rovastar & Idiot24-7 - Mixed Emotions (Harlequin's Shame Mi.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Idiot24-7 - Mixed Emotions (Harlequin's Shame Mi.milk",
+      "sha256": "6b10470f43ed04dccafe24d2cf5cb682d2d0a54a11aebb289892a3363f83834d"
+    },
+    "presets/Aderrasi - Arise! (Padded Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Arise! (Padded Mix).milk",
+      "sha256": "fa7a75549127b753328db8cab8531d1055a40d608e601798c284d53ccafa8923"
+    },
+    "presets/Aderrasi - What Cannot Be Undone.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - What Cannot Be Undone.milk",
+      "sha256": "c8900119e93f58e3cfd4e524d865269f5037d58a18bd3850be45f9582f828385"
+    },
+    "presets/Zylot - De(-a)range(d)(ment) strain.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - De(-a)range(d)(ment) strain.milk",
+      "sha256": "5f54d6dc4416d0a343edbdb1ff169bfbfced28e09bb3bf9dfd4c319851634e0e"
+    },
+    "presets/Geiss - Festive.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Festive.milk",
+      "sha256": "10220dbce8fb1368cf032a1b345f7c6d00a0e352f50a57614c2f013028c9b5e8"
+    },
+    "presets/Zylot - The Inner Workings of my New Computer.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - The Inner Workings of my New Computer.milk",
+      "sha256": "24b960c49d958e2869dfdac70f9c41f25d0132014eda4d5ebb47143a3abe195f"
+    },
+    "presets/Unchained & Rovastar - Wormhole Pillars (Hall of Shadows mi.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Wormhole Pillars (Hall of Shadows mi.milk",
+      "sha256": "e1258fd48d49bf76fdffbd91743322858e04f7fd306f474c8024e77697b388ae"
+    },
+    "presets/Fvese - Zoom Effects (Remix 2).milk": {
+      "upstream_path": "data/projectm/presets/Fvese - Zoom Effects (Remix 2).milk",
+      "sha256": "6db5013946a319cf7601a452b5c587d3a976c002d68b18ee2d2e6086b87f86f1"
+    },
+    "presets/Geiss - Bipolar 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bipolar 1.milk",
+      "sha256": "c75a0722f7edfecbe26a049c570423e16bc95b859e81818a0b5a764abbb2ffda"
+    },
+    "presets/Geiss - De La Moutard 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - De La Moutard 2.milk",
+      "sha256": "b86c22845fc6a34b03b731fff841f38a7636c017d6a80155b5fa9e2618584bd7"
+    },
+    "presets/Rovastar - VooV's Movement (After Dark Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - VooV's Movement (After Dark Mix).milk",
+      "sha256": "9e4b2647c046d7839269f0b4d634ae31d32b9d1135d142d002018eea5d2d3f8e"
+    },
+    "presets/Unchained - Cranked On Failure.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Cranked On Failure.milk",
+      "sha256": "6d15351c9f0a78b0617c8ec403ae6d0b23efffb41432e4cf11291880122fcab9"
+    },
+    "presets/Geiss - Swirl 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirl 2.milk",
+      "sha256": "9bcc86013ee2ed41b57ef0b3e1c51a64cbc48a59e84a3da7c8d9b6008f738249"
+    },
+    "presets/Unchained - Beat Demo 1.0.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo 1.0.milk",
+      "sha256": "b3545d3181b20dfa369a11c5ce520f7de109fba2bebb5db9af3c9296c8a488b7"
+    },
+    "presets/Krash & Zylot - Inside The Planar Portal (Indecision Mix).milk": {
+      "upstream_path": "data/projectm/presets/Krash & Zylot - Inside The Planar Portal (Indecision Mix).milk",
+      "sha256": "7c3b4483eb250fa64973fd84a084814a9293e966e3a8e156b81cf18bb038257d"
+    },
+    "presets/Rovastar & Unchained - Oddball World.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Unchained - Oddball World.milk",
+      "sha256": "e8e2b2a553f682a03c1f4d6d141cd4ec6db0b12bad21115f85df99cbba2b3e6b"
+    },
+    "presets/Telek - Sine Wave.milk": {
+      "upstream_path": "data/projectm/presets/Telek - Sine Wave.milk",
+      "sha256": "0f0c3949f228670c5c4121083fe5e90ff3b33a3fe2a763a4200bb06c63eda928"
+    },
+    "presets/Rovastar & Che - Asylum Animations.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Che - Asylum Animations.milk",
+      "sha256": "2706d43c636770699bd218b93b6e4b1edce062faefc0c17fd347c397e0173aac"
+    },
+    "presets/Aderrasi - Aimless (Gravity Directive Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Aimless (Gravity Directive Mix).milk",
+      "sha256": "46e77195be865502e7d646a8fc001486b59e6a5cdeeb0d6e1b726414013795b1"
+    },
+    "presets/Che - Burning Hus.milk": {
+      "upstream_path": "data/projectm/presets/Che - Burning Hus.milk",
+      "sha256": "c2c7df1c38bd23731c837c6aa1ad01bb970c81ce9bbc43e704db832f95418bdc"
+    },
+    "presets/Geiss - Reducto Absurdum.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Reducto Absurdum.milk",
+      "sha256": "b5e19eb23252dec3b1fdefe448f15e619294733534cb4f80fc6914f9cceef2e4"
+    },
+    "presets/Unchained - Beat Demo 2.0.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo 2.0.milk",
+      "sha256": "09eb84e9b97806d82b8c77dda26b3c9a621b8b6778e062a6df330d1441a8025d"
+    },
+    "presets/Rovastar & Geiss - Octotrip (MultiTrip Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Octotrip (MultiTrip Mix).milk",
+      "sha256": "eb11d0d43cad1f8f1316ac817c1ed911b1630c576c23e9432814e6557b077976"
+    },
+    "presets/Geiss - Bright Fiber Matrix 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bright Fiber Matrix 1.milk",
+      "sha256": "1d4afafdb8c5b1ce96432053113c2e30b7bd0dfb1944b2d7217881210e468095"
+    },
+    "presets/Idiot24-7 - Ascending to heaven 2.milk": {
+      "upstream_path": "data/projectm/presets/Idiot24-7 - Ascending to heaven 2.milk",
+      "sha256": "6e0dc3f0e8872ecf37099b06940773b01d58c6aa20634b6fe9efabe367149c24"
+    },
+    "presets/Geiss - Coral.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Coral.milk",
+      "sha256": "ee831a6b86bc3e9b76ff914566ce9ff0351e8af9e259554d25350072671c8bed"
+    },
+    "presets/Geiss - Bass Kaleidosphere.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bass Kaleidosphere.milk",
+      "sha256": "d9b247ee9ba767117364bead863704419883fd5e6d7b7b32c92d644eb05415b8"
+    },
+    "presets/Rovastar - Snapshot Of Space.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Snapshot Of Space.milk",
+      "sha256": "47f18b083841a8484f288e812af33dd537a131876914e13bce52961c068e7ea4"
+    },
+    "presets/Geiss - Solar Flare (Reptile).milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Solar Flare (Reptile).milk",
+      "sha256": "11000060976b7ec970712254ba1255141063444a937bc1d7078d8eef2f178396"
+    },
+    "presets/Aderrasi - Anchorpulse (Verified Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Anchorpulse (Verified Mix).milk",
+      "sha256": "66e54567afecf54dc2761d1ff5704cb801c546eb9a3fb37ba2095b27db38411d"
+    },
+    "presets/Aderrasi - Ashes Of Air (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Ashes Of Air (Remix).milk",
+      "sha256": "1bebbc4f76ac5a5c5bf92c83e4c4edd344ec769a7aad6f5f6d1e7b5c5c88b7e6"
+    },
+    "presets/Zylot & Rovastar - Crystal Ball (Cerimonial Decor Mix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot & Rovastar - Crystal Ball (Cerimonial Decor Mix).milk",
+      "sha256": "59bfd7161155d4c107e7e5b64c889754c9bce275105bb042d87fc3b7d4bd0e14"
+    },
+    "presets/Mstress & Juppy - Dancers In The Dark.milk": {
+      "upstream_path": "data/projectm/presets/Mstress & Juppy - Dancers In The Dark.milk",
+      "sha256": "9146ff595ec39396cc0e11163e614706d1ed94c65fe01c2045be31b786da1f6a"
+    },
+    "presets/Geiss - Symmetry.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Symmetry.milk",
+      "sha256": "05252f88040899b97bcce057c33ecb4d74e041d3a5f6c8d11d86830c739892a1"
+    },
+    "presets/Rovastar - The Shroomery.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - The Shroomery.milk",
+      "sha256": "94574b2adb89061242b63003cde6111bb21429aa13386fe8643d62fe8c9eddbc"
+    },
+    "presets/Rovastar - Altars Of Madness 4 (Spirit Of Twisted Madness M.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness 4 (Spirit Of Twisted Madness M.milk",
+      "sha256": "da827ad4a9b45e48ec8b469be6a955101554d9838ef7ebd737766d67dfa55dc4"
+    },
+    "presets/Eo.S. - repeater 05 - rave on acid.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - repeater 05 - rave on acid.milk",
+      "sha256": "e100b47d9654896a62cf1bbc150cfeef79e5bdbf8aec4f7bd0cf24904c526b7a"
+    },
+    "presets/Krash - Windowframe To Mega Swirl 2.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Windowframe To Mega Swirl 2.milk",
+      "sha256": "96c636f3264148b0d2f393b7e37c0e886e484c7778904a7679e6a21d8b487011"
+    },
+    "presets/Rovastar - A Million Miles from Earth (Pathfinder Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - A Million Miles from Earth (Pathfinder Mix).milk",
+      "sha256": "796a52df9b7a52d977d781005722e2d10bc52ec5d5d9fd5bd734b481a190e77f"
+    },
+    "presets/Geiss - Flower.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Flower.milk",
+      "sha256": "e0cec2fca925bb171f6655d98a43014c8b9f0cb8c384e413802476924e2a6d8f"
+    },
+    "presets/Rovastar - Future Speakers.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Future Speakers.milk",
+      "sha256": "e997d818020248ecfc77d96fb441ae6bf55026f509a38eddce8df7f6ba122481"
+    },
+    "presets/Unchained - Perverted Dialect.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Perverted Dialect.milk",
+      "sha256": "8f7899f91e5398c1ec45061d8e0c01c0fe7c6e0c94aecb360125d1fd19b38428"
+    },
+    "presets/Reenen - phoenix.milk": {
+      "upstream_path": "data/projectm/presets/Reenen - phoenix.milk",
+      "sha256": "1a9307967078e889875e38023feb77f496ea13184078655d5f7a37010bc361db"
+    },
+    "presets/Rovastar & Unchained - Demonology (Vampire Soul Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Unchained - Demonology (Vampire Soul Mix).milk",
+      "sha256": "33840c6fe9344087cc2973674de8db54901e5f2fc6e91c096e959dc0b234ca5d"
+    },
+    "presets/[Ishan] - Life in the drains.milk": {
+      "upstream_path": "data/projectm/presets/[Ishan] - Life in the drains.milk",
+      "sha256": "8eafe8f6c930b7ffa0729595e215772c94e40eb626c49161c9eb9c23766d0049"
+    },
+    "presets/Aderrasi - Candy Avian.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Candy Avian.milk",
+      "sha256": "f4a9278503343e1e77d65ae49f390a54ab22df17a10cc86a278a7fe577b98c26"
+    },
+    "presets/Rovastar & Fvese - Dark Subconscious.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Fvese - Dark Subconscious.milk",
+      "sha256": "ef97e5d2e516fb3fa0824a89e90552b251910aae0e1502c2c9f5236ee92dc137"
+    },
+    "presets/Geiss - Cycloid 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Cycloid 2.milk",
+      "sha256": "9646e4921aa70596fe27279581e7f9780fcbb6d3bcec9087773ba5d1c746cf3d"
+    },
+    "presets/Geiss - Cosmic Dust 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Cosmic Dust 2.milk",
+      "sha256": "dd12d8d1451be14e73b8e74b33d5d5503e77fb228a8d775c8ca27f6fdd3a5310"
+    },
+    "presets/Rovastar - Tripmaker.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Tripmaker.milk",
+      "sha256": "3984d074b3e6e02bc8f7a7095618197021a9b0e8bc38ac2b0927df668475c4c4"
+    },
+    "presets/Aderrasi - What cannot be.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - What cannot be.milk",
+      "sha256": "7d8ff772249a3d58c5500dcd2290f8f7fdd76a03f48028ae819e0a5bb40d3f0c"
+    },
+    "presets/Geiss - Supernova 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Supernova 2.milk",
+      "sha256": "5a15af2b8842bfce3520e52936f66a08aa5efb226720efeecf069dd3f09830cc"
+    },
+    "presets/Geiss - Bipolar 3.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bipolar 3.milk",
+      "sha256": "7fc5797e3477f4122f063b7c64e38b8f830fb9878d49f4205a975ec23d2c4688"
+    },
+    "presets/Che - Escape.milk": {
+      "upstream_path": "data/projectm/presets/Che - Escape.milk",
+      "sha256": "1cecba2de6ef0131e23cb2df95956f8fce10bbcaa76addd3b8954db745135daf"
+    },
+    "presets/Rovastar - Lost Souls of the Bermuda Triangle (Darkest Soul.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Lost Souls of the Bermuda Triangle (Darkest Soul.milk",
+      "sha256": "c167f8b262b9d4f00d66218c1af0dfa849c7b4af770a7a9eb19d70489661968a"
+    },
+    "presets/Eo.S. - heater core C_Phat's_class + sparks_mix.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - heater core C_Phat's_class + sparks_mix.milk",
+      "sha256": "4548763ba065898157b4884d1296d91f68665c52949a7ec01b958917c761829e"
+    },
+    "presets/Geiss - Sunsets.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Sunsets.milk",
+      "sha256": "a913856118845e220933279a86d28184a5945f6d63b074ee1dfba881915de0eb"
+    },
+    "presets/Idiot & Zylot - Unhealthy Love (Idiot's STDs Mix).milk": {
+      "upstream_path": "data/projectm/presets/Idiot & Zylot - Unhealthy Love (Idiot's STDs Mix).milk",
+      "sha256": "b1ca1452d72fbdf900bd4ce4eb9822fa01e7c71eba0ed96840c84e600e04df54"
+    },
+    "presets/Unchained - Beat Demo 2.3.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo 2.3.milk",
+      "sha256": "d29e1c5f6b9f512acd534ddfc9d943b9d014674c79fb68bf9a590ed1f78b3a94"
+    },
+    "presets/Aderrasi - Causeway Of Dreams (REMix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Causeway Of Dreams (REMix).milk",
+      "sha256": "ad2626eba510dc9ce82a5febff4edaf7323bb7281d89d7c8e84504b49aafa136"
+    },
+    "presets/Geiss & Rovastar - The Chaos Of Colours (sprouting dimentia mix).milk": {
+      "upstream_path": "data/projectm/presets/Geiss & Rovastar - The Chaos Of Colours (sprouting dimentia mix).milk",
+      "sha256": "8881faf71b0502b9cf6fb6178e8027d9fe2936bc01e0d0bb9531dfc7fd19facf"
+    },
+    "presets/Geiss & Rovastar - Julia Fractal (Vectrip Mix).milk": {
+      "upstream_path": "data/projectm/presets/Geiss & Rovastar - Julia Fractal (Vectrip Mix).milk",
+      "sha256": "70c0e8e8fa0dd611432b1b52e95bdd705a3d00698068bfd8c4a1637ac557df5a"
+    },
+    "presets/Geiss - Eddies 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Eddies 2.milk",
+      "sha256": "7c3635726c3fe4095220ec3234d2055023a98546b7bfed504c53e3a4cb8bc1a5"
+    },
+    "presets/Geiss - Anomaly 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Anomaly 1.milk",
+      "sha256": "b6f2334bd0ff2f6451f818326c3b0796400221936c31601e9a662c4d947127e5"
+    },
+    "presets/StudioMusic - Harmonic Bliss (elated mix).milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic - Harmonic Bliss (elated mix).milk",
+      "sha256": "54dbbc7381d1aa29ccd09f926b5d40e2be1c1c6e5bec3e0b326d1f79504b05fe"
+    },
+    "presets/Tschoey - Music Flower.milk": {
+      "upstream_path": "data/projectm/presets/Tschoey - Music Flower.milk",
+      "sha256": "61ff3cf822d894226a788a97ac639b793dc2a647b66a9bec61615fed7448c627"
+    },
+    "presets/Rovastar & Idiot24-7 - Mixed Emotions (Harlequin's Shame Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Idiot24-7 - Mixed Emotions (Harlequin's Shame Mix).milk",
+      "sha256": "0b928fb10b9e84e50f81a299c39ce1c150f775f701aaa6601034f3d9efc6da6d"
+    },
+    "presets/Unchained - Goo Kung Fu.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Goo Kung Fu.milk",
+      "sha256": "09a960220fe38e3c9eaaf96cdb790d9cc72956e2368499c14113eec351e947f5"
+    },
+    "presets/EvilJim - Ice Drops.milk": {
+      "upstream_path": "data/projectm/presets/EvilJim - Ice Drops.milk",
+      "sha256": "e3910b5c92ee0cfad57f5ba4b95124eaed5e159ce76184df7e1c9d77798da4e7"
+    },
+    "presets/Rovastar - Frozen Rapture .milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Frozen Rapture .milk",
+      "sha256": "31cd889a2d5ab5d6c8e8074667dda4797cc615cb3d85c4a2931c0c7b45c8a7b6"
+    },
+    "presets/Eo.S. - glowsticks v2 03 music.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - glowsticks v2 03 music.milk",
+      "sha256": "482ac566a3010f07fffbebb79e5d7b20e8268cb1e93c99b8a5ee66a6a5f5643f"
+    },
+    "presets/Unchained & Rovastar - Luckless.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Luckless.milk",
+      "sha256": "5438afed2ab2e0850da3ef9881d6ef1285a93878e086add9710e13289b370ed3"
+    },
+    "presets/che - burning hus (oil mix).milk": {
+      "upstream_path": "data/projectm/presets/che - burning hus (oil mix).milk",
+      "sha256": "7403fd664e67ef12f43c3fdcd2054cf142336a1cbbf8d25c3fbf44f15f7cdb44"
+    },
+    "presets/Idiot - Tentacle Dreams (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - Tentacle Dreams (Remix).milk",
+      "sha256": "4d73b41f3fa3662a3f9ade5a95c824b146460bda688b4a0103c225b91dc6f1ce"
+    },
+    "presets/Rovastar & Unchained - Xen Traffic.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Unchained - Xen Traffic.milk",
+      "sha256": "939f7541eac78507fd8998a8884854c632a14199f83bfbcdd420e2a7df38bb03"
+    },
+    "presets/Zylot - Global Earthquake.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Global Earthquake.milk",
+      "sha256": "2463311c5ac52f8408a81d640e068a03ffb0699e2fa609b8a37636539b6ebf74"
+    },
+    "presets/Rovastar - Parallel Universe.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Parallel Universe.milk",
+      "sha256": "d6b587c3e73c4a65de724b932092d85916b2d13cd7b37c2eb0037388eae23b0f"
+    },
+    "presets/baked - mushroom rainbows[2].milk": {
+      "upstream_path": "data/projectm/presets/baked - mushroom rainbows[2].milk",
+      "sha256": "8c9fe46a83f39c8eb39a54a1436409f95e7b2168d202db1d8ed71336a3bf053c"
+    },
+    "presets/Aderrasi - Blender.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Blender.milk",
+      "sha256": "e3cd4475b5890dcdac13eb378622ec236c2c2fa948c3b516cbfa95605b3b47b2"
+    },
+    "presets/Rovastar & Geiss - Dynamic Swirls 3 (Voyage Of Twisted Soul.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Dynamic Swirls 3 (Voyage Of Twisted Soul.milk",
+      "sha256": "15de4cc1c96f2eb8d72e2e69f19ca4831d3e1fcbef2e4a772984caa2b45243fc"
+    },
+    "presets/Geiss - Digital Smoke.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Digital Smoke.milk",
+      "sha256": "4178ed8264fb9af8b8a8d8dba3393088c47517457fc0cdd271601ca92013e8e1"
+    },
+    "presets/Zylot & Mstress - Toxic Storm On Acid Sea (The End Of The W.milk": {
+      "upstream_path": "data/projectm/presets/Zylot & Mstress - Toxic Storm On Acid Sea (The End Of The W.milk",
+      "sha256": "956fa9d0f0b692937c134c8d6b21293ce9d1851bb7069e063920053192d9fcf8"
+    },
+    "presets/TobiasWolfBoi - The Pit.milk": {
+      "upstream_path": "data/projectm/presets/TobiasWolfBoi - The Pit.milk",
+      "sha256": "a811631d116ade401c269ab232634127207f6158041f38be57795aecb7192304"
+    },
+    "presets/Geiss - Feedback.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Feedback.milk",
+      "sha256": "ce9abada9355d35317d5d999b89cb1ac48b52334ac7dfa5f8dd879e524107a72"
+    },
+    "presets/Unchained - Ribald Ballad.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Ribald Ballad.milk",
+      "sha256": "ac2b9553226eae1b6b344ecdbc9995b02c41ebcb29ec4d1cd99cfe89deb1be58"
+    },
+    "presets/Zylot - light of the path.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - light of the path.milk",
+      "sha256": "2a55ddb0fec3c608cfc8cc7d9eb6694947753641da82ca380d2227d53195e050"
+    },
+    "presets/Rovastar - Multiverse Starfield 1.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Multiverse Starfield 1.milk",
+      "sha256": "8cc7e52d2c058df5d8153165831ce81072f05d0c3f49cb6369c57a0e0688858c"
+    },
+    "presets/Mstress - Snowing Fiber City.milk": {
+      "upstream_path": "data/projectm/presets/Mstress - Snowing Fiber City.milk",
+      "sha256": "d4a9467af45ab4d439ae95536b1f605dd59dab9c614713a5eb0125a22a77f45c"
+    },
+    "presets/Geiss - Bass Zoom.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bass Zoom.milk",
+      "sha256": "4770e9513b703bef82bc38375c18403f2a69292a36a0a13c7f72a4c053a4bf80"
+    },
+    "presets/Rozzor & Aderrasi - Canon.milk": {
+      "upstream_path": "data/projectm/presets/Rozzor & Aderrasi - Canon.milk",
+      "sha256": "1d93bacaeebfa5b51903f46fb481f8586dcec0f33f9b0da7c663bbb24fb65363"
+    },
+    "presets/nil - Vortex of Vortices.milk": {
+      "upstream_path": "data/projectm/presets/nil - Vortex of Vortices.milk",
+      "sha256": "fc1e6f5aa32a0c140a4e35eab4960997c6b9a499ecd831ddac40df2c30407611"
+    },
+    "presets/EMPR - Random - Look mama I'm on TV! 2.milk": {
+      "upstream_path": "data/projectm/presets/EMPR - Random - Look mama I'm on TV! 2.milk",
+      "sha256": "a0ec146f2262c796d7e0caabe2c4a65372f43a40a2a008565d5dc471692764b0"
+    },
+    "presets/Rovastar - Fractopia (Upspoken Mix)_Phat_Speak_When_Spoken_2.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Fractopia (Upspoken Mix)_Phat_Speak_When_Spoken_2.milk",
+      "sha256": "9fce3bb3cd5d48fd00a5101535018fd3edeb50b2cc7225a2e2d0e7bb54db7ae7"
+    },
+    "presets/Rovastar & Krash - Interwoven (Contra Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Krash - Interwoven (Contra Mix).milk",
+      "sha256": "0a9a8e86fface64aa15ed43f5c0c3cb82e901d3150c98e5775e1d59de9ba82e2"
+    },
+    "presets/Aderrasi - Antidote (Side Effects Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Antidote (Side Effects Mix).milk",
+      "sha256": "d033732b7271c9adc0702d3e781541be4372f9258bb3e07ec9a984a8421c7d48"
+    },
+    "presets/Rovastar - Harlequin's Dynamic Fractal 3.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Dynamic Fractal 3.milk",
+      "sha256": "28679434c26e7a6988aeb5673d143fb875db3d53e3091040a97288fb5ed3c831"
+    },
+    "presets/Rozzor and Idiot - Any Other Deep Rising.milk": {
+      "upstream_path": "data/projectm/presets/Rozzor and Idiot - Any Other Deep Rising.milk",
+      "sha256": "a332b8a380bc8b56cda078a50fb8d6d0b311e5aeaa1c7c73d20cb2671ad23747"
+    },
+    "presets/Fvese - The Tunnel (Final Stage Mix).milk": {
+      "upstream_path": "data/projectm/presets/Fvese - The Tunnel (Final Stage Mix).milk",
+      "sha256": "350a88a27827c8016b9f255d4efd4402d83c9c1998885a7796de784bc41c0d79"
+    },
+    "presets/Unchained & CTho - Bad Vibes.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & CTho - Bad Vibes.milk",
+      "sha256": "6166966136417eb96bb3e6f32b76a003574a73193cfd743ae7dd54bb2579e17f"
+    },
+    "presets/Geiss - Solar Flare.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Solar Flare.milk",
+      "sha256": "17ba8fb49e426db6b500a56259c7110fe364331496ddb4d0d6df0b52247e817b"
+    },
+    "presets/Rovastar & Geiss - Octotrip.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Octotrip.milk",
+      "sha256": "a38ed0b044b7a858d1d197f261cbbf2a67ef220027072d09296a59804b35fdee"
+    },
+    "presets/Geiss - Warp Of Dali 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Warp Of Dali 1.milk",
+      "sha256": "4cab6515aad3532bac103e4f293e6a579cefab94830c0fd92b3ca17e27715a63"
+    },
+    "presets/Geiss - Runoff.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Runoff.milk",
+      "sha256": "1f2d58189635970f4be7d5d17692fd3d8eeb6b660b06721b2a16420ec3b82bad"
+    },
+    "presets/Geiss - Iris.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Iris.milk",
+      "sha256": "2853f721684aa2ad59cf3613006bc425331107e8d0e3532b97523976dd28936c"
+    },
+    "presets/Rovastar and Unchained - Life After Pie (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar and Unchained - Life After Pie (Remix).milk",
+      "sha256": "d89c6b667c669108861fdbf373d7c37e822981cd4ed871ebf088659434d20955"
+    },
+    "presets/Geiss - Eddies 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Eddies 1.milk",
+      "sha256": "1e19ddb5879dfcc172c6b5a97a0c1621e9f58e4693fdeb92115e33a99d083371"
+    },
+    "presets/Rovastar & Zylot - Azirphaeli's Plan (Multiplan Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Zylot - Azirphaeli's Plan (Multiplan Mix).milk",
+      "sha256": "a33fab0ed7667b92e12be6dcbf0b35ae524d6040e46df5b977647f0201c1f39f"
+    },
+    "presets/Rovastar - Harlequin's Dynamic Fractal (Dual Spiral Mix ).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Dynamic Fractal (Dual Spiral Mix ).milk",
+      "sha256": "1ad830ba93c64c3cd9971bf0afde41b12cea0ef9132ae4f42cece5b6d1e9aa7d"
+    },
+    "presets/Geiss - Pinch.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Pinch.milk",
+      "sha256": "1ca72836f3349a551ce7799384ebd72e4aa27078b62a2c59f1805eab6e0afe63"
+    },
+    "presets/Rovastar - Space (Twisted Dimension Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Space (Twisted Dimension Mix).milk",
+      "sha256": "dbc55cf532cecc2ff6fce7378256119506db54431643df9035e3dbe1eecb8d3f"
+    },
+    "presets/Unchained & Illusion - Spirit Morph.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Illusion - Spirit Morph.milk",
+      "sha256": "f8d008f14b94b66abb281eaf160e180b0cdc565776e46f23ba6f0064ee38f5d9"
+    },
+    "presets/idiot - Nothing Yet - 03 - The worst of the pack.milk": {
+      "upstream_path": "data/projectm/presets/idiot - Nothing Yet - 03 - The worst of the pack.milk",
+      "sha256": "c78e89f21f3e07132ba35ac3101cef87869651d6fc98222151a3f8cb52eb8ba2"
+    },
+    "presets/Eo.S. - glowsticks v2 05 and proton lights (+Krash's beat code) _Phat_remix07 recursive demons.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - glowsticks v2 05 and proton lights (+Krash's beat code) _Phat_remix07 recursive demons.milk",
+      "sha256": "8d6684111bbb3aec77fb4466017535c3770e5752788ae0f7b7d27740099d8f14"
+    },
+    "presets/Rovastar - Harlequin's Spirit.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Spirit.milk",
+      "sha256": "b7b393578900d0850669e2a43988ad597b35314495a60b0dfab154a621f11313"
+    },
+    "presets/Illusion & Unchained - Frozen Eye 1.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Unchained - Frozen Eye 1.milk",
+      "sha256": "2438150268326b15f64f06916b5e26241a460bba3cfba40c4c0e142439e42f29"
+    },
+    "presets/Geiss - Demonic Distortion.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Demonic Distortion.milk",
+      "sha256": "f8be2bdc1b74b32787628eff59e0d4cb634d75c6eedb46347d99d2223de8cf40"
+    },
+    "presets/shifter - escape the worm - Eo.S. + Phat 5362.milk": {
+      "upstream_path": "data/projectm/presets/shifter - escape the worm - Eo.S. + Phat 5362.milk",
+      "sha256": "1f5c879bac78ddd4724a2cd7de01c1a35cbe86a4c833b470c72cbfc7d2a2b60f"
+    },
+    "presets/Rovastar - Multiverse Starfield 3.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Multiverse Starfield 3.milk",
+      "sha256": "5eaba71636f88a6bcdbf106e3ca2364602e718874fcb26b18ea080087bbb1cba"
+    },
+    "presets/Geiss - Starfish 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Starfish 1.milk",
+      "sha256": "ca07c6c7a06244e32cf860267e9b00285252171c74d8c71176de4b62a3dab79a"
+    },
+    "presets/Unchained - Beat Demo 2.1.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo 2.1.milk",
+      "sha256": "e00ad7068a151058a4cebf152da751bb515f8ca2da3d0cb47073bb7c037caa9b"
+    },
+    "presets/Telek - Slow Thing (Spiderman Mix).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Slow Thing (Spiderman Mix).milk",
+      "sha256": "5979d01f95e56abac58fd6e0fc0bdf0447c3e2767a4bb56a5b8c1a82da2dc10f"
+    },
+    "presets/Fvese - Round and Round (geiss gamma mix).milk": {
+      "upstream_path": "data/projectm/presets/Fvese - Round and Round (geiss gamma mix).milk",
+      "sha256": "732cfb48d653245d416b10319450296960e448b0401d75fb162a9160bdea6357"
+    },
+    "presets/Geiss - Bipolar 5.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bipolar 5.milk",
+      "sha256": "73da44cf57d981af6a0a20ececcb373907d8ac16185d7968ef7a12f719d462ed"
+    },
+    "presets/Aderrasi - Dark Matter (Converse Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Dark Matter (Converse Mix).milk",
+      "sha256": "ffd9156d3e802fe72cdbad32400b99d68874ae1beffebe5a496fc1e34169eecc"
+    },
+    "presets/Geiss - Shake.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Shake.milk",
+      "sha256": "ee84eabf035ad3ac2bce1a2564c4fd016bab0ad14210533af60d6605e830453c"
+    },
+    "presets/Geiss - Oldskool Mellowstyle.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Oldskool Mellowstyle.milk",
+      "sha256": "28bb25e9659d5b661a8787b11e79321446bc5d240db06b2fd714138fc670edba"
+    },
+    "presets/Rovastar - Inner Thoughts (Distant Memories Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Inner Thoughts (Distant Memories Mix).milk",
+      "sha256": "da7f3f7ffc27173ed8b02c29987c3cb539542bcf3e70dc3d1c17b5a47c43258e"
+    },
+    "presets/Unchained & Rovastar - Rainbow Obscura.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Rainbow Obscura.milk",
+      "sha256": "be7c3689b5adac8b3d9d25a6c984bdff1135cecc2274fae26be075f84bd4abec"
+    },
+    "presets/Idiot - What Is.milk": {
+      "upstream_path": "data/projectm/presets/Idiot - What Is.milk",
+      "sha256": "2883147559be135811aa1a623b708dda6d289e6c930ba0de9fe06e80a6362ee3"
+    },
+    "presets/Geiss - Pelota De Fuego.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Pelota De Fuego.milk",
+      "sha256": "577a10fbb7d1a3d01bdaa9d9a677fc1aae9ff6f4208c0573ee64f176775bdaba"
+    },
+    "presets/Geiss - Hyperion.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Hyperion.milk",
+      "sha256": "332c2bd3e5406488b723395d07db6e9fcd6e715b4444b96fb42344dc3ce485ef"
+    },
+    "presets/Aderrasi - Anchorpulse (Pulse Of A Ghast II Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Anchorpulse (Pulse Of A Ghast II Mix).milk",
+      "sha256": "bc76fc989c68b81a0019c978de20ca4c9390ceb02c44618b21731c909764e65b"
+    },
+    "presets/shifter - escape the worm - Eo.S. + Phat - Before_It_Eats_Your_Brain_Mix_v2.milk": {
+      "upstream_path": "data/projectm/presets/shifter - escape the worm - Eo.S. + Phat - Before_It_Eats_Your_Brain_Mix_v2.milk",
+      "sha256": "01b91c7554d9e25925bc4cb60a2e66ce14b0483c97ea1fd88b466d36af627d12"
+    },
+    "presets/Illusion & Rovastar - Clouded Bottle.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Rovastar - Clouded Bottle.milk",
+      "sha256": "9c62fae2e7b5389444c74c30baeadfa2d84ceb98eeae44fc37960461e16c4fb2"
+    },
+    "presets/Rovastar & Geiss - Approach (Vectrip Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Geiss - Approach (Vectrip Mix).milk",
+      "sha256": "6e60ecf0517e0af6ec5c7ce14d1a06ef2593423a43627ba7e631a677272a2c63"
+    },
+    "presets/Krash - Season's Greetings 2.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Season's Greetings 2.milk",
+      "sha256": "a79320c1482456dbf7aa56d490b25d00b6efda7d5981cffb3cb338c24caa1b29"
+    },
+    "presets/Geiss - Corpus Callosum.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Corpus Callosum.milk",
+      "sha256": "ebc0917834d75ddd536271a6427be0502696f5b2669e890d7acb4c124facbd7d"
+    },
+    "presets/Zylot - Visionarie (geiss aspect ratio fix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Visionarie (geiss aspect ratio fix).milk",
+      "sha256": "c094a00979674e5e53dff5ce0f5525f701aef278792f5418dbb075712777b37d"
+    },
+    "presets/Zylot - Digiscape Advanced Processor.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Digiscape Advanced Processor.milk",
+      "sha256": "6ab775ead2115db1121828ae5bfa17b90f8331a63badf3124aaf7bf6fbbf801f"
+    },
+    "presets/Krash & Idiot - Memories Of The Castle.milk": {
+      "upstream_path": "data/projectm/presets/Krash & Idiot - Memories Of The Castle.milk",
+      "sha256": "48299cf805ecc075daefee0861708cd7d8ef850d15cb8fed4b158cf90e705aa8"
+    },
+    "presets/Geiss - Ultrafast.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Ultrafast.milk",
+      "sha256": "7c7bf206db9a5c46aa9ad2cb4bd1abe36ba34caafcfecbf4ffbf46fbaf49095f"
+    },
+    "presets/StudioMusic - Twisted Galaxy.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic - Twisted Galaxy.milk",
+      "sha256": "31ab833f87773cf815caaafa47daf7b33a86557e1d56ab71c9604c6177b20311"
+    },
+    "presets/Unchained - Beat Demo 2.2.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Beat Demo 2.2.milk",
+      "sha256": "f93e4d1d4676b15761b484fe123795b67ffb9aafcabc0a4357835c407c3d9b88"
+    },
+    "presets/Krash & Illusion - Indecisive Mosaic.milk": {
+      "upstream_path": "data/projectm/presets/Krash & Illusion - Indecisive Mosaic.milk",
+      "sha256": "1677c15d54292c59874a10b94f3de5bad5df40a93d3416e77477ec753de9475c"
+    },
+    "presets/Telek - City Helix Lattice.milk": {
+      "upstream_path": "data/projectm/presets/Telek - City Helix Lattice.milk",
+      "sha256": "bab0d8862a4bb90bb83a5c057649386ac49f67077aaf5b5f44df52f6bc665076"
+    },
+    "presets/Rozzor & Che - Inside The House Of Nil.milk": {
+      "upstream_path": "data/projectm/presets/Rozzor & Che - Inside The House Of Nil.milk",
+      "sha256": "7212368fb853b7e68b986f4c265d4db9ffb36cad506bc223a088e81cbbe213df"
+    },
+    "presets/Zylot & Idiot - ATan2 Demo (Spiraling Mad Mix).milk": {
+      "upstream_path": "data/projectm/presets/Zylot & Idiot - ATan2 Demo (Spiraling Mad Mix).milk",
+      "sha256": "d63476cc463cf37294782d0dc9e980549dafa0a9296045ce9ff1501a6bce3f03"
+    },
+    "presets/Bmelgren & Krash - Rainbow Orb Peacock (Centred Journey Mix.milk": {
+      "upstream_path": "data/projectm/presets/Bmelgren & Krash - Rainbow Orb Peacock (Centred Journey Mix.milk",
+      "sha256": "f5a5cc853e066fb2600d063fc6bcfb3dc8de98a6ad945c66bd3d8f0c9c1ba7f0"
+    },
+    "presets/Unchained & Rovastar - Slow Solstice.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Slow Solstice.milk",
+      "sha256": "42716b8b584a3a2325e2f6b093ab81602003245d835c15d106750e3dbc38d8e1"
+    },
+    "presets/Rovastar & Unchained - Ambrosia Mystic (Dark Heart Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Unchained - Ambrosia Mystic (Dark Heart Mix).milk",
+      "sha256": "a9a459bbd89b932fa8d040e0fbcd1cef29db589903df4ebb9e9f600e81852c06"
+    },
+    "presets/Krash and Fvese - Molten Indecision (Fvese Remix).milk": {
+      "upstream_path": "data/projectm/presets/Krash and Fvese - Molten Indecision (Fvese Remix).milk",
+      "sha256": "b14bb58b50f5a9589855523529cd3f2c6215fc48977748ddbbb89a2c3aa4e292"
+    },
+    "presets/Krash - Pulse.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Pulse.milk",
+      "sha256": "de11ad41f2178f32f91b26221785c793da4953ec55404643dc69e9e65dad61f6"
+    },
+    "presets/Aderrasi - Elastoid.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Elastoid.milk",
+      "sha256": "9928efc7483beb46d5d1b0b63c237ce63a4ebfc6c34df7520552aef1b8540654"
+    },
+    "presets/Rovastar - Altars Of Madness.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness.milk",
+      "sha256": "875fddb5775d8b6cd02029e95bbf43a266faf30d7f7d723c9a3884813f5f1ca0"
+    },
+    "presets/Geiss - Cruzin'.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Cruzin'.milk",
+      "sha256": "b3ec9c82254d43bde922f23d1b6113dfc2b85062f046c4aca171b1c750c3dfaa"
+    },
+    "presets/Geiss - Scary.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Scary.milk",
+      "sha256": "2c29cb9005c970745b5e2c0efaadfb885c41d130a03810de3243fe0f8edc8e2b"
+    },
+    "presets/Illusion & Unchained - Invade My Mind.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Unchained - Invade My Mind.milk",
+      "sha256": "33e859a47acb3ce18d58f6bf6a1ea0aa6f9cf2e1f0e29342c28d1bf3211ca4ec"
+    },
+    "presets/Geiss - Script.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Script.milk",
+      "sha256": "b0f2f8cc0781e86e95cbb7ac9c940981d16928457b66233f1ec708d6e381261c"
+    },
+    "presets/Unchained - Subjective Experience Of The Manifold.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Subjective Experience Of The Manifold.milk",
+      "sha256": "67290d8009e4facbad97d75f2443e0db20371b8e25c2f3c1156c76f1a212189c"
+    },
+    "presets/Rovastar - Fractopia (Upspoken Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Fractopia (Upspoken Mix).milk",
+      "sha256": "95fc5798c3e72bbb9ce3469b85e13782bd09926580c889a1f11507fac9de696e"
+    },
+    "presets/Idiot & Che - Various Abstract Effects.milk": {
+      "upstream_path": "data/projectm/presets/Idiot & Che - Various Abstract Effects.milk",
+      "sha256": "083b4591954721f0bded44bc562a6d73c5cb307cc0d049d00b6d0ebe31d0e7dd"
+    },
+    "presets/Rocke - Personal Comet.milk": {
+      "upstream_path": "data/projectm/presets/Rocke - Personal Comet.milk",
+      "sha256": "5f277bdc93a14c7e1f950491f8cd4a83d52c0cc0c529d4b9e8fb3ee05b1cef1b"
+    },
+    "presets/Rovastar - A Million Miles from Earth.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - A Million Miles from Earth.milk",
+      "sha256": "f98915b051a3d9b97172e55a9112376660349c62c81bccc0fe7b9d8246819eb2"
+    },
+    "presets/Rovastar - Dark Ritual (Star Of Destiny Denied Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Dark Ritual (Star Of Destiny Denied Mix).milk",
+      "sha256": "8a24254c58584b0a3bb4e4f2ef7e60f24b6b1155f254d902ed5d142888ad91a5"
+    },
+    "presets/Geiss - Anomaly 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Anomaly 2.milk",
+      "sha256": "30d132b130c234b53bc3a22388f13227d5d80430dd929ec700b7cba77f2ece64"
+    },
+    "presets/Geiss - Vortex 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Vortex 1.milk",
+      "sha256": "2f21feefe7b7b1765f3e7675c3da8ed081f2366fa8ce6f61cfeaeff675ab2121"
+    },
+    "presets/Rovastar - Harlequin's Spirit (Twisted Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Spirit (Twisted Mix).milk",
+      "sha256": "c9d8ff8a5c067b7167e5bf7d632d592bc5cceb9fb1e958f63b50df8c692b273f"
+    },
+    "presets/Unchained - Picture Of Exile.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Picture Of Exile.milk",
+      "sha256": "bb689a6ae1a9ce9025a7d0745b303cdd87f27d0a16a867c57d1638e88b8a83f7"
+    },
+    "presets/Krash - Twisting Indecision.milk": {
+      "upstream_path": "data/projectm/presets/Krash - Twisting Indecision.milk",
+      "sha256": "e7faabee5592aa35a460c39f5210442076828716c88f1a9767881afb2e37ec81"
+    },
+    "presets/Unchained - Unclaimed Wreckage 2 (Shamanic).milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Unclaimed Wreckage 2 (Shamanic).milk",
+      "sha256": "9308c2f17a87d20168df88c539042db701507fb74ba8748aef1a85b2692afa9c"
+    },
+    "presets/Geiss - Drift.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Drift.milk",
+      "sha256": "825990bd4dcf362403c23feebe68e8cd27600f05c36cc0c207e34bb2e05d21f9"
+    },
+    "presets/Zylot - Rainbow Planet Under Attack.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Rainbow Planet Under Attack.milk",
+      "sha256": "b2831f9ef106611346140f875488f2eb2d107100c99db2623c53427cfbe864e4"
+    },
+    "presets/Idiot24-7 - Meeting place.milk": {
+      "upstream_path": "data/projectm/presets/Idiot24-7 - Meeting place.milk",
+      "sha256": "6867dafacbe1e6373c40a7d2e9bb0adc412edd5d387d09a4f01dcf9002b7138e"
+    },
+    "presets/Jess - Trying To Trap A Twister.milk": {
+      "upstream_path": "data/projectm/presets/Jess - Trying To Trap A Twister.milk",
+      "sha256": "373ca652b0818cd85efcebd15ba4c50cdb266a9b8b60be63bca58d963746df24"
+    },
+    "presets/Rozzor and StudioMusic - Vertigyny (Geiss shape mod).milk": {
+      "upstream_path": "data/projectm/presets/Rozzor and StudioMusic - Vertigyny (Geiss shape mod).milk",
+      "sha256": "3206bbe22844498c1ec0e4ccbd041ab07351804262112450409cbfe3616129f1"
+    },
+    "presets/Geiss - Vortex 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Vortex 2.milk",
+      "sha256": "d2e9a460807ced4f07ffecea6cc9e54856e03d6db69686ed0b2db0e28bd1e8d0"
+    },
+    "presets/Geiss - Calligraphy.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Calligraphy.milk",
+      "sha256": "d4bd9fe4bc6e6181f14661268a67129ef2cec82b29dd35e4ba735c11ee894c42"
+    },
+    "presets/Rovastar - Inner Thoughts (Dark Secret Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Inner Thoughts (Dark Secret Mix).milk",
+      "sha256": "42802aebcc8ef6d049ad95ce0331c95d95f9406187a0e49c38d78cb8b5c69b53"
+    },
+    "presets/Rovastar & Idiot24-7 - Balk Acid.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Idiot24-7 - Balk Acid.milk",
+      "sha256": "4be70adeb71e7f630ffe2ae177876fc00fb10721747fc92f444d87134f7303dd"
+    },
+    "presets/Geiss - Trampoline.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Trampoline.milk",
+      "sha256": "1c470166b1e32a9f33355d4f3f35294880e336583bbe89f193b8a32ec72419bc"
+    },
+    "presets/Rovastar - Cosmic Echoes 2.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Cosmic Echoes 2.milk",
+      "sha256": "cb30feef4aa98f810bbe0299f869cb89be5fcf4a50564c531371a31053aa5419"
+    },
+    "presets/Rovastar - Hyperspace (Hyper Speed Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Hyperspace (Hyper Speed Mix).milk",
+      "sha256": "eb1b0b47c13782aa86c4a1150232ac80df09a90544a9a8ed2f54e046ac599bef"
+    },
+    "presets/Geiss - Approach.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Approach.milk",
+      "sha256": "ca92a8245fa19271af92f228774ec6559f383a0deea67e6cbfa655cac377fb94"
+    },
+    "presets/idiot - Some big word I learned.milk": {
+      "upstream_path": "data/projectm/presets/idiot - Some big word I learned.milk",
+      "sha256": "63af5814603099e3377951d96c7adb5be7eb3ebd48990075301f1957f8bb7124"
+    },
+    "presets/Geiss - Octopus Gold with Dots.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Octopus Gold with Dots.milk",
+      "sha256": "1f26af13f76eeaeb7d56a614a59fed957f26741d9fb3022f4fc584f0d46a94ae"
+    },
+    "presets/Rovastar - Solarized Space (Space DNA Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Solarized Space (Space DNA Mix).milk",
+      "sha256": "e0ddbce394f874b7ad1123e6651c638651e7cf6b2b676406b0c64c992a6e4faa"
+    },
+    "presets/Geiss - Swirlie 4.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirlie 4.milk",
+      "sha256": "f5244c78c7175b8d7c6daf055780649d7692670669a2fe6bf2b1096c8ea4ca50"
+    },
+    "presets/Rovastar & Unchained - Centre Of Gravity.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Unchained - Centre Of Gravity.milk",
+      "sha256": "644f80f4214e39fa4cd7be4c7242254957f0509aaebb016bbcaef1226f47eab6"
+    },
+    "presets/nil - Can't Stop the Cramming.milk": {
+      "upstream_path": "data/projectm/presets/nil - Can't Stop the Cramming.milk",
+      "sha256": "e22fa20a578c6fe399477f968d2524a8081c71a8fd0683c815b88533bdb798d4"
+    },
+    "presets/Illusion & Che - Return Of The King.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Che - Return Of The King.milk",
+      "sha256": "263dddbcb4a6c80b3abbd0b5f1d89cb8faabefbef3ddb06203db90097f872aa3"
+    },
+    "presets/Zylot - String.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - String.milk",
+      "sha256": "c308c906718b0b448ab6e870773b35f65eff682f019050b7803b6d78b00053d7"
+    },
+    "presets/Geiss - Octopus Gold.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Octopus Gold.milk",
+      "sha256": "ceda913726fef5a79dbdb4de073b0d00bc5970643f2eeb7e8d8d992c016b1153"
+    },
+    "presets/StudioMusic & Unchained - So Much Love.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic & Unchained - So Much Love.milk",
+      "sha256": "22ac4b343a6eb546b964afdc238dd4926f4a884903d833fb08aad27afcc96c04"
+    },
+    "presets/Geiss - Aieeeeee!!!.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Aieeeeee!!!.milk",
+      "sha256": "36e4ac969194173663cbc46398885b12d2f91ed4fc72c9ceefdd6a502445612a"
+    },
+    "presets/Fvese - Window Reflection 6.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - Window Reflection 6.milk",
+      "sha256": "3ed821e6429636ab9e7d3b3d89e4af6a7fddd41faaa38429d2f3cb405165ccc4"
+    },
+    "presets/Geiss - Solar Flare (Blue).milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Solar Flare (Blue).milk",
+      "sha256": "222974a7043d43bb4f40bda2f2face52a1c90a0c9de2113abbd29cf3cc2fae0b"
+    },
+    "presets/Rovastar - Harlequin's Fractal Encounter.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Fractal Encounter.milk",
+      "sha256": "fc8dcdd0a029a7f6306bc0a8ac6bebe29610355b7dcc3dcaa4380b4023f109c5"
+    },
+    "presets/Geiss - Octopus Ever Changing.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Octopus Ever Changing.milk",
+      "sha256": "60adbc74d22bc5105ddfb86e755c1aa399204adc5e6d1a526b07b74ed8040e5a"
+    },
+    "presets/Aderrasi - Spillswirl.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Spillswirl.milk",
+      "sha256": "c49b54ac556cb1ad7c8d6222a9c61c1870400ff64e67fc83df6b76ea18de89fd"
+    },
+    "presets/Krash - 3D Shapes Demo.milk": {
+      "upstream_path": "data/projectm/presets/Krash - 3D Shapes Demo.milk",
+      "sha256": "e427e1d51fefc7145936575103daa25c9c27552a612991e1ec1609afc9228d1f"
+    },
+    "presets/Telek - Slow Shift Matrix (bb4.5).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Slow Shift Matrix (bb4.5).milk",
+      "sha256": "683223af9afa937d7db413d726339c672d909c6cc51572a3296d68a9a86cc487"
+    },
+    "presets/Phat+fiShbRaiN+Eo.S_Mandala_Chasers_remix.milk": {
+      "upstream_path": "data/projectm/presets/Phat+fiShbRaiN+Eo.S_Mandala_Chasers_remix.milk",
+      "sha256": "bbd4b95e3069a0c3912b51d86337b7d7728bf848b08c49b9c38724adce785b20"
+    },
+    "presets/StudioMusic & Unchained - Wrenched Fate.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic & Unchained - Wrenched Fate.milk",
+      "sha256": "1b1fa3095cc3f801e24b178f068ada4992495362d6b0f780b519289838910df0"
+    },
+    "presets/Unchained - Invariant Under Rigorous Motions.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Invariant Under Rigorous Motions.milk",
+      "sha256": "163711f9f71cb5961655e8fa5f9fc1cca6fd2c807ce3b97a628b51505eff58f1"
+    },
+    "presets/Unchained & Rovastar - Triptionary.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Triptionary.milk",
+      "sha256": "ba3993e46347942dc7e2873032dcc900841cc62b4d7751ca0ade2077f3360206"
+    },
+    "presets/Telek - Spokes (More Dynamic).milk": {
+      "upstream_path": "data/projectm/presets/Telek - Spokes (More Dynamic).milk",
+      "sha256": "fc9a80559df2060550959c010964a47ac3ac9e11c75b5dfb6dc1370b7502f42a"
+    },
+    "presets/Unchained & Rovastar - Xen Traffic.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Rovastar - Xen Traffic.milk",
+      "sha256": "1c6e08cc6d497cf5e6f27408611a1af8e5ea2f7f5311696505562f4c0717e974"
+    },
+    "presets/Geiss - Space Voyage Bright.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Space Voyage Bright.milk",
+      "sha256": "49e674b168e074c3e081b80e6eb5438bb8fe10e0c67c938b9d03947e333dd538"
+    },
+    "presets/Unchained - ReAwoke.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - ReAwoke.milk",
+      "sha256": "57e3484211f9d394afd6fb086c83d7152b7520c97170544c58f9d7f7531ceeb1"
+    },
+    "presets/Geiss - Swirl 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirl 1.milk",
+      "sha256": "1344df282f76dd452c6a49b69a48df1ae345783d15c3f16023b056162d27ba26"
+    },
+    "presets/Redi Jedi - multiple points of origin, one destination.milk": {
+      "upstream_path": "data/projectm/presets/Redi Jedi - multiple points of origin, one destination.milk",
+      "sha256": "dc0e97d36cdcfd45d5eee6033d4da50120e43b6a4519a8fc95a5a07bead838fd"
+    },
+    "presets/Rovastar - Dark Ritual (Star Of Destiny Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Dark Ritual (Star Of Destiny Mix).milk",
+      "sha256": "5de035c8bc53b4d3f65529a46bc1ad52c10a6acfeafb10cb635bdc28f2406633"
+    },
+    "presets/Rovastar & Aderrasi - Oceanic Bassograph (Underwater Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Aderrasi - Oceanic Bassograph (Underwater Mix).milk",
+      "sha256": "d8b4fd894206a426a47fdfcd82070e2465b534b5903c633b171cfda1f466729a"
+    },
+    "presets/Geiss - Cepiasound.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Cepiasound.milk",
+      "sha256": "a4891c034e358fcda067cac2288524914eab646806aab6f6841e565bbb4b292d"
+    },
+    "presets/Zylot - De(-a)range(d)(ment) complex.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - De(-a)range(d)(ment) complex.milk",
+      "sha256": "ef7994fdcfa8939ac99fcf541aab00a251e7cd4b1f8a2c5c8e0eba05193baa72"
+    },
+    "presets/Geiss - Galaxy 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Galaxy 2.milk",
+      "sha256": "aa63a9ba7d466593ab153c06e5c61ec1a87609235609c6838f4ea5eaffbe0c5a"
+    },
+    "presets/idiot - Spectrum.milk": {
+      "upstream_path": "data/projectm/presets/idiot - Spectrum.milk",
+      "sha256": "4b12ba2bbcb1cc689e204dacb77f3061dbeae3f01f452d1697d8a8dec6d226dc"
+    },
+    "presets/Rovastar - Altars Of Madness (A Million Miles From Earth Mi.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness (A Million Miles From Earth Mi.milk",
+      "sha256": "885b2a137e69c560cf384968f82bad074da6fe2e95d83d293c3244edf6ee8faa"
+    },
+    "presets/Geiss - Bipolar 4.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Bipolar 4.milk",
+      "sha256": "e57561be6bd8433859b9933ce1d4c06a923d04ae99a76b682c8b2b7151f7ba76"
+    },
+    "presets/Unchained - Picture Of Nectar.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Picture Of Nectar.milk",
+      "sha256": "52ba69454926fb44dfaf5a12cbe9543ea6a740785942438c464b9d928d45883a"
+    },
+    "presets/Aderrasi - Airhandler (Menagerie Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Airhandler (Menagerie Mix).milk",
+      "sha256": "2589b02182b19e6d4e289cbee825a7eb25c51c004158248ca992f80306f4d24a"
+    },
+    "presets/EMPR - Random - They're so cute Dad can I keep one!.milk": {
+      "upstream_path": "data/projectm/presets/EMPR - Random - They're so cute Dad can I keep one!.milk",
+      "sha256": "69047a9e00a88e3dfc2cac61054f384c592570375625065b55d6f400e7bdae47"
+    },
+    "presets/Unchained - A Matter Of Taste (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Unchained - A Matter Of Taste (Remix).milk",
+      "sha256": "7e61a23ff21ed83b0ebf0a9c0cacaea6b16331122bfeeafe2afb69e03be3bfa9"
+    },
+    "presets/Telek - Slow Shift Matrix.milk": {
+      "upstream_path": "data/projectm/presets/Telek - Slow Shift Matrix.milk",
+      "sha256": "efff348ae331067beed044e4e99e67fe5a29d30ef5eb9fbeb9718efdefe9ff9e"
+    },
+    "presets/Krash & Rovastar - The Devil Is In The Details.milk": {
+      "upstream_path": "data/projectm/presets/Krash & Rovastar - The Devil Is In The Details.milk",
+      "sha256": "27f84d50a14532c25da3fb9e675b6de2708e0612381432155aadfc1b3ccbaf9f"
+    },
+    "presets/Rovastar - Forgotten Moon.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Forgotten Moon.milk",
+      "sha256": "279c80bc8380512d227f4cd4827774877a06c3c04d6af144a98b32100c394779"
+    },
+    "presets/Rovastar - Clouded Judgement 3.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Clouded Judgement 3.milk",
+      "sha256": "5c0a92056a8d4960dfe0662f91d5cca11e724d91fd061de0c2d7cf45b25001e8"
+    },
+    "presets/Rovastar - twisted bytes.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - twisted bytes.milk",
+      "sha256": "0b8aae0e9c95fe7f29ed9719e283ecfb95d66b26b95b2c6499cdac7584f2fe8d"
+    },
+    "presets/Rovastar - Altars Of Madness (Boxfresh Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness (Boxfresh Mix).milk",
+      "sha256": "f3ebe23d2bed2a5b0a490e6d4880720f2207fe9900e9826f7cb92ab4d443fff1"
+    },
+    "presets/Fvese - 0 To 60.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - 0 To 60.milk",
+      "sha256": "ada5293fb770f8e8719112f8c930ac385c678de9cc3e3374caf2c69efcddbcbc"
+    },
+    "presets/Rovastar - Kalideostars (Round  Round Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Kalideostars (Round  Round Mix).milk",
+      "sha256": "2f8407aeb74071dd0e6ead2166a9b33b177f630c83c28dab6a327711b2b4f0bb"
+    },
+    "presets/Geiss - Descent.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Descent.milk",
+      "sha256": "e46cb71e5a709e99d4094f5e8b164a6988abff0a88c6802f28063082adc03c86"
+    },
+    "presets/Geiss - Spacedust.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Spacedust.milk",
+      "sha256": "a88799ab2bea085ec32e6ea1a94977bd74cca358ad3acc7c8023f503d0b4da0e"
+    },
+    "presets/Studio Music - Cherished Desires.milk": {
+      "upstream_path": "data/projectm/presets/Studio Music - Cherished Desires.milk",
+      "sha256": "ba9538d89eadc190e210a2b97d881f82021933623125efe8e2b032585eaa23f6"
+    },
+    "presets/Unchained - Morat's Final Voyage.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Morat's Final Voyage.milk",
+      "sha256": "ea15638fe9125e9df9bf065c0240ffa1c88fc93a9e79935c63c6bae6b667cdb2"
+    },
+    "presets/PieturP - triptrap_(getting_concrete_visions_through_a_diafragma_version).milk": {
+      "upstream_path": "data/projectm/presets/PieturP - triptrap_(getting_concrete_visions_through_a_diafragma_version).milk",
+      "sha256": "b4372ea03dad690f1327d4e36821ffa3d9ec9336e7d67bb8dbbc2ce27fb2a967"
+    },
+    "presets/Rovastar - Altars Of Madness (Surealist Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness (Surealist Mix).milk",
+      "sha256": "36b497e76e88448f3aaf2cae26b9e2ca4e15add3456a6ab9f6aff608a43f2633"
+    },
+    "presets/Geiss - Sinews 2.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Sinews 2.milk",
+      "sha256": "256d831892e3426c6dc853c6feeae823d9b0161bb176905c8acbe5809fa3be3b"
+    },
+    "presets/Rozzer & Zylot - Force Field Generator (Slowtime Tweak).milk": {
+      "upstream_path": "data/projectm/presets/Rozzer & Zylot - Force Field Generator (Slowtime Tweak).milk",
+      "sha256": "88e7e9bc625e40bf52e2345bf73b9ac528019d4d537723f99421e5f0f4c53413"
+    },
+    "presets/Geiss - Octopus Blue.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Octopus Blue.milk",
+      "sha256": "38339a947d547843095576a0a0423fa9a7483e90d6405965bb55768f311e97eb"
+    },
+    "presets/Geiss - Nautilus.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Nautilus.milk",
+      "sha256": "87339c476f2e50fc9cfef5b751498df49538f8673bb9f43de155a176bb4a409b"
+    },
+    "presets/Rovastar - Magic Carpet.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Magic Carpet.milk",
+      "sha256": "6121880960ee076e5b7ee8928eda5602f4e3246dcbad912f10777e50c8300d53"
+    },
+    "presets/Unchained - God Of The Game (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Unchained - God Of The Game (Remix).milk",
+      "sha256": "00c55f80af60c7748c79096938ce960de89ed30754cb1622e0531386266b466b"
+    },
+    "presets/Rocke - Cold Love (Tei Zwaa).milk": {
+      "upstream_path": "data/projectm/presets/Rocke - Cold Love (Tei Zwaa).milk",
+      "sha256": "143f33e015055d24378c2ef18bef6e5003586bc42fa4546ade8c4f2bb875646a"
+    },
+    "presets/Geiss - Eggs.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Eggs.milk",
+      "sha256": "89dd96692382e924c9a7e48fa9d439bd7090f506c08a04b06298a66a78b9f6f6"
+    },
+    "presets/Rovastar & Zylot - Passion Flower.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Zylot - Passion Flower.milk",
+      "sha256": "417c92392f32bb850b1c2ca6432c9ad026fa1885a283003c6613704efc035790"
+    },
+    "presets/Rovastar - Fractopia (Fantic Dancing Lights Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Fractopia (Fantic Dancing Lights Mix).milk",
+      "sha256": "3d8faec3538c234ebaabbc35c474b440ff3406aa6f49139f649cb8335160a1a1"
+    },
+    "presets/Rovastar - Decreasing Dreams (Extended Movement Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Decreasing Dreams (Extended Movement Mix).milk",
+      "sha256": "e0c6e30fa314bd64af1977683f7efdd91cae9d6dd873038bed3cafd0152412a4"
+    },
+    "presets/Unchained - Unclaimed Wreckage.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Unclaimed Wreckage.milk",
+      "sha256": "b8edbb271084b134c1abaa7c97f88c06b05fa0c5aeacda92fc05ba612a1229d2"
+    },
+    "presets/Bmelgren - Godhead.milk": {
+      "upstream_path": "data/projectm/presets/Bmelgren - Godhead.milk",
+      "sha256": "8aaea6ea8fc787c3985b32c18c623b52e7fcbdf744cb0e24f879161fd3aca6ec"
+    },
+    "presets/Geiss - Destruction.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Destruction.milk",
+      "sha256": "5655fc8c845c962eba13cbe9de7e3e0a5a077a858f4a48767ab559cd058a4b0a"
+    },
+    "presets/Rovastar - Harlequin's Dynamic Fractal 1.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Dynamic Fractal 1.milk",
+      "sha256": "ae4f07f75f09d6ca50db8ffbcd17369593e3a0833697c55657e9f50ffccd80a5"
+    },
+    "presets/Rozzor and Rovastar - Altars Of Madness 3 (ooze tweak).milk": {
+      "upstream_path": "data/projectm/presets/Rozzor and Rovastar - Altars Of Madness 3 (ooze tweak).milk",
+      "sha256": "d7d397c5c1b029aefc7a32f19d5b80275b2bd8dbdd988d5e3a3d5d21448c1f41"
+    },
+    "presets/Aderrasi - Anomalous Material Science (Pure Splinter Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Anomalous Material Science (Pure Splinter Mix).milk",
+      "sha256": "5b2e549e52d8f2c964fc17a0e9870b8cb3c2e007abe1a2aedacb704da91f3f0d"
+    },
+    "presets/Rovastar & Fvese - Stranger Minds (Astral Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Fvese - Stranger Minds (Astral Mix).milk",
+      "sha256": "8f5564693f748120a438bf33a71b729b4f9085a9bc48888120667589854a5534"
+    },
+    "presets/Rozzor - Learning Curve (Invert tweak).milk": {
+      "upstream_path": "data/projectm/presets/Rozzor - Learning Curve (Invert tweak).milk",
+      "sha256": "b8ebb41c29fd4a7319b1fad2890399e8f80c01249e239ca32568c888e2af5145"
+    },
+    "presets/Unchained & Che - Oddnezz 3.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Che - Oddnezz 3.milk",
+      "sha256": "a9f8d5b6dfc7cbb3ed584c733930a51849f39a541d1e7337102850e81242dccc"
+    },
+    "presets/Aderrasi - Circlefacade.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Circlefacade.milk",
+      "sha256": "0491063db0cc473364d236963e3b6388138354806bcdeb090278110ed1bc6a9a"
+    },
+    "presets/Eo.S. - glowsticks v2 04 music minimal.milk": {
+      "upstream_path": "data/projectm/presets/Eo.S. - glowsticks v2 04 music minimal.milk",
+      "sha256": "a37ff46a7774c1dd4d8832ec801080fe26b5d106ad6cddac312634137780e152"
+    },
+    "presets/Eo.S.+Phat Cool Bug v2 + (Krash's beat detection).milk": {
+      "upstream_path": "data/projectm/presets/Eo.S.+Phat Cool Bug v2 + (Krash's beat detection).milk",
+      "sha256": "bb69ae2ebfbe8049f7ac628dcc74f56bd92bdfd00ffdec75ab3d33628c7dde4d"
+    },
+    "presets/Illusion & Rovastar - Snowflake Return.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Rovastar - Snowflake Return.milk",
+      "sha256": "f0a0ce7c4399e76c0cd272d15acee9b82fa5c5436cb39cc64aed7183effda981"
+    },
+    "presets/DaNOnE - Highway to Heaven (rotating).milk": {
+      "upstream_path": "data/projectm/presets/DaNOnE - Highway to Heaven (rotating).milk",
+      "sha256": "669fafd914cb9d626e7ba2895afc8af9cf8149bec00a62a8ad602562a4ab95b9"
+    },
+    "presets/Rovastar - LabFunk.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - LabFunk.milk",
+      "sha256": "e2c03a92fac52bc49897b33f18b10ccb4fba0121b18ea5c201dfd5fa7f1b9803"
+    },
+    "presets/Unchained - Goofy Beat Detection.milk": {
+      "upstream_path": "data/projectm/presets/Unchained - Goofy Beat Detection.milk",
+      "sha256": "a155168f8ea8eea8e80a5a6044226f40cc2af3189c39179dee0e250cfc9a2036"
+    },
+    "presets/Zylot - Ether Storm.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Ether Storm.milk",
+      "sha256": "c196ce0292da4c4366b54b02b0942cb69c2457a0a659a792b98e872aa7d03ee9"
+    },
+    "presets/Geiss - Reducto Ad Nauseum.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Reducto Ad Nauseum.milk",
+      "sha256": "77a91315413bd4c487bafdac832d4dbbbbb67ab77d8bf5ec4192fb528804f8c7"
+    },
+    "presets/Rovastar & Rocke - Answer.42 (Trippy S. Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Rocke - Answer.42 (Trippy S. Mix).milk",
+      "sha256": "8d217822743e44603d2860ef811cd4e14afb006be549ed0a5e10ace2fd28deed"
+    },
+    "presets/Rovastar - Altars Of Madness (Duel Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Altars Of Madness (Duel Mix).milk",
+      "sha256": "db0bcbeda85723f13974dac62e720c23fb302937e6ccb53451c7e3f8e3d1c3b9"
+    },
+    "presets/Rovastar - Bellanova (New Wave Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Bellanova (New Wave Mix).milk",
+      "sha256": "13220024857ff43fb0f203f71372f410b86b218f90a41272eb8ffccc1b4fd338"
+    },
+    "presets/Geiss - Swirlie 1.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Swirlie 1.milk",
+      "sha256": "0a5542a067709adf11afb10172aa365324a541ff47b4c1b35ee2597818060fdb"
+    },
+    "presets/Geiss - Asymptote.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Asymptote.milk",
+      "sha256": "1ea4ff8f3231df5b11e6474f94ee0b8cf3a0c345f9dc290187ba42eb14a382fa"
+    },
+    "presets/Rovastar & Unchained - Voodoo Chess Magnet (Everglow Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Unchained - Voodoo Chess Magnet (Everglow Mix).milk",
+      "sha256": "d8cfc1d58f860dc0bab7a8d381a617282444b0fa428108d56a43ecf91954ee05"
+    },
+    "presets/Illusion & Che - The Piper.milk": {
+      "upstream_path": "data/projectm/presets/Illusion & Che - The Piper.milk",
+      "sha256": "c007cdd133213cc0ce44f9d1fb557cec657a5e7742fa77387d0656bff116bd5d"
+    },
+    "presets/Idiot - Madness Within The Void (Remix).milk": {
+      "upstream_path": "data/projectm/presets/Idiot - Madness Within The Void (Remix).milk",
+      "sha256": "28aedeef557cff8846dba26410c86d0a4e2ea57313c6b6b2a09315f57ff42790"
+    },
+    "presets/Che - Watch & Fly.milk": {
+      "upstream_path": "data/projectm/presets/Che - Watch & Fly.milk",
+      "sha256": "80d9c17604374a176ee71bc7b00480e878bd073d9884000e5b1c2e0465fd245a"
+    },
+    "presets/Rovastar - Harlequin's Fractal Encounter 2.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Harlequin's Fractal Encounter 2.milk",
+      "sha256": "3be97a43cf4c5296f7983ef2dbc4acf5d986a26f83c18adcad1ceb79bb982128"
+    },
+    "presets/StudioMusic Aderrasi & nil - LA movement (Intellectual Sens.milk": {
+      "upstream_path": "data/projectm/presets/StudioMusic Aderrasi & nil - LA movement (Intellectual Sens.milk",
+      "sha256": "425aba55fbbcdfc4ebfe89375629db5b9476a4b408a2d620c34bb992e0a19aab"
+    },
+    "presets/Rovastar - The Chaos Of Colours (Drifting Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - The Chaos Of Colours (Drifting Mix).milk",
+      "sha256": "987570f7040ef5ce70fcd43bb016d9af731e9ce056e0a1bb40d03164262e4eca"
+    },
+    "presets/Rovastar - The Awakening.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - The Awakening.milk",
+      "sha256": "1d4a24ac46b4088eb90770a081d394b682bfd157a7c24c102e1b75eeed5ba39c"
+    },
+    "presets/Rovastar - Starquake (Sunquake Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Starquake (Sunquake Mix).milk",
+      "sha256": "6fb26b5aae9fa66ad8e2dcc644992721eb1a7c70eebf805beb20bfe3d5a679a3"
+    },
+    "presets/Unchained & Illusion - Logic Morph.milk": {
+      "upstream_path": "data/projectm/presets/Unchained & Illusion - Logic Morph.milk",
+      "sha256": "dc23f87ec5e0c0724b786f2b67abb47e638c8b01e7ad90b00162096101a11eab"
+    },
+    "presets/Aderrasi - Antidote (Aqualung Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Antidote (Aqualung Mix).milk",
+      "sha256": "08c64309c964be4399fb53c18f9ecb4c8a49bc8090980660a9d1982bcd0139fc"
+    },
+    "presets/Rovastar - Cosmic Echoes 1.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Cosmic Echoes 1.milk",
+      "sha256": "1fea1c40a70b6fd3fcedef85a96144afa79673b8ff9e3e8dd3325dcefdcc975e"
+    },
+    "presets/Rovastar - Sea Shells.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Sea Shells.milk",
+      "sha256": "8ce5338f08897d9592c8fad394ce8eb58a15c0f289d779a12834bc435c9f74dc"
+    },
+    "presets/nil - Can't Stop the Blithering.milk": {
+      "upstream_path": "data/projectm/presets/nil - Can't Stop the Blithering.milk",
+      "sha256": "fbaeb1b312a5adbce99903ae8cd8da36dab50fe3dcd172a119c01f2a5815ea60"
+    },
+    "presets/Geiss - Octopus.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Octopus.milk",
+      "sha256": "32f30572739a78af3bfda8c7d392520455b1439938544e3b05e6f7a913c92957"
+    },
+    "presets/Rovastar - Omnipresence Resurrection.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Omnipresence Resurrection.milk",
+      "sha256": "0725b9a04618291533a0697b4355e633abed9122db06c8e650d2ae065c8e5ccf"
+    },
+    "presets/Rovastar - Kalideostars.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Kalideostars.milk",
+      "sha256": "0d95c1d0b871d38427961c2dcc269b92bbf57a441804904d7b918e28ba6d0554"
+    },
+    "presets/Aderrasi - Aimless (Spirogravity Mix).milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Aimless (Spirogravity Mix).milk",
+      "sha256": "46e77195be865502e7d646a8fc001486b59e6a5cdeeb0d6e1b726414013795b1"
+    },
+    "presets/Aderrasi - Antidote.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Antidote.milk",
+      "sha256": "e7fe63b26efa4135064219b1c5d0446d4ab40b3586fca59e88134596ac51efd5"
+    },
+    "presets/Aderrasi - Causeway Of Dreams.milk": {
+      "upstream_path": "data/projectm/presets/Aderrasi - Causeway Of Dreams.milk",
+      "sha256": "87d8db7a31feb7f722103570bff557cc2da7455d7f1d058319a3e6af4c46347a"
+    },
+    "presets/Geiss - El Cubismo.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - El Cubismo.milk",
+      "sha256": "b4a315534414e205ec0a5638c5ef6b1f32c1d02ea34257f46795556d6e2b9440"
+    },
+    "presets/Zylot - Waves Of Blood.milk": {
+      "upstream_path": "data/projectm/presets/Zylot - Waves Of Blood.milk",
+      "sha256": "74da8252143f0c788d193a44e395e1f3002cef68d9fcf13036b81e00af11d78a"
+    },
+    "presets/Rovastar - A Million Miles From Earth (Wormhole Mix).milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - A Million Miles From Earth (Wormhole Mix).milk",
+      "sha256": "c4e9adac59e0a164c631e8a8e96aad66b437feb71158568118c0fa4310b57367"
+    },
+    "presets/Rovastar - Cosmic Havoc.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar - Cosmic Havoc.milk",
+      "sha256": "1dfb4697a1db6f330848e10120acd068975856f4d7ce795198a0befed5651130"
+    },
+    "presets/Geiss - Smoke.milk": {
+      "upstream_path": "data/projectm/presets/Geiss - Smoke.milk",
+      "sha256": "7a8f455a67eed6324dee0b8dabe1accf736f9d8ac5af8e3c546735546bc45019"
+    },
+    "presets/Bmelgren - Take This Highway.milk": {
+      "upstream_path": "data/projectm/presets/Bmelgren - Take This Highway.milk",
+      "sha256": "ada92cd9450bc889375f1457e1009d5144c7a9615ab2a66efd4553a80d305d70"
+    },
+    "presets/Krash & TEcHNO - Rhythmic Mantas.milk": {
+      "upstream_path": "data/projectm/presets/Krash & TEcHNO - Rhythmic Mantas.milk",
+      "sha256": "2de9c0e526573e2ca0403717108bcc1f655e27af8c9e2469c6468f0f9cc6a820"
+    },
+    "presets/Rovastar & Telek - Cosmic Fireworks.milk": {
+      "upstream_path": "data/projectm/presets/Rovastar & Telek - Cosmic Fireworks.milk",
+      "sha256": "dd35b266881a335ce7d26a129b431453dbdee32ec0f8b2ec152d198de9d6363f"
+    },
+    "presets/Fvese - New meetings.milk": {
+      "upstream_path": "data/projectm/presets/Fvese - New meetings.milk",
+      "sha256": "98dfbd625b1384712e44769e1f33a15e004ad424b55621598124dfc0a4d5eb07"
+    },
+    "Renderer/Renderer.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Renderer.cpp",
+      "sha256": "7c0020d1ff42c4c1d140b85c5a2dac298cb3494db873b34cfad0a2b13fa3c6b8"
+    },
+    "Renderer/ShaderEngine.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/ShaderEngine.hpp",
+      "sha256": "273131df99b71a62874f0504a29e67a419be54ac396198940b5dde41bfd0db0a"
+    },
+    "Renderer/Renderer.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Renderer.hpp",
+      "sha256": "9136e5a0c7fc25e0c01e76142bb2427aed9087d94c024c0f0020051267c3f645"
+    },
+    "Renderer/Waveform.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Waveform.cpp",
+      "sha256": "ff896d7f12e1b7d9ddd562311d3ca2bdec84fb2d2c89b6a824dfe98551d626ac"
+    },
+    "Renderer/FBO.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/FBO.hpp",
+      "sha256": "84b3f1d41162d72a61214a95e0312244ac353fa8a8a221fbd24ed55a3a67d5ca"
+    },
+    "Renderer/Renderable.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Renderable.cpp",
+      "sha256": "a99bf296d6f20549bcad1b0f85ce0f09d735b8408d38a3314ec5a7fff5d21877"
+    },
+    "Renderer/Waveform.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Waveform.hpp",
+      "sha256": "8e5b981f7d2812c8ebe2ef7d6949cf8f4b059ac74a954a627c3d1b28baa2f348"
+    },
+    "Renderer/TextureManager.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/TextureManager.hpp",
+      "sha256": "3b7b03bf4c29c470861b1ac9503f818e2a1690a10ef718ee885bb638be4de80e"
+    },
+    "Renderer/BeatDetect.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/BeatDetect.cpp",
+      "sha256": "e4a27f6ae0d7caef525d38efa23c399a03f0a359658750a833ce251bfd8e73a3"
+    },
+    "Renderer/VideoEcho.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/VideoEcho.hpp",
+      "sha256": "8094416a7d5e0e7dcb2c1e1144b50c8c3469833c6376bc21d5e6c9b469617463"
+    },
+    "Renderer/Filters.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Filters.hpp",
+      "sha256": "b3b1a19e03e612d3ebf1f3e5ce9211f7efd87c989c32d1e97b4279275faa5818"
+    },
+    "Renderer/RenderItemMatcher.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/RenderItemMatcher.cpp",
+      "sha256": "66bafcdb66bd06d5747cd95234a77683750bf56f9105d1e1dc2ad21be134206f"
+    },
+    "Renderer/VideoEcho.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/VideoEcho.cpp",
+      "sha256": "4256042b5919b637bd7d3231878dd527a1ed943dd1e9a140ad169aa1fed0a1f1"
+    },
+    "Renderer/RenderItemDistanceMetric.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/RenderItemDistanceMetric.hpp",
+      "sha256": "59134df69c04bdaefffacc61243862ba56c9de72dc5e8e75e026c6867af5b25e"
+    },
+    "Renderer/PerlinNoise.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/PerlinNoise.hpp",
+      "sha256": "779b00fdb0e32c20a2e12d72d78b4b14f1ba6eb8e2f491e1b1a829cb1a5defa0"
+    },
+    "Renderer/PipelineContext.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/PipelineContext.hpp",
+      "sha256": "1e8c92b9985049d0f53993527303c3304e52daf0b3842b82cae477600e5943ab"
+    },
+    "Renderer/UserTexture.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/UserTexture.hpp",
+      "sha256": "136651f278ef9449157191598661aaadc46035009d119b77cd4a02918f2ff664"
+    },
+    "Renderer/RenderItemMergeFunction.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/RenderItemMergeFunction.hpp",
+      "sha256": "7760b4efe10c9eb1e940c4ef329f7608dc2da756a4ac2921a447ba1cb489e62c"
+    },
+    "Renderer/Filters.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Filters.cpp",
+      "sha256": "f438b35f4169b8e9976ea95075589569ab43ff391ed6c78ed38abcd8eb649e17"
+    },
+    "Renderer/TextureManager.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/TextureManager.cpp",
+      "sha256": "1bc812c2fb067542e78943bc76cb8c0a70df3967ebba38411436adae647ea53d"
+    },
+    "Renderer/UserTexture.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/UserTexture.cpp",
+      "sha256": "37045d9d3d71b6c10d641a0eb490bffe3aaca9657adc84247b919b45937cd447"
+    },
+    "Renderer/PerPixelMesh.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/PerPixelMesh.cpp",
+      "sha256": "386435ebd3e39b2eda8fe2cc82b1bb7377b4dd961c2586a50d96c265611f6ab7"
+    },
+    "Renderer/Renderable.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Renderable.hpp",
+      "sha256": "560d864e9b17d01b15f948044c217073d7c9bc52ef8a49fc34c8ea23de488da4"
+    },
+    "Renderer/Pipeline.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Pipeline.hpp",
+      "sha256": "869172b67cf47d9adbfe7a333d3171343f91bfb148164a8c096541f1ba0e7f02"
+    },
+    "Renderer/MilkdropWaveform.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/MilkdropWaveform.cpp",
+      "sha256": "c2410111d32665ec3c38f29bad091c4bfcdacaa32484eedd92d34538347a5938"
+    },
+    "Renderer/MilkdropWaveform.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/MilkdropWaveform.hpp",
+      "sha256": "93351c90ce5a45ab657bc82f3638197c37878620b5982accf5a487eabfbe278a"
+    },
+    "Renderer/Transformation.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Transformation.hpp",
+      "sha256": "0300467d2df7a3038139b8067e8499760a092f27d6dcf434bd85ee36ffd79087"
+    },
+    "Renderer/PerlinNoise.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/PerlinNoise.cpp",
+      "sha256": "9d28f1bed274d1a291479095e8a7bd12aee03643d370bb0190f4214fbc27bb0a"
+    },
+    "Renderer/FBO.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/FBO.cpp",
+      "sha256": "c0236a8f9932d51d14a559b615d0740857458d8bbff67eef36efa58953f37401"
+    },
+    "Renderer/Shader.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Shader.hpp",
+      "sha256": "913564b232ee76da196d71d4896709254d07a0518ec084d808cad7e32f9194a0"
+    },
+    "Renderer/BeatDetect.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/BeatDetect.hpp",
+      "sha256": "a53325d419c45a5ab52b573579e679820d021265cfaceffa05b0fd7595350773"
+    },
+    "Renderer/Pipeline.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Pipeline.cpp",
+      "sha256": "6fed50a736311d281732aa1608f1c9d1ba189727e08bd2296abc4f69ccd84b74"
+    },
+    "Renderer/ShaderEngine.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/ShaderEngine.cpp",
+      "sha256": "f7e898198907ad4cdd6e0a8d85e7efb98b5e7a9cce637d1fd153c600277c9f86"
+    },
+    "Renderer/PipelineContext.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/PipelineContext.cpp",
+      "sha256": "c0352fe3e9a25f18fcf144f3cfb047ae304dbfc83b997091f5203de61b0e62de"
+    },
+    "Renderer/RenderItemMatcher.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/RenderItemMatcher.hpp",
+      "sha256": "38f984a4d21d834c0218e920bb3a623d972cf65ce1c680649a74af988dbd5fc5"
+    },
+    "Renderer/RenderItemDistanceMetric.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/RenderItemDistanceMetric.cpp",
+      "sha256": "032622f3f724c44a1b1de8705d759aa3c26e144e335dc7044800482c0a2ee4b4"
+    },
+    "Renderer/PerPixelMesh.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/PerPixelMesh.hpp",
+      "sha256": "1198c104c2a8ed175095f1a1b34810152d88fec321b2da6c70623c19c891badd"
+    },
+    "Renderer/Shader.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/Shader.cpp",
+      "sha256": "cd3eb076fe459019316b6b4b80cd9027e8c8350679b18da16ca3a7be40dff7d6"
+    },
+    "omptl/omptl_numeric_extentions_par.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_numeric_extentions_par.h",
+      "sha256": "5828ea575037cfd0205c40b16b33ddd1234e80d104ff3d9b5a98259e4ed4465b"
+    },
+    "omptl/omptl_numeric_extentions_ser.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_numeric_extentions_ser.h",
+      "sha256": "52378a7a68ff1e187e939ec494a89bab9ccede82201df3c3d41489a962385bc6"
+    },
+    "omptl/omptl_algorithm_ser.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_algorithm_ser.h",
+      "sha256": "368739056c4a73d44d2ac0e826b3a62ec28a753f83627252acb36111e200874a"
+    },
+    "omptl/omptl_numeric": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_numeric",
+      "sha256": "6917c1adf4a516e9e82e7bcfd10b515b198d4f29555cb4e9ad23709846f27508"
+    },
+    "omptl/Example.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/Example.cpp",
+      "sha256": "fa5ea01ec22beae247b41f9038e106dc43e3c8a0b3e0e6a53e2477b67a489695"
+    },
+    "omptl/omptl_algorithm": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_algorithm",
+      "sha256": "caeffa61310bbe519ab8e20ae4f2774f0733d72edcc26d3a4b3626c84aa33ca0"
+    },
+    "omptl/omptl_numeric_ser.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_numeric_ser.h",
+      "sha256": "adb5116861647dcf22da7c156bf832583b2b3b0ed4de54cbc21fdae64e8379bc"
+    },
+    "omptl/omptl_numeric_par.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_numeric_par.h",
+      "sha256": "e4c6ad0d9c10dfd0539a84cb6780c0249eb74ae2c23a6c113a1ab712f34ba2c8"
+    },
+    "omptl/omptl_tools.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_tools.h",
+      "sha256": "4523599c75c2c502760d3af2fe98308e8c99c488b02b870e51412abe281a93b8"
+    },
+    "omptl/License.txt": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/License.txt",
+      "sha256": "6095e9ffa777dd22839f7801aa845b31c9ed07f3d6bf8a26dc5d2dec8ccc0ef3"
+    },
+    "omptl/omptl_numeric_extentions.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_numeric_extentions.h",
+      "sha256": "854a22d33d986ca20f9103186ebcc17a67f5bd61affb3ab5acae9a8422fce5b3"
+    },
+    "omptl/omptl_algorithm_par.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl_algorithm_par.h",
+      "sha256": "27683e6bdc8a0f52ae251ff507600a50cfa26e19612211f5b8b5b03a839c4d43"
+    },
+    "omptl/omptl": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/omptl/omptl",
+      "sha256": "b69f2783552bebcc37f4fb4d8286fb0607d3fdd50060f22a0e4d43f1e5599ef2"
+    },
+    "MilkdropPresetFactory/Func.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Func.cpp",
+      "sha256": "2365f8571659419d5c715c8f3d6928f2e45c261a1eae45435e123c1952db6526"
+    },
+    "MilkdropPresetFactory/MilkdropPresetFactory.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/MilkdropPresetFactory.cpp",
+      "sha256": "966812427266dd93ef082ccd04f35f0e258a25cae5229262dcd2020b6e221f78"
+    },
+    "MilkdropPresetFactory/Func.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Func.hpp",
+      "sha256": "9aaffa4edc13a9377d836d2ce7cd7cd4c9c643de9a14117457c915c3eaa1a362"
+    },
+    "MilkdropPresetFactory/PerFrameEqn.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PerFrameEqn.hpp",
+      "sha256": "f39b7b7f63ba3c0053f401fa17242ee8706c3874ae0bd7586fdfac0e3cfa7210"
+    },
+    "MilkdropPresetFactory/MilkdropPreset.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/MilkdropPreset.hpp",
+      "sha256": "bf67e477e7cc195f0a55c72a2db6be79f12728e6ed08014bee4bdcd68a79ed18"
+    },
+    "MilkdropPresetFactory/Parser.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Parser.cpp",
+      "sha256": "08ee9c83eb2395638addb2d47a3b46f3df55ef3cd573c5a274178008ff746a7d"
+    },
+    "MilkdropPresetFactory/Parser.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Parser.hpp",
+      "sha256": "1026c9c8672d7ad52fda19e8528d463b3f3f2d164f5969c5bb6d5ca169d4f652"
+    },
+    "MilkdropPresetFactory/CustomShape.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/CustomShape.hpp",
+      "sha256": "e2db76eef22127cb68f5aaf71a06474f5131f77547caa2e2bff0813a543d7f2b"
+    },
+    "MilkdropPresetFactory/Expr.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Expr.cpp",
+      "sha256": "ec5b62a3d10d8dce4e38c728a8db807f53b26e5d56616f2a94e59612e56b3038"
+    },
+    "MilkdropPresetFactory/CustomWave.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/CustomWave.cpp",
+      "sha256": "d862a3ddd3c5a02fbffd280db3d7e5cbe2009e741261a3043f4502c2cd29a7dc"
+    },
+    "MilkdropPresetFactory/MilkdropPreset.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/MilkdropPreset.cpp",
+      "sha256": "26bb53bba903de346b05e1b6b25995495444d6e767dd42e07e6621f1b977159c"
+    },
+    "MilkdropPresetFactory/BuiltinFuncs.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/BuiltinFuncs.hpp",
+      "sha256": "3110b15075ceb182f828fec54532b0f8075f1e2efafcf6bf8725474c18aaed26"
+    },
+    "MilkdropPresetFactory/PerFrameEqn.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PerFrameEqn.cpp",
+      "sha256": "0f80bb52d947c15f2b50e179ee2840f62828d5f0012167b46b56483467bc1568"
+    },
+    "MilkdropPresetFactory/CustomShape.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/CustomShape.cpp",
+      "sha256": "a8d1a95577b1dffad19357b238f14b32af98d3352d6c224f51d9b9d1cf620398"
+    },
+    "MilkdropPresetFactory/PerPixelEqn.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PerPixelEqn.cpp",
+      "sha256": "75e1a18e46dccc2e08611c635ea81e696aa5b40a84e7992741bcb0b2cd00e694"
+    },
+    "MilkdropPresetFactory/PresetFrameIO.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PresetFrameIO.cpp",
+      "sha256": "fc5f481794e637f025e070f3bf2249737a90fe78fd27659ba12e2f7ff5f59fdf"
+    },
+    "MilkdropPresetFactory/PerPixelEqn.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PerPixelEqn.hpp",
+      "sha256": "ccd3cb50cd2be0b30081cadc398e03a1d74c38b324a6d4bf44beb9ad5a47f335"
+    },
+    "MilkdropPresetFactory/Eval.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Eval.hpp",
+      "sha256": "b51d62b759042fd4bc228d131803ed33c8e91ae92827be8dad19a619944c17d4"
+    },
+    "MilkdropPresetFactory/InitCond.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/InitCond.cpp",
+      "sha256": "f942909249acb855284506c77474d8a87c3f31383f906abffbe809392d350cc7"
+    },
+    "MilkdropPresetFactory/PresetFrameIO.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PresetFrameIO.hpp",
+      "sha256": "ed64d6a1f2e800fe1a5076b497f3d186fdc041b09d66387792896345818058a2"
+    },
+    "MilkdropPresetFactory/InitCond.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/InitCond.hpp",
+      "sha256": "886f862d9cd888c261e89663cbafd9876a6cfd9d76755696a12e442ed4dbb576"
+    },
+    "MilkdropPresetFactory/PerPointEqn.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PerPointEqn.cpp",
+      "sha256": "2748964594e0ac55ef5b1f333b074d8b3e2eb44cfce0db067d9e4a5920262cf1"
+    },
+    "MilkdropPresetFactory/BuiltinParams.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/BuiltinParams.cpp",
+      "sha256": "c831d0c59039fcda5fffd274f48b4ffed01a28d105d069f2be7eecc109f56138"
+    },
+    "MilkdropPresetFactory/IdlePreset.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/IdlePreset.cpp",
+      "sha256": "2b4f6b3d5e8a6f6d4b16d3e551463723a75b032b738108d13221a2ee0823aa1f"
+    },
+    "MilkdropPresetFactory/Param.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Param.cpp",
+      "sha256": "180d877414c518d7abdd8b6c5fe6866b3020194b7f8eda2d3db873f25ecc14df"
+    },
+    "MilkdropPresetFactory/CValue.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/CValue.hpp",
+      "sha256": "8c2f184d13f173932c7cdee57d6ef5ab8dbdefc794c66c9f7f7cb3b5f5c434e5"
+    },
+    "MilkdropPresetFactory/Param.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Param.hpp",
+      "sha256": "82c484b4aca896adbf7c222e6f5723c82b65d5fa443b102915ce2ae0bbfca6a5"
+    },
+    "MilkdropPresetFactory/Expr.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Expr.hpp",
+      "sha256": "8601c0b49606863ce52ef9ea84265db9fa4543222be7a9fdc6c2e24ec37f0360"
+    },
+    "MilkdropPresetFactory/PerPointEqn.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/PerPointEqn.hpp",
+      "sha256": "704188eb7b38f710d18f66f6f42e37c9093a15bdf890ba5c9968d66efb22ef5a"
+    },
+    "MilkdropPresetFactory/BuiltinFuncs.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/BuiltinFuncs.cpp",
+      "sha256": "65ece9b465152082b0817fed3d31f27edb5afca12370e258ecb04b129669ba61"
+    },
+    "MilkdropPresetFactory/IdlePreset.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/IdlePreset.hpp",
+      "sha256": "c996bf2b1af0a3d7540aca87c8c352d2f257ff60f29a93bf286d9cb13e65b965"
+    },
+    "MilkdropPresetFactory/MilkdropPresetFactory.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/MilkdropPresetFactory.hpp",
+      "sha256": "3b9a0427cc551a9d17bfdf2f546b82edcd9e54c60cbe6ef83b39e146dd80021c"
+    },
+    "MilkdropPresetFactory/ParamUtils.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/ParamUtils.hpp",
+      "sha256": "fa7cecfddd631ecd027fb8b5e1bfa241b0aa2dab8accc61a8014c9a4ebff7494"
+    },
+    "MilkdropPresetFactory/InitCondUtils.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/InitCondUtils.hpp",
+      "sha256": "bf50c136eabf511b0528400eaba7e8a5b110de73fb5970c5ef9f33ce8e25c6ed"
+    },
+    "MilkdropPresetFactory/CustomWave.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/CustomWave.hpp",
+      "sha256": "61ce7efad34fdbba63351c219f4ec84c4c121a107fce631e496ee73e0e5d3f59"
+    },
+    "MilkdropPresetFactory/Eval.cpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/Eval.cpp",
+      "sha256": "f1d100c6dd69db94f97299189a24942647b9270e609d352df26591cf02a7bbe2"
+    },
+    "MilkdropPresetFactory/BuiltinParams.hpp": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/MilkdropPresetFactory/BuiltinParams.hpp",
+      "sha256": "ff9bc315f1a9127663a795503867d3e6dd43d24279d99e6d822bc156185423cf"
+    },
+    "Renderer/SOIL/stb_image_aug.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/stb_image_aug.h",
+      "sha256": "c93f15a67e30ce41c326607844a9b59d840721cabb4fad117c0590b717b473a3"
+    },
+    "Renderer/SOIL/SOIL.c": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/SOIL.c",
+      "sha256": "1619ee2394c99639c63d7b377bf68f35e737226f46d41264886f6b405372b2bb"
+    },
+    "Renderer/SOIL/SOIL.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/SOIL.h",
+      "sha256": "6cbe17451275f51ae4493995069a643b11cdf303ab85cd974de7562c62023595"
+    },
+    "Renderer/SOIL/image_helper.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/image_helper.h",
+      "sha256": "fa8a4fe7433e0aabb31e94bc5ae1b31ddb0c71dc084a1af807e8ffab282b4c3c"
+    },
+    "Renderer/SOIL/stbi_DDS_aug.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/stbi_DDS_aug.h",
+      "sha256": "73834adecba641a123dbcdc7ebfc97582a0561127c297179a3aadcdbdefd8463"
+    },
+    "Renderer/SOIL/stbi_DDS_aug_c.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/stbi_DDS_aug_c.h",
+      "sha256": "196d32e8a2d91bec385056311cdc758990b5519173090e19a23edc8ccfd808fc"
+    },
+    "Renderer/SOIL/image_DXT.c": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/image_DXT.c",
+      "sha256": "a263cc66da937cb7dcb8f75ec3086edb94ae9e799896ea87628a26762e55a522"
+    },
+    "Renderer/SOIL/image_DXT.h": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/image_DXT.h",
+      "sha256": "0f94a8103b40617cfbda894d6efae2806aad6fea3cc53553392c0d3c6dfb7314"
+    },
+    "Renderer/SOIL/stb_image_aug.c": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/stb_image_aug.c",
+      "sha256": "a53f0508cafb544aa0b11c241c1000055bd9d827d19712f4de08898e36f29728"
+    },
+    "Renderer/SOIL/image_helper.c": {
+      "upstream_path": "3rdparty-libs/sources/projectm_full/projectM-complete-2.0.1-Source/src/libprojectM/Renderer/SOIL/image_helper.c",
+      "sha256": "449ba815b6f610660515246d029f5d08b45178fe8f9f9f520939edad85a7935e"
+    }
+  }
+}

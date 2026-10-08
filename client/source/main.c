@@ -19,6 +19,8 @@
 #include "menu.h"
 #include "init_wait.h"
 #include "audio_buffer.h"
+#include "pcm_snapshot.h"
+#include "visualizer.h"
 #include "discovery_port.h"
 
 #if WJ_DISCOVERY_PORT < 1 || WJ_DISCOVERY_PORT > 65535
@@ -60,6 +62,8 @@ static long long discovery_started, job_started;
 static struct wj_http_trace job_trace;
 static char list_status[100] = "Sources not loaded";
 static unsigned list_attempt;
+static int pending_command;
+static char previous_lines[26][73];
 enum network_phase { NETWORK_INIT, NETWORK_IP, NETWORK_LOOKUP, NETWORK_SCAN, NETWORK_CLEANUP };
 static enum network_phase network_phase;
 static int job_init_deadline;
@@ -304,11 +308,6 @@ static void finish_job(void) {
                         wj_http_stage_name(job_trace.stage), job_result);
         return;
     }
-    if (job == JOB_CONTROL) {
-        copy(message, sizeof(message), "Command sent");
-        next_status = 0;
-        return;
-    }
     struct wj_document doc;
     if (wj_document(reply, &doc)) {
         if (job == JOB_LIST) {
@@ -319,11 +318,24 @@ static void finish_job(void) {
         copy(message, sizeof(message), "Unsupported or malformed server response");
         return;
     }
+    if (job == JOB_CONTROL) {
+        if (doc.count == 1 && doc.rows[0].count == 3 &&
+            !strcmp(doc.rows[0].field[0], "ok") && !strcmp(doc.rows[0].field[1], "accepted") &&
+            !wj_number(doc.rows[0].field[2], 1, 2147483647, &pending_command)) {
+            copy(message, sizeof(message), "Accepted; waiting for server result...");
+        } else copy(message, sizeof(message), "Command accepted; update server for completion status");
+        next_status = 0;
+        return;
+    }
     if (job == JOB_STATUS) {
         for (int i = 0; i < doc.count; i++) {
             struct wj_row *row = &doc.rows[i];
-            if (row->count == 2 && !strcmp(row->field[0], "command") && row->field[1][0]) {
-                copy(message, sizeof(message), row->field[1]);
+            if (row->count == 4 && !strcmp(row->field[0], "command") && pending_command) {
+                int id;
+                if (!wj_number(row->field[2], 1, 2147483647, &id) && id == pending_command) {
+                    copy(message, sizeof(message), row->field[1]);
+                    if (!strcmp(row->field[3], "complete") || !strcmp(row->field[3], "failed")) pending_command = 0;
+                }
             } else if (row->count >= 4 && !strcmp(row->field[0], "status")) {
                 copy(now_playing, sizeof(now_playing), row->field[1]);
                 copy(artist, sizeof(artist), row->field[2]);
@@ -346,7 +358,7 @@ static void finish_job(void) {
              screen == 1 ? "Sources" : "Browse", list_attempt, job_trace.status,
              job_trace.received, count, job_trace.elapsed_ms);
     selected = location.selected < count ? location.selected : 0;
-    if (count) copy(message, sizeof(message), "A: open/play  B: back  2: play album/list");
+    if (count) copy(message, sizeof(message), "A: open/play  B: back  2: visualizer");
     else if (screen == 1) copy(message, sizeof(message), "No configured sources; 1: refresh, B: servers");
     else if (!strcmp(source, "radio") || !strcmp(source, "ytdlp"))
         copy(message, sizeof(message), "No saved entries. Add them in the web UI; B: back");
@@ -393,7 +405,6 @@ static void control(const char *action) {
 // Update only changed, padded rows: clearing the whole live framebuffer caused
 // visible flashing, and newline-driven output could scroll past the console.
 static void draw_line(int row, const char *format, ...) {
-    static char previous[26][73];
     char text[512], line[73];
     va_list args;
     va_start(args, format);
@@ -410,9 +421,9 @@ static void draw_line(int row, const char *format, ...) {
         line[i] = c >= 32 && c < 127 ? c : '?';
     }
     line[width] = 0;
-    if (!strcmp(previous[row - 1], line)) return;
+    if (!strcmp(previous_lines[row - 1], line)) return;
     printf("\x1b[%d;1H%s", row, line);
-    copy(previous[row - 1], sizeof(previous[0]), line);
+    copy(previous_lines[row - 1], sizeof(previous_lines[0]), line);
 }
 
 static void draw(void) {
@@ -432,12 +443,17 @@ static void draw(void) {
         draw_line(6 + i, "%s %.65s", i < count && i == selected ? ">" : " ",
                   i < count ? menu.items[i].title : "");
     }
+    if (screen == 2 && total > 0) {
+        draw_line(18, "Page %d / %d | %d-%d of %d | Left/right: page",
+                  location.offset / PAGE_SIZE + 1, (total - 1) / PAGE_SIZE + 1,
+                  count ? location.offset + 1 : 0, location.offset + count, total);
+    } else draw_line(18, "%s", "");
     draw_line(19, "%s", message);
     draw_line(20, "%.10s  %.57s", play_state, now_playing);
     draw_line(21, "%s", artist);
     draw_line(23, "HOME exit | +/- volume %d%% | 1 refresh/retry", volume * 100 / 255);
     draw_line(24, "Left/right page | B + left/right skip track");
-    draw_line(25, "B + 1 pause/resume | B + 2 stop | A choose/play");
+    draw_line(25, "B+1 pause | B+2 stop | B+A play list | 2 visualizer");
     draw_line(26, "%s | %s | %d KiB | refills %d", job_busy ? "Working" : "Ready",
               stream_started ? "Playing" : stream_fd >= 0 ? "Buffering" : "Disconnected",
               audio_buffered / 1024, audio_underruns);
@@ -469,6 +485,7 @@ int main(int argc, char **argv) {
     VIDEO_WaitVSync();
     ASND_Init();
     MP3Player_Init();
+    int pcm_available = wj_pcm_init() == 0;
     MP3Player_Volume(volume);
     LWP_MutexInit(&mutex, false);
     storage = fatInitDefault();
@@ -478,10 +495,10 @@ int main(int argc, char **argv) {
         FILE *file = fopen("sd:/apps/wiijukebox/server.id", "r");
         if (file) { if (fgets(saved_id, sizeof(saved_id), file)) saved_id[strcspn(saved_id, "\r\n")] = 0; fclose(file); }
     }
-    log_event("launch network-audit-1 discovery_port=%d", WJ_DISCOVERY_PORT);
+    log_event("launch projectm-upstream-1 discovery_port=%d", WJ_DISCOVERY_PORT);
     start_job(JOB_DISCOVER, NULL, NULL);
     long long last_draw = 0;
-    int b_combo = 0;
+    int b_combo = 0, visualizer = 0;
     u32 pending_buttons = 0;
     int pending_back = 0, pending_combo = 0;
     while (SYS_MainLoop()) {
@@ -489,6 +506,32 @@ int main(int argc, char **argv) {
         u32 down = WPAD_ButtonsDown(0), held = WPAD_ButtonsHeld(0), up = WPAD_ButtonsUp(0);
         if (down & WPAD_BUTTON_HOME) break;
         finish_job();
+        if ((down & WPAD_BUTTON_2) && !(held & WPAD_BUTTON_B)) {
+            down &= ~WPAD_BUTTON_2;
+            if (visualizer) {
+                wj_visualizer_leave(framebuffer);
+                visualizer = 0;
+                VIDEO_ClearFrameBuffer(mode, framebuffer, COLOR_BLACK);
+                memset(previous_lines, 0, sizeof(previous_lines));
+            } else if (!pcm_available) {
+                copy(message, sizeof(message), "Could not initialize visualizer audio tap");
+            } else if (!wj_visualizer_enter(mode)) visualizer = 1;
+            else {
+                wj_visualizer_leave(framebuffer);
+                copy(message, sizeof(message), wj_visualizer_error());
+            }
+        }
+        if (visualizer && (up & WPAD_BUTTON_B) && !b_combo) {
+            wj_visualizer_leave(framebuffer);
+            visualizer = 0;
+            up &= ~WPAD_BUTTON_B;
+            VIDEO_ClearFrameBuffer(mode, framebuffer, COLOR_BLACK);
+            memset(previous_lines, 0, sizeof(previous_lines));
+        }
+        if (visualizer && !(held & WPAD_BUTTON_B)) {
+            down &= ~(WPAD_BUTTON_A | WPAD_BUTTON_1 | WPAD_BUTTON_LEFT |
+                      WPAD_BUTTON_RIGHT | WPAD_BUTTON_UP | WPAD_BUTTON_DOWN);
+        }
         if (down & WPAD_BUTTON_PLUS) { volume = volume < 239 ? volume + 16 : 255; MP3Player_Volume(volume); }
         if (down & WPAD_BUTTON_MINUS) { volume = volume > 16 ? volume - 16 : 0; MP3Player_Volume(volume); }
         if (down & WPAD_BUTTON_UP) selected = count ? (selected + count - 1) % count : 0;
@@ -497,7 +540,7 @@ int main(int argc, char **argv) {
         if (action) {
             pending_buttons = action;
             if (job_busy && screen) copy(message, sizeof(message), "Input queued; waiting for network request...");
-            pending_combo = (held & WPAD_BUTTON_B) && screen && !(action & WPAD_BUTTON_A);
+            pending_combo = (held & WPAD_BUTTON_B) && screen;
             if (pending_combo) b_combo = 1;
             if ((action & WPAD_BUTTON_1) && !screen && job_busy && job == JOB_DISCOVER) {
                 log_event("restart requested attempt=%d elapsed_ms=%lld",
@@ -515,12 +558,12 @@ int main(int argc, char **argv) {
             pending_buttons = 0;
             pending_back = pending_combo = 0;
             if (combo && screen && pressed) {
-                if (pressed & WPAD_BUTTON_LEFT) control("previous");
+                if (pressed & WPAD_BUTTON_A) play_item();
+                else if (pressed & WPAD_BUTTON_LEFT) control("previous");
                 else if (pressed & WPAD_BUTTON_RIGHT) control("next");
                 else if (pressed & WPAD_BUTTON_2) control("stop");
                 else control(!strcmp(play_state, "paused") ? "play" : "pause");
             } else if (pressed & WPAD_BUTTON_A) select_item();
-            else if (pressed & WPAD_BUTTON_2) play_item();
             else if (pressed & WPAD_BUTTON_1) {
                 if (!screen) start_job(JOB_DISCOVER, NULL, NULL);
                 else load_list();
@@ -578,11 +621,19 @@ int main(int argc, char **argv) {
                 stop_audio();
                 start_job(JOB_STREAM, NULL, NULL);
             } else if (now >= next_status) {
-                next_status = now + 3000;
+                next_status = now + (pending_command ? 500 : 3000);
                 start_job(JOB_STATUS, "GET", "/api/wii/status");
             }
         }
-        if (now - last_draw > 100 || down || up) { draw(); last_draw = now; }
+        if (visualizer) {
+            if (wj_visualizer_render()) {
+                wj_visualizer_leave(framebuffer);
+                visualizer = 0;
+                VIDEO_ClearFrameBuffer(mode, framebuffer, COLOR_BLACK);
+                memset(previous_lines, 0, sizeof(previous_lines));
+                copy(message, sizeof(message), wj_visualizer_error());
+            }
+        } else if (now - last_draw > 100 || down || up) { draw(); last_draw = now; }
         VIDEO_WaitVSync();
     }
     LWP_MutexLock(mutex);
@@ -593,6 +644,8 @@ int main(int argc, char **argv) {
         if (job == JOB_STREAM && job_result >= 0) wj_close(job_result);
     }
     stop_audio();
+    wj_visualizer_leave(framebuffer);
+    wj_visualizer_shutdown();
     net_deinit();
     LWP_MutexDestroy(mutex);
     ASND_End();

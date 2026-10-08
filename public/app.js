@@ -157,7 +157,7 @@ async function browse(path, label, offset = 0) {
 function itemArtwork(item) {
     if (item.artwork) return `<img src="${escapeHtml(item.artwork)}" alt="" loading="lazy">`;
     const icons = {
-        artists: '<circle cx="12" cy="8" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2M5 4a3 3 0 0 0 0 6M19 4a3 3 0 0 1 0 6"/>',
+        artists: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/>',
         albums: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
         playlists: '<path d="M4 5h16M4 10h16M4 15h8M4 20h8m4-6 5 3-5 3Z"/>',
         starred: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/>',

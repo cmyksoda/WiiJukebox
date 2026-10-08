@@ -15,6 +15,8 @@ class WiiProtocol {
         this.id = serverIdentity(config);
         this.items = new Map();
         this.commandStatus = "";
+        this.commandId = 0;
+        this.commandState = "idle";
     }
 
     _remember(source, item) {
@@ -49,7 +51,7 @@ class WiiProtocol {
                 const s = this.pipeline.status;
                 rows = [['status', s.nowPlaying.title, s.nowPlaying.artist,
                     s.paused ? 'paused' : (s.source ? 'playing' : 'idle'), s.source?.label || '',
-                    Object.entries(s.capabilities).filter(([, enabled]) => enabled).map(([key]) => key).join(',')], ['command', this.commandStatus]];
+                    Object.entries(s.capabilities).filter(([, enabled]) => enabled).map(([key]) => key).join(',')], ['command', this.commandStatus, this.commandId, this.commandState]];
             } else if (req.method === 'GET' && action === 'browse') {
                 const id = url.searchParams.get('source');
                 const ref = url.searchParams.get('ref');
@@ -68,18 +70,22 @@ class WiiProtocol {
             } else if (req.method === 'POST' && action === 'play') {
                 const id = url.searchParams.get('source');
                 const item = this._lookup(url.searchParams.get('ref'), id);
-                if (this.commandStatus === 'Working...') throw new Error('a Wii command is already running');
-                this._command(this.pipeline.command(async () => {
+                if (this.commandState === 'pending') throw new Error('a Wii command is already running');
+                const commandId = this._command(this.pipeline.command(async () => {
                     const source = await this.registry.connect(id);
                     await this.pipeline.attach(source, item);
                     this.config.data.lastPlayed = { source: id, item };
                     this.config.save();
-                }));
-                rows = [['ok', 'accepted']];
+                }), { audio: true, message: 'Audio ready' });
+                rows = [['ok', 'accepted', commandId]];
             } else if (req.method === 'POST' && action === 'control') {
-                if (this.commandStatus === 'Working...') throw new Error('a Wii command is already running');
-                this._command(control(this.pipeline, this.config, url.searchParams.get('action')));
-                rows = [['ok', 'accepted']];
+                const action = url.searchParams.get('action');
+                if (this.commandState === 'pending' && action !== 'stop') throw new Error('a Wii command is already running');
+                const commandId = this._command(control(this.pipeline, this.config, action), {
+                    audio: action === 'next' || action === 'previous',
+                    message: { stop: 'Stopped', pause: 'Paused', play: 'Resumed' }[action] || 'Audio ready',
+                });
+                rows = [['ok', 'accepted', commandId]];
             } else {
                 return this._send(res, 404, [['error', 'unknown Wii endpoint']]);
             }
@@ -87,11 +93,26 @@ class WiiProtocol {
         } catch (err) { this._send(res, 400, [['error', err.message]]); }
     }
 
-    _command(promise) {
+    _command(promise, { audio = false, message = 'Complete' } = {}) {
+        const id = ++this.commandId;
+        this.commandState = 'pending';
         this.commandStatus = 'Working...';
-        promise.then((result) => {
-            this.commandStatus = result?.error || (result?.endOfQueue ? 'End of queue' : 'Done');
-        }, (err) => { this.commandStatus = err.message; });
+        Promise.resolve(promise).then(async (result) => {
+            if (id !== this.commandId) return;
+            if (result?.error) throw new Error(result.error);
+            if (audio && !result?.endOfQueue) {
+                this.commandStatus = 'Waiting for audio...';
+                await this.pipeline.waitForAudio();
+            }
+            if (id !== this.commandId) return;
+            this.commandStatus = result?.endOfQueue ? 'End of queue' : message;
+            this.commandState = 'complete';
+        }).catch((err) => {
+            if (id !== this.commandId) return;
+            this.commandStatus = err.message;
+            this.commandState = 'failed';
+        });
+        return id;
     }
 
     _send(res, code, rows) {

@@ -1,0 +1,3 @@
+
+# Keep the upstream checksum manifest valid across checkouts.
+client/vendor/projectm/** -text

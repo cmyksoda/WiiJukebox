@@ -30,7 +30,7 @@ server directly. An unavailable direct address falls back to discovery. Network
 initialization errors and the Wii's assigned IP are shown on screen; failed
 discovery retries automatically. During initialization, `1` cancels and restarts
 the attempt. The screen shows the attempt number and elapsed seconds; a
-ten-second initialization deadline requests network cleanup before retrying.
+30-second initialization deadline requests network cleanup before retrying.
 There is no on-screen address keyboard yet.
 
 For alternate ports, set `port` and `discoveryPort` in the server's `config.json`
@@ -65,7 +65,8 @@ request to finish. Curly quotes and dashes are converted for the ASCII font.
 | A | Select server/source; open container; play track/station |
 | B (release) | Back |
 | Left / Right | Previous/next library page |
-| 2 | Play selected track, station, album or playlist |
+| 2 | Toggle projectM visualizer |
+| Hold B + A | Play selected album/playlist in full |
 | Hold B + Left / Right | Previous/next queued track |
 | Hold B + 1 | Pause/resume a supported source |
 | Hold B + 2 | Stop the source |
@@ -83,7 +84,7 @@ network may delay exit. Audio/control latency also includes stream buffering.
 
 Use the web UI to connect **Navidrome / Subsonic**. Then the Wii can browse Artists,
 Albums, Playlists and Starred without knowing the service credentials. A opens a
-container; 2 queues its entirety. The Wii displays 12 entries per page, while
+container; B + A queues its entirety. The Wii displays 12 entries per page, while
 complete playlist queues stay on the server. Both normal MD5-token authentication
 and a reverse-proxy deployment prefix were exercised with a real fixture.
 
@@ -113,3 +114,18 @@ as `?` until a proper font renderer replaces the console.
 Original client code is GPL-3.0-only. See the repository LICENSE. libogc/libmad/
 ASND/libfat retain their upstream licenses; obtain their corresponding sources
 from devkitPro when distributing a linked binary.
+
+## projectM visualizer
+
+Press **2** to toggle the upstream WiiRadio projectM GX renderer. **B** returns
+to the browser. Volume and B+transport work in either view; browser selection
+and page controls are inactive while the visualizer is visible. Presets are
+embedded, so no extra SD assets are needed when using wiiload. Random presets
+change every 25 seconds with a 5-second blend. Original upstream notices and
+source provenance are in `vendor/README.md` and `vendor/projectm/UPSTREAM.json`.
+
+The browser shows `Page X / Y` and the visible item range separately from
+network diagnostics. Commands show acceptance first, then a matching server
+result. Play/skip completion waits for decoded audio on the server; existing
+stream buffering can still delay what reaches the speakers. Old completion
+messages do not repeatedly replace browser messages.

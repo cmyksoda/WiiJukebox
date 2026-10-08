@@ -30,9 +30,9 @@ Content-Length and no-store. The Wii uses HTTP/1.0 and requests Connection: clos
 | GET `/api/wii/info` | `server`, UUID, name, mount |
 | GET `/api/wii/sources` | `source`, source ID, label, state (configured sources only) |
 | GET `/api/wii/browse?source=...&ref=...&offset=...` | `page`, offset, total; then `item`, opaque reference, type, title, subtitle |
-| POST `/api/wii/play?source=...&ref=...` | `ok`, `accepted`; work finishes asynchronously |
-| POST `/api/wii/control?action=...` | `ok`, `accepted`; work finishes asynchronously |
-| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; then `command`, last command result |
+| POST `/api/wii/play?source=...&ref=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
+| POST `/api/wii/control?action=...` | `ok`, `accepted`, command ID; work finishes asynchronously |
+| GET `/api/wii/status` | `status`, title, artist, playback state, source label, comma-separated supported controls; then `command`, result text, command ID, state (`idle`, `pending`, `complete`, `failed`) |
 
 An empty browse ref opens the source root. Browse pages contain 12 entries.
 Opaque item references last one hour and are scoped to their source. At most

@@ -38,6 +38,8 @@ class Pipeline extends EventEmitter {
         this._commands = Promise.resolve();
         this._endTimer = null;
         this._generation = 0;
+        this._audioReady = false;
+        this._audioError = null;
 
         // What the WebUI shows and what goes out over ICY.
         this._nowPlaying = { title: '', artist: '', album: '', artwork: null };
@@ -77,6 +79,33 @@ class Pipeline extends EventEmitter {
         const result = this._commands.then(work);
         this._commands = result.catch(() => {});
         return result;
+    }
+
+    waitForAudio(timeoutMs = 30000) {
+        const generation = this._generation;
+        return new Promise((resolve, reject) => {
+            let timer;
+            const finish = (error) => {
+                clearTimeout(timer);
+                this.off('audio-readiness', check);
+                if (error) reject(error);
+                else resolve();
+            };
+            const check = () => {
+                if (this._generation !== generation) finish(new Error('selection replaced'));
+                else if (this._audioError) finish(this._audioError);
+                else if (this._audioReady) finish();
+            };
+            timer = setTimeout(() => finish(new Error('timed out waiting for decoded audio')), timeoutMs);
+            timer.unref?.();
+            this.on('audio-readiness', check);
+            check();
+        });
+    }
+
+    _audioFailed(error) {
+        this._audioError = error;
+        this.emit('audio-readiness');
     }
 
     advanceEnded({ source, generation }) {
@@ -151,6 +180,9 @@ class Pipeline extends EventEmitter {
     /** Route whatever the source returned into the pacer. */
     _consume(handle) {
         this._generation++;
+        this._audioReady = false;
+        this._audioError = null;
+        this.emit('audio-readiness');
         if (!handle) throw new Error('source returned no audio handle');
 
         if (handle.type === 'pcm') {
@@ -158,7 +190,10 @@ class Pipeline extends EventEmitter {
             this._pcmStream = handle.stream;
             this._input = handle.stream;
             handle.stream.on('data', (chunk) => this._pushPcm(chunk));
-            handle.stream.on('error', (err) => this.emit('warning', `pcm stream: ${err.message}`));
+            handle.stream.on('error', (err) => {
+                this._audioFailed(err);
+                this.emit('warning', `pcm stream: ${err.message}`);
+            });
             handle.stream.on('end', () => this._onSourceEnded());
             return;
         }
@@ -182,6 +217,7 @@ class Pipeline extends EventEmitter {
         });
         decoder.on('error', (err) => {
             if (this._decoder !== decoder) return;
+            this._audioFailed(err);
             this.emit('warning', `decode failed: ${err.message}`);
             this._onSourceEnded();
         });
@@ -199,6 +235,10 @@ class Pipeline extends EventEmitter {
     }
 
     _pushPcm(chunk) {
+        if (chunk.length && !this._audioReady) {
+            this._audioReady = true;
+            this.emit('audio-readiness');
+        }
         if (this.pacer.push(chunk)) return;
 
         // Backpressure: the buffer is full because the source is running ahead of
@@ -264,6 +304,7 @@ class Pipeline extends EventEmitter {
     };
 
     _onSourceEnded = () => {
+        if (!this._audioReady && !this._audioError) this._audioFailed(new Error('source ended before producing audio'));
         if (this._endTimer) return;
         const source = this._source;
         this.pacer.finishInput();
@@ -279,6 +320,9 @@ class Pipeline extends EventEmitter {
     /** Stop the current source and clear the left-hand side of the pipeline. */
     async detach() {
         this._generation++;
+        this._audioReady = false;
+        this._audioError = null;
+        this.emit('audio-readiness');
         clearInterval(this._endTimer);
         this._endTimer = null;
         this.pacer.paused = false;

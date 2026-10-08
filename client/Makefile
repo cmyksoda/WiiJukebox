@@ -6,10 +6,12 @@ include $(DEVKITPPC)/wii_rules
 endif
 .DEFAULT_GOAL := all
 CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
+CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
 CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Werror $(MACHDEP) -I$(LIBOGC_INC) -Ibuild -MMD -MP
 DISCOVERY_PORT ?= 4001
 LIBS := -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
-OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c))
+OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o
+include projectm.mk
 .PHONY: all clean host-test package FORCE
 all: dist/apps/wiijukebox/boot.dol
 build:
@@ -20,13 +22,15 @@ build/discovery_port.h: FORCE | build
 build/main.o: build/discovery_port.h
 build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
-build/wiijukebox.elf: $(OBJECTS)
-	$(CC) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wiijukebox.map -o $@
+build/wiijukebox.elf: $(OBJECTS) build/libprojectM.a
+	$(CXX) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wiijukebox.map -o $@
 dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
 	$(DEVKITPRO)/tools/bin/elf2dol $< $@
 HOST_CC ?= cc
 HOST_CFLAGS ?= -O2 -g
 host-test: | build
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
+	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
 	./build/menu_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/init_wait.c tests/init_wait_test.c -o build/init_wait_test

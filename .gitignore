@@ -6,3 +6,6 @@ public/vendor/
 client/build/
 client/dist/apps/wiijukebox/boot.dol
 client/dist/*.zip
+
+client/dist/apps/wiijukebox/licenses/
+client/dist/apps/wiijukebox/THIRD_PARTY.txt
