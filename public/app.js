@@ -153,14 +153,18 @@ function renderHome() {
         h('span', { class: 'name', text: src.label }),
         h('span', { class: 'state' }, h('span', { class: 'dot' }), label));
     });
-    content.replaceChildren(
+    content.replaceChildren(...kids([
         h('div', { class: 'grid' }, tiles),
         h('div', { class: 'panel', style: 'margin-top:18px' },
             h('h3', { text: 'Your Wii' }),
             h('p', { class: 'hint', text: 'Open WiiJukebox on your Wii and choose this server on the same network.' }),
             h('p', { class: 'hint', text: $('#server-id').textContent }),
-            h('p', { class: 'hint', text: $('#stream-addr').textContent })),
-    );
+            h('p', { class: 'hint', text: $('#stream-addr').textContent }),
+            window.WiiJukeboxApp
+                ? h('div', { class: 'buttons' }, h('button', { class: 'pill small', text: 'Choose another server',
+                    onclick: () => window.WiiJukeboxApp.switchServer() }))
+                : null),
+    ]));
 }
 
 async function openSource(src) {
@@ -1049,6 +1053,17 @@ document.addEventListener('keydown', (event) => {
 $('#back').onclick = () => {
     const prev = state.stack.pop();
     if (prev) browse(prev.path, prev.label, prev.offset);
+};
+
+// The Android app asks this on its back button; true means the page used it.
+window.wiiJukeboxBack = () => {
+    if (document.body.classList.contains('viz')) toggleVisualizer();
+    else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
+    else if (document.body.classList.contains('sources-open')) setSourcesOpen(false);
+    else if (!$('#back').hidden) $('#back').click();
+    else if (state.activeSource !== null) { state.activeSource = null; sourcesSignature = ''; renderHome(); renderSources(); }
+    else return false;
+    return true;
 };
 
 for (const [ids, action] of [[['#prev', '#mini-prev'], 'previous'], [['#next', '#mini-next'], 'next'], [['#stop'], 'stop']]) {
