@@ -12,6 +12,7 @@ const { Config } = require('../src/config');
 const { Pipeline } = require('../src/core/pipeline');
 const { SourceRegistry } = require('../src/sources');
 const { WebServer } = require('../src/web/server');
+const { waitFor } = require('./helpers/fake-binary');
 const run = promisify(execFile);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -268,27 +269,38 @@ test('an episode opens as a seekable URI with its duration and artwork, and noth
     assert.equal(source.state, 'ready');
 });
 
-test('episodes stream over HTTP, identify themselves to the host, and seek by range', { timeout: 30000 }, async () => {
+/** Serves a generated tone with byte-range support, like a podcast CDN. */
+async function withTone(seconds, work) {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'wiijukebox-podcast-'));
     const file = path.join(tmp, 'tone.wav');
-    await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=8:sample_rate=22050', '-ac', '1', file]);
+    await run('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `sine=frequency=440:duration=${seconds}:sample_rate=22050`, '-ac', '1', file]);
     const wav = await fs.readFile(file);
     const seen = [];
+    const handler = (req, res) => {
+        seen.push({ agent: req.headers['user-agent'], range: req.headers.range });
+        const [, start] = /bytes=(\d+)-/.exec(req.headers.range || '') || [];
+        const from = Number(start || 0);
+        res.writeHead(start ? 206 : 200, { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes',
+            'Content-Length': wav.length - from, ...(start && { 'Content-Range': `bytes ${from}-${wav.length - 1}/${wav.length}` }) });
+        res.on('error', () => {});
+        res.end(wav.subarray(from));
+    };
+    try { await withServer(handler, (base) => work(base, seen)); }
+    finally { await fs.rm(tmp, { recursive: true, force: true }); }
+}
+
+function silentPipeline() {
     const pipeline = new Pipeline();
     pipeline.pacer._write = () => true;
     pipeline.pacer.start();
+    return pipeline;
+}
+
+test('episodes stream over HTTP, identify themselves to the host, and seek by range', { timeout: 30000 }, async () => {
+    const pipeline = silentPipeline();
     try {
-        await withServer((req, res) => {
-            seen.push({ agent: req.headers['user-agent'], range: req.headers.range });
-            const [, start] = /bytes=(\d+)-/.exec(req.headers.range || '') || [];
-            const from = Number(start || 0);
-            res.writeHead(start ? 206 : 200, { 'Content-Type': 'audio/wav', 'Accept-Ranges': 'bytes',
-                'Content-Length': wav.length - from, ...(start && { 'Content-Range': `bytes ${from}-${wav.length - 1}/${wav.length}` }) });
-            res.on('error', () => {});
-            res.end(wav.subarray(from));
-        }, async (base) => {
-            const source = new PodcastsSource({}, {});
-            await pipeline.attach(source, { type: 'track', title: 'Tone', artist: 'Show', duration: 8, url: `${base}/tone.wav` });
+        await withTone(8, async (base, seen) => {
+            await pipeline.attach(new PodcastsSource({}, {}), { type: 'track', title: 'Tone', artist: 'Show', duration: 8, url: `${base}/tone.wav` });
             await pipeline.waitForAudio();
             assert.equal(pipeline.status.capabilities.seek, true);
             assert.equal(pipeline.status.nowPlaying.duration, 8);
@@ -300,7 +312,20 @@ test('episodes stream over HTTP, identify themselves to the host, and seek by ra
         });
     } finally {
         await pipeline.shutdown();
-        await fs.rm(tmp, { recursive: true, force: true });
+    }
+});
+
+test('a finished episode ends playback instead of starting another', { timeout: 30000 }, async () => {
+    const pipeline = silentPipeline();
+    pipeline.on('track-ended', (event) => pipeline.advanceEnded(event));
+    try {
+        await withTone(1, async (base) => {
+            await pipeline.attach(new PodcastsSource({}, {}), { type: 'track', title: 'Short', duration: 1, url: `${base}/tone.wav` });
+            await waitFor(() => pipeline.activeSource === null, 10000);
+            assert.equal(pipeline.status.nowPlaying.title, '');
+        });
+    } finally {
+        await pipeline.shutdown();
     }
 });
 
