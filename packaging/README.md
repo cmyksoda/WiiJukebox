@@ -212,20 +212,22 @@ cancels a run that is still going. Artifacts are `WiiJukebox-linux`,
 
 ### Checked in GitHub Actions
 
-Run RUN_URL (commit `COMMIT`) built and tested all three systems:
+Run [37852158837](https://github.com/cmyksoda/WiiJukebox/actions/runs/37852158837) (commit `0e55f81`) built and tested all three systems (its Linux job passed on a re-run: an unrelated timing test in `test/wii-seek-art.test.js` failed once on the loaded runner):
 
 | | Linux (ubuntu-latest, virtual display) | Windows (windows-latest) | macOS (macos-latest, Apple silicon) |
 |---|---|---|---|
-| Built | AppImage, deb | zip, NSIS installer | arm64 and x64 dmg and zip |
+| Built | AppImage, deb, rpm | portable zip, NSIS installer | arm64 and x64 dmg and zip |
 | Unit tests for the desktop code | yes, inside `npm test` | yes | yes |
 | `npm test` and `npm run smoke` | yes | not run | not run |
-| Packaged app started by the smoke test | the AppImage; the `.deb` installed with apt, with Chromium's sandbox on | the portable zip; the setup exe, run silently | the arm64 app; the x64 app under Rosetta |
+| Packaged app started by the smoke test | the AppImage; the `.deb` installed with apt, with Chromium's sandbox on; the `.rpm` installed with dnf in a `fedora:latest` container (Fedora 44) | the portable zip; the setup exe, run silently | the arm64 app; the x64 app under Rosetta |
 
 What the smoke test confirmed on each of those (`smoke-logs-*` artifacts hold the output):
 
 - The app starts hidden, shows the first-run page, and its server comes up on port
   4680; `/api/status`, `/`, a vendor file and 8 KiB of MP3 from `/stream` are served;
-  Wii discovery answers on UDP 4681; the tray icon was created.
+  Wii discovery answers on UDP 4681; the tray icon was created. It also ran with web
+  and discovery on one port number, and (AppImage, portable zip and the arm64 app) with
+  the server's own default, 4005 for both.
 - The bundled FFmpeg is the copy in use, has the MP3 encoder, reports a GPL license
   and encodes a test tone. Versions seen: 7.0.2 on Linux, 6.1.1 on Windows, 8.1.3
   (Jellyfin) on macOS.
@@ -252,6 +254,12 @@ Also seen per system:
   expected for an unsigned download. The bundled FFmpeg is a thin binary for the app's
   architecture.
 - Linux: the `.deb` installs `/opt/WiiJukebox` and a menu entry and removes cleanly.
+  The `.rpm` (name `wiijukebox`, GPL-3.0-only, `rpm -qip` metadata filled in) installs
+  on Fedora 44 with `dnf`: before anything else is added, `ldd` finds every shared
+  library of the app from the rpm's own dependencies; the files are `/opt/WiiJukebox`,
+  `/usr/share/applications/wiijukebox.desktop` and icons from 16 to 512 pixels in
+  `/usr/share/icons/hicolor`, with no `.build-id` links that could clash with another
+  Electron package; the smoke test passes; `dnf remove` leaves nothing behind.
 
 ### Checked by hand on Fedora (Linux)
 
@@ -276,6 +284,9 @@ problems, port busy, crash, FFmpeg missing) was rendered and read.
   nothing was rebooted), and macOS login items for an app that is not in Applications.
 - macOS on Intel hardware or older than the runner's macOS (the Intel app ran under
   Rosetta; the bundled FFmpeg needs macOS 12), Windows on ARM, Linux on arm64.
+- The `.rpm` on a real Fedora desktop (Wayland session, the menu entry and icon showing,
+  the tray on GNOME or KDE) and on RHEL or openSUSE. The container run has no desktop or
+  GPU and runs as root with `--no-sandbox`; the deb run is what covers Chromium's sandbox.
 - GNOME without the AppIndicator extension shows no tray icon; the window then comes
   back by starting the app again. Not tried.
 - The yt-dlp download on Intel macOS, and whether the receivers in
