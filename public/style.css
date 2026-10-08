@@ -131,6 +131,11 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 
 #toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 #crumb { margin: 0; font-size: 20px; font-weight: 600; flex: 1; }
+#back { width: 44px; height: 44px; flex: none; border: 1px solid var(--line); background: var(--panel-2); border-radius: 13px; }
+#pagination { display: flex; align-items: center; gap: 2px; width: max-content; margin: 0 0 16px auto; padding: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; }
+#pagination[hidden] { display: none; }
+#pagination .page-button { width: 44px; height: 40px; padding: 0; min-height: 40px; }
+#library-page { min-width: 58px; text-align: center; color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 #search {
     background: var(--panel-2);
@@ -148,6 +153,7 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 #content.list { grid-template-columns: 1fr; gap: 2px; }
 
 .card {
+    min-width: 0;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -168,6 +174,13 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
     margin-bottom: 8px;
 }
 .card .t { font-weight: 500; }
+.card .t, .card .s { display: block; }
+.card .s:empty { display: none; }
+.card .ph, .row .ph { display: grid; place-items: center; color: var(--dim); }
+.card .ph svg { width: 38px; height: 38px; }
+.category-card { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; min-height: 138px; padding: 18px; }
+.category-card .ph { width: 48px; height: 48px; aspect-ratio: auto; margin: 0; border-radius: 14px; background: var(--accent-dim); color: var(--accent); }
+.category-card .ph svg { width: 26px; height: 26px; }
 .card .s, .row .s { font-size: 12px; color: var(--dim); }
 .card .t, .card .s, .row .t {
     overflow: hidden;
@@ -392,8 +405,6 @@ button svg {
     #right .btn svg { width: 19px; height: 19px; }
     .button-label { font-size: 9px; line-height: 1.2; }
     .icon-btn, .btn.small { min-height: 44px; }
-    #pagination { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    #pagination[hidden] { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

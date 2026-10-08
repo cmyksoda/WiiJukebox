@@ -141,7 +141,10 @@ async function browse(path, label, offset = 0) {
         $('#pagination').hidden = result.total <= 100 && offset === 0;
         $('#library-prev').disabled = offset === 0;
         $('#library-next').disabled = offset + items.length >= result.total || !items.length;
-        $('#library-page').textContent = `Page ${Math.floor(offset / 100) + 1}`;
+        const page = Math.floor(offset / 100) + 1;
+        const pages = Math.max(page, Math.ceil(result.total / 100));
+        $('#library-page').textContent = `${page} / ${pages}`;
+        $('#library-page').setAttribute('aria-label', `Page ${page} of ${pages}`);
         $('#library-prev').onclick = () => browse(path, label, Math.max(0, offset - 100));
         $('#library-next').onclick = () => browse(path, label, offset + 100);
         renderItems(items, path, label, offset);
@@ -149,6 +152,21 @@ async function browse(path, label, offset = 0) {
         content.innerHTML = '';
         toast(err.message, true);
     }
+}
+
+function itemArtwork(item) {
+    if (item.artwork) return `<img src="${escapeHtml(item.artwork)}" alt="" loading="lazy">`;
+    const icons = {
+        artists: '<circle cx="12" cy="8" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2M5 4a3 3 0 0 0 0 6M19 4a3 3 0 0 1 0 6"/>',
+        albums: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+        playlists: '<path d="M4 5h16M4 10h16M4 15h8M4 20h8m4-6 5 3-5 3Z"/>',
+        starred: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/>',
+        folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+        track: '<path d="M10 18V5l10-2v13M10 8l10-2"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
+    };
+    const key = item.type === 'folder' ? item.id : { artist: 'artists', album: 'albums', playlist: 'playlists' }[item.type];
+    const icon = icons[key] || icons[item.type] || icons.track;
+    return `<span class="ph" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>`;
 }
 
 function renderItems(items, path, label, offset = 0) {
@@ -170,16 +188,16 @@ function renderItems(items, path, label, offset = 0) {
         if (allTracks) {
             el.className = 'row';
             el.innerHTML = `
-                ${item.artwork ? `<img src="${escapeHtml(item.artwork)}" alt="">` : '<span class="ph"></span>'}
+                ${itemArtwork(item)}
                 <span class="meta">
                     <span class="t">${escapeHtml(item.title || '')}</span>
                     <span class="s">${escapeHtml(item.subtitle || '')}</span>
                 </span>
                 <span class="dur">${fmtDuration(item.duration)}</span>`;
         } else {
-            el.className = 'card';
+            el.className = item.type === 'folder' && !item.artwork ? 'card category-card' : 'card';
             el.innerHTML = `
-                ${item.artwork ? `<img src="${escapeHtml(item.artwork)}" alt="" loading="lazy">` : '<span class="ph"></span>'}
+                ${itemArtwork(item)}
                 <span class="t">${escapeHtml(item.title || '')}</span>
                 <span class="s">${escapeHtml(item.subtitle || '')}</span>`;
         }

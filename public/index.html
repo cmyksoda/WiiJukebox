@@ -38,16 +38,16 @@
   <main id="main">
     <div id="toolbar">
       <button id="sources-toggle" class="icon-btn menu-button" aria-label="Open sources" aria-controls="sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
-      <button id="back" class="icon-btn" title="Back" hidden>&larr;</button>
+      <button id="back" class="icon-btn" title="Back" aria-label="Back to previous folder" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
       <h2 id="crumb">Pick a source</h2>
       <input id="search" type="search" placeholder="Search" hidden>
     </div>
 
-    <div id="pagination" hidden>
-      <button class="btn small" id="library-prev">Previous page</button>
-      <span id="library-page"></span>
-      <button class="btn small" id="library-next">Next page</button>
-    </div>
+    <nav id="pagination" aria-label="Library pages" hidden>
+      <button class="icon-btn page-button" id="library-prev" title="Previous page" aria-label="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+      <span id="library-page" aria-live="polite"></span>
+      <button class="icon-btn page-button" id="library-next" title="Next page" aria-label="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+    </nav>
     <div id="content"></div>
 
     <div id="empty" class="empty">
