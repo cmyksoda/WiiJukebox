@@ -51,16 +51,19 @@ function executableOf(file) {
 const executable = executableOf(target);
 
 class App {
-    constructor(name, extraArgs = []) {
+    /** @param {{args?: string[], settings?: object, env?: object}} options `settings` is the app's saved state; none means a first run. */
+    constructor(name, { args: extraArgs = [], settings = null, env = {} } = {}) {
         this.dir = fs.mkdtempSync(path.join(process.env.WIIJUKEBOX_SMOKE_DIR || os.tmpdir(), `wiijukebox-smoke-${name}-`));
         this.config = path.join(this.dir, 'config');
         this.userData = path.join(this.dir, 'userdata');
         this.stateFile = path.join(this.dir, 'state.json');
         this.output = [];
         this.extraArgs = extraArgs;
+        this.extraEnv = env;
         fs.mkdirSync(path.join(this.config, 'wiijukebox'), { recursive: true });
         fs.mkdirSync(this.userData, { recursive: true });
         fs.writeFileSync(path.join(this.config, 'wiijukebox', 'config.json'), JSON.stringify({ port: PORT, discoveryPort: DISCOVERY_PORT }));
+        if (settings) fs.writeFileSync(path.join(this.userData, 'settings.json'), JSON.stringify(settings));
     }
 
     get env() {
@@ -72,6 +75,7 @@ class App {
             WIIJUKEBOX_HIDDEN: '1',
             // An AppImage can then run without FUSE.
             APPIMAGE_EXTRACT_AND_RUN: '1',
+            ...this.extraEnv,
         };
     }
 
@@ -210,8 +214,7 @@ async function pageClient() {
 
 async function checkReturningUser() {
     console.log('\n== returning user: server, FFmpeg and web UI ==');
-    const app = new App('returning');
-    fs.writeFileSync(path.join(app.userData, 'settings.json'), JSON.stringify({ setupDone: true, onClose: 'background' }));
+    const app = new App('returning', { settings: { setupDone: true, onClose: 'background' } });
     app.start();
     try {
         const state = await app.waitState('the server to start', (s) => s.serverUrl);
@@ -258,7 +261,7 @@ async function checkReturningUser() {
 
 async function checkFirstRun() {
     console.log('\n== first run: setup page drives the server ==');
-    const app = new App('firstrun', [`--remote-debugging-port=${DEBUG_PORT}`]);
+    const app = new App('firstrun', { args: [`--remote-debugging-port=${DEBUG_PORT}`] });
     app.start();
     let client;
     try {
@@ -299,6 +302,64 @@ async function checkFirstRun() {
     }
 }
 
+async function checkPortInUse() {
+    console.log('\n== port already in use: the app offers another one ==');
+    const blocker = net.createServer();
+    await new Promise((resolve) => blocker.listen(PORT, '0.0.0.0', resolve));
+    const app = new App('portbusy', { args: [`--remote-debugging-port=${DEBUG_PORT}`], settings: { setupDone: true, onClose: 'background' } });
+    app.start();
+    let client;
+    try {
+        await app.waitState('the port-busy page', (s) => s.page === 'port-busy');
+        check('a busy port shows the port-busy page instead of a crash', true);
+        client = await pageClient();
+        const suggested = await until('a suggested port', () => client.evaluate("document.querySelector('#new-port')?.value || ''"), 30000);
+        check('another free port is suggested', Number(suggested) > 1023 && Number(suggested) !== PORT, suggested);
+        await client.evaluate("document.querySelector('#use-port').click(); true");
+        const state = await app.waitState('the server on the new port', (s) => s.page === 'player' && s.serverUrl);
+        check('the server restarts on the chosen port', state.serverUrl === `http://127.0.0.1:${suggested}/`, state.serverUrl);
+        check('the new port is saved in config.json', JSON.parse(fs.readFileSync(path.join(app.config, 'wiijukebox', 'config.json'), 'utf8')).port === Number(suggested));
+        check('server answers on the new port', (await get(`${state.serverUrl}api/status`)).status === 200);
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('port-in-use flow', false, err.message);
+        app.dump();
+    } finally {
+        client?.close();
+        app.kill();
+        blocker.close();
+    }
+}
+
+async function checkMissingFfmpeg() {
+    console.log('\n== FFmpeg missing: the app explains and can start without it ==');
+    const missing = path.join(os.tmpdir(), 'wiijukebox-missing', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+    const app = new App('noffmpeg', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`],
+        settings: { setupDone: true, onClose: 'background' },
+        env: { WIIJUKEBOX_FFMPEG: missing },
+    });
+    app.start();
+    let client;
+    try {
+        const state = await app.waitState('the FFmpeg page', (s) => s.page === 'ffmpeg');
+        check('a missing FFmpeg shows its page and starts no server', !state.serverUrl && !state.ffmpeg && !(await portOpen(PORT)));
+        client = await pageClient();
+        const command = await until('the install command', () => client.evaluate("document.querySelector('#command')?.textContent || ''"), 30000);
+        check('the page names a way to install FFmpeg', command.length > 5, command.split('\n')[0]);
+        await client.evaluate("document.querySelector('#anyway').click(); true");
+        const started = await app.waitState('the server after "Start without it"', (s) => s.serverUrl);
+        check('"Start without it" starts the server', (await get(`${started.serverUrl}api/status`)).status === 200);
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('missing-FFmpeg flow', false, err.message);
+        app.dump();
+    } finally {
+        client?.close();
+        app.kill();
+    }
+}
+
 async function main() {
     console.log(`smoke test of ${executable}${ARCH ? ` as ${ARCH}` : ''} on ${process.platform}-${process.arch}`);
     for (const port of [PORT, DEBUG_PORT]) {
@@ -306,6 +367,8 @@ async function main() {
     }
     await checkReturningUser();
     await checkFirstRun();
+    await checkPortInUse();
+    await checkMissingFfmpeg();
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
     process.exit(failures ? 1 : 0);
 }
