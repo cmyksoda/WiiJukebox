@@ -16,6 +16,11 @@ const state = {
     panelTimer: null, // polling for the receiver / sign-in panels
 };
 
+// Corner glyphs for a source's top-level folders, matching the Wii client's icons.
+const FOLDER_GLYPHS = {
+    artists: 'artist', albums: 'album', playlists: 'playlist', starred: 'star', top: 'star', subscriptions: 'podcast',
+};
+
 // What each channel is, for the label on its tile.
 const KINDS = {
     subsonic: 'Library', jellyfin: 'Library', plex: 'Library',
@@ -302,7 +307,9 @@ function renderItems(items, path, label, offset = 0) {
 
     const cardFor = (item) => {
         if (item.type === 'folder' && !item.artwork) {
-            return h('button', { class: 'category', onclick: () => open(item) }, item.title || '');
+            const glyph = FOLDER_GLYPHS[item.id] || (String(item.id).startsWith('section/') ? 'album' : 'note');
+            return h('button', { class: 'category', onclick: () => open(item) },
+                h('i', { class: `g g-${glyph}`, 'aria-hidden': 'true' }), item.title || '');
         }
         const card = h('button', { class: 'card', onclick: () => open(item) },
             artwork(item),
@@ -593,7 +600,7 @@ async function bindFavorites(source, urlInput, nameInput, saveButton) {
                             await reload();
                         } catch (err) { toast(err.message, true); }
                     },
-                }, h('span', { 'aria-hidden': 'true', text: '✕︎' })));
+                }, h('i', { class: 'g g-close', 'aria-hidden': 'true' })));
         });
         container.replaceChildren(...kids([
             h('h2', { class: 'favorites-heading' }, radio ? 'Saved stations' : 'Saved links',
@@ -607,6 +614,8 @@ async function bindFavorites(source, urlInput, nameInput, saveButton) {
             await api(`/sources/${source}/favorites`, { method: 'POST', body: {
                 url: $(urlInput).value.trim(), name: $(nameInput).value.trim(),
             } });
+            $(urlInput).value = '';
+            $(nameInput).value = '';
             await reload();
             toast('Saved for the Wii source browser');
         } catch (err) { toast(err.message, true); }

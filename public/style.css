@@ -99,6 +99,29 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .g-down { background: currentColor; clip-path: polygon(10% 27%, 90% 27%, 50% 95%); }
 .g-close::before, .g-close::after { content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: currentColor; transform: rotate(45deg); }
 .g-close::after { transform: rotate(-45deg); }
+.g-artist::before, .g-artist::after, .g-playlist::before, .g-playlist::after,
+.g-note::before, .g-note::after, .g-podcast::before, .g-podcast::after { content: ""; position: absolute; background: currentColor; }
+.g-artist::before { left: 32%; right: 32%; top: 6%; height: 36%; border-radius: 50%; }
+.g-artist::after { left: 12%; right: 12%; top: 50%; bottom: 6%; border-radius: 50% 50% 16% 16% / 70% 70% 16% 16%; }
+.g-album { border-radius: 50%; background: radial-gradient(circle closest-side, transparent 0 26%, currentColor 28%); }
+.g-playlist {
+    background: linear-gradient(currentColor 0 0) 4% 12% / 70% 11% no-repeat,
+        linear-gradient(currentColor 0 0) 4% 40% / 70% 11% no-repeat,
+        linear-gradient(currentColor 0 0) 4% 68% / 38% 11% no-repeat;
+}
+.g-playlist::before { left: 52%; top: 62%; width: 30%; height: 30%; border-radius: 50%; }
+.g-playlist::after { left: 74%; top: 30%; width: 9%; height: 48%; }
+.g-star { background: currentColor; clip-path: polygon(50% 4%, 61% 37%, 96% 37%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 4% 37%, 39% 37%); }
+.g-note::before { left: 12%; top: 58%; width: 38%; height: 38%; border-radius: 50%; }
+.g-note::after { inset: 0; clip-path: polygon(42% 6%, 84% 24%, 84% 42%, 52% 30%, 52% 76%, 42% 76%); }
+.g-podcast::before {
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle closest-side, currentColor 0 18%, transparent 20% 40%, currentColor 42% 58%,
+        transparent 60% 78%, currentColor 80% 98%, transparent 100%);
+    clip-path: inset(0 0 26% 0);
+}
+.g-podcast::after { left: 44%; right: 44%; top: 50%; bottom: 0; border-radius: 2px; }
 .pill.icon .g { font-size: 12px; }
 .pill.icon .g-close { font-size: 16px; }
 .g-pause {
@@ -375,6 +398,7 @@ body.viz #app { opacity: 0; pointer-events: none; }
 .play-all:hover { filter: brightness(1.12); }
 
 .category {
+    position: relative;
     display: flex;
     align-items: flex-end;
     min-height: 92px;
@@ -387,6 +411,7 @@ body.viz #app { opacity: 0; pointer-events: none; }
     font-size: 17px;
     text-align: left;
 }
+.category .g { position: absolute; top: 12px; right: 14px; font-size: 30px; color: var(--accent); opacity: .35; }
 .category:hover, .category:focus-visible { border-color: var(--accent); background: var(--tile-hover); }
 
 .list { display: flex; flex-direction: column; gap: 2px; }
