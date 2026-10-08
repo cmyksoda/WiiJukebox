@@ -57,32 +57,55 @@ WebKit packages.
 
 ### What a person sees
 
-- **First run.** A welcome page offers two choices (YouTube, SoundCloud and Bandcamp
-  support by downloading yt-dlp, and start at login), then starts the server and
-  shows **Connect your Wii**: put the Wii on the same network, open WiiJukebox on it
-  (it finds the computer by UDP discovery), or type the address shown (for example
-  `192.168.0.3:4005`). The page also reports whether the server and discovery are
-  working. After that the window shows the web UI.
+- **First run.** A welcome page offers four choices, in this order: the included audio
+  engine, the default server settings (both ticked and marked "(recommended)"), YouTube,
+  SoundCloud and Bandcamp support by downloading yt-dlp (ticked), and start at login
+  (unticked). It then starts the server and shows **Connect your Wii**: put the Wii on
+  the same network, open WiiJukebox on it (it finds the computer by UDP discovery), or
+  type the address shown (for example `192.168.0.3:4005`). The page also reports whether
+  the server and discovery are working. After that the window shows the web UI.
 - **Background.** A tray icon (menu bar icon on a Mac) keeps the server and the music
   going. The first time the window is closed the app asks whether to keep playing in
   the background or quit, and remembers the answer ("Keep playing when the window is
   closed" in the menu changes it). Quit from the tray or application menu stops the
   server and its FFmpeg. If the app is killed without quitting, the server notices
   and stops by itself.
+- **Audio engine and server settings.** Unticking "Use the included audio engine" makes
+  the server use the FFmpeg already on the computer (see [FFmpeg and
+  yt-dlp](#ffmpeg-and-yt-dlp)). Unticking "Use default server settings" shows two
+  fields, prefilled with the current values:
+  - *Server name*, the name the Wii lists. It is trimmed, cannot be empty or contain line
+    breaks, and is at most 80 characters (what discovery sends).
+  - *Port*, the web port: a whole number from 1024 to 65535 that is free right now.
+  Both go into the server's `config.json` (`station.name` and `port`) before the server
+  starts, and nothing else in that file changes. The discovery port is never touched:
+  the Wii looks for servers on UDP 4005 and is told the web port in the answer, so
+  it still finds the server by itself whatever the name and port. Left ticked, the page
+  writes nothing, and its text ("Named WiiJukebox, on port 4005") shows what `config.json`
+  and the server's defaults say, so a hand-edited file is kept.
 - **Start at login** (menu item, offered unticked on first run). The app then opens quietly in
   the tray, so the Wii can connect after a restart. Windows and macOS use their login
   items; Linux writes `~/.config/autostart/wiijukebox.desktop`.
 - **One copy.** Starting the app again brings the window forward. Starting it with
   `--quit` makes the running copy quit (scripts, installers).
 - **Menu and tray entries.** Connect your Wii, Copy Wii address, Copy stream address,
-  Open in browser, Restart server, Install or update yt-dlp, Start at login, Show
-  settings folder, Show server log (`logs/server.log` in the app's data folder).
+  Open in browser, Restart server, Server name and port, Install or update yt-dlp, Use
+  included FFmpeg, Start at login, Keep playing when the window is closed, Show settings
+  folder, Show server log (`logs/server.log` in the app's data folder).
+  - **Server name and port…** opens a small window with the same two fields as the
+    welcome page. Saving stops the server, writes `config.json` and starts it again (a
+    change of nothing does not restart it). Keeping the port the server already holds is
+    allowed; a different one must be free. It is greyed out until the first-run setup is done.
+  - **Use included FFmpeg** is a checkbox; changing it restarts the server. It is not
+    shown when the app has no included FFmpeg (a development run).
 - **Errors are pages, not console text.** A busy port shows "Port 4005 is in use" with
   a free port suggested; one click saves it in the server's `config.json` and
   restarts (the Wii finds the new port by discovery). A server crash shows its last
-  lines and a Restart button. A missing FFmpeg shows install commands, a Check again
-  button and "Start without it". A failed yt-dlp download shows a note on the Connect
-  page and can be retried from the menu.
+  lines and a Restart button. An FFmpeg problem shows a page that says which it is
+  (none found, or one found that cannot make MP3), with install commands, a Check again
+  button, "Start without it" and, if the included FFmpeg is unticked, a button that
+  switches back to it. A failed yt-dlp download shows a note on the Connect page and can
+  be retried from the menu.
 
 ### Ports and firewalls
 
@@ -101,11 +124,20 @@ taken or blocked on this computer is reported with "type the address on the Wii"
 
 ### FFmpeg and yt-dlp
 
-FFmpeg is bundled and always used before anything on `PATH`: a system build such as
-Fedora's `ffmpeg-free` can lack the MP3 encoder the stream needs. Every bundled build
-is GPL v3 with `libmp3lame`, and its license text and source pointer ship next to it
-in `resources/bin` (`ffmpeg-LICENSE.txt`, `ffmpeg-README.txt`). `scripts/stage.js`
-downloads each one and checks a pinned SHA-256.
+FFmpeg is bundled and used before anything on `PATH` by default: a system build such as
+Fedora's `ffmpeg-free` can lack the MP3 encoder the stream needs. The setting
+`useBundledFfmpeg` in the app's `settings.json` (ticked by default; the welcome page and
+the menu change it) turns that around: the included folder is skipped and the server gets
+the first FFmpeg found among the overrides, `PATH` and the common install folders.
+Whichever FFmpeg is chosen must list `libmp3lame` in `ffmpeg -encoders`. If none is
+found, or the one found cannot encode MP3, the FFmpeg page says which of the two it is and
+offers the included FFmpeg again. A development run has no included FFmpeg, so the option
+is hidden and the computer's own is used. An override (`WIIJUKEBOX_FFMPEG`) wins over the
+setting.
+
+Every bundled build is GPL v3 with `libmp3lame`, and its license text and source pointer
+ship next to it in `resources/bin` (`ffmpeg-LICENSE.txt`, `ffmpeg-README.txt`).
+`scripts/stage.js` downloads each one and checks a pinned SHA-256.
 
 | System | Build | Source |
 |---|---|---|
@@ -165,13 +197,14 @@ copy of the mark the local pages show.
 
 | Setting | Effect |
 |---|---|
-| `WIIJUKEBOX_FFMPEG`, `WIIJUKEBOX_YTDLP` | Name the one program to use. A path that does not exist makes the app behave as if the program were not installed; use this instead of changing `PATH`. |
+| `WIIJUKEBOX_FFMPEG`, `WIIJUKEBOX_YTDLP` | Name the one program to use, whatever the included FFmpeg setting says. A path that does not exist makes the app behave as if the program were not installed, and a script that lists no `libmp3lame` in `-encoders` as an FFmpeg without MP3; use this instead of changing `PATH`. |
 | `WIIJUKEBOX_HIDDEN=1` | Never shows any window. (`--hidden`, used by start at login, only starts quietly and still shows problems.) |
 | `WIIJUKEBOX_USER_DATA=<dir>` | Keeps the app's own data (settings, bin, logs) in that folder. |
 | `WIIJUKEBOX_STATE_FILE=<file>` | Writes the page shown, the server URL and the tools found as JSON whenever they change. |
 | `XDG_CONFIG_HOME=<dir>` | Where the server's `wiijukebox/config.json` lives, so a test can set its ports. |
 | `--quit` | Asks the running copy to quit. |
 | `--remote-debugging-port=<n>` | Chromium's own switch; the smoke test uses it to click the setup page. |
+| `--inspect=<n>` | Node's inspector for the main process; the smoke test uses it to press the "Server name and port" and "Use included FFmpeg" menu items (`getMenuItemById('server-settings')`, `'bundled-ffmpeg'`). |
 
 `scripts/smoke.js` is the end-to-end check of a packaged app:
 
@@ -179,15 +212,27 @@ copy of the mark the local pages show.
 node scripts/smoke.js ../dist/desktop/linux-unpacked/wiijukebox --port 4680
 ```
 
-It starts the app hidden on ports 4680 (web), 4681 (discovery) and 4690 (debugging),
-and checks: the server URL, that the bundled FFmpeg is the one in use, has MP3 and is
-GPL, `/api/status`, `/`, a packaged vendor file, 8 KiB of MP3 from `/stream`, a
-discovery reply, a clean `--quit`, and that the ports are free afterwards. Then it runs
-the server with web and discovery on one port number (the default configuration),
-the first-run flow by clicking the real setup page, the busy-port flow and the
-missing-FFmpeg flow. It exits non-zero if any check fails. The tests use 4680 and 4681
-so they never touch a server on the default port; CI also passes `--default-ports` to run
-the app once with the server's own defaults (4005).
+It starts the app hidden on ports 4680 (web), 4681 (discovery), 4690 (debugging) and
+4691 (inspector), and checks: the server URL, that the bundled FFmpeg is the one in use,
+has MP3 and is GPL, `/api/status`, `/`, a packaged vendor file, 8 KiB of MP3 from
+`/stream`, a discovery reply, a clean `--quit`, and that the ports are free afterwards.
+Then it runs:
+
+- the server with web and discovery on one port number (the default configuration);
+- the first-run flow by clicking the real setup page, including that the audio engine
+  and server settings options come first, are ticked, and show the real FFmpeg version,
+  name and port;
+- the choice of a server name and port: bad names and ports are refused, a good one
+  reaches `config.json` and the discovery reply;
+- the "Server name and port" window, opened from the menu, with a change of name and port;
+- the busy-port flow and the missing-FFmpeg flow;
+- the included FFmpeg unticked: no FFmpeg on the computer, an FFmpeg without MP3 (a
+  stand-in shell script, so not on Windows), and the computer's own FFmpeg followed by the
+  switch back to the included one.
+
+It exits non-zero if any check fails. The tests use 4680 and 4681 (once also 4681 as a TCP
+web port, to try a port change) so they never touch a server on the default port; CI also
+passes `--default-ports` to run the app once with the server's own defaults (4005).
 
 ### Continuous integration
 
@@ -269,6 +314,11 @@ problems, port busy, crash, FFmpeg missing) was rendered and read.
 
 ### Not verified
 
+- The welcome options, the "Server name and port" window and the "Use included FFmpeg"
+  menu item were smoke-tested on Linux (the AppImage, on this Fedora machine) only. The
+  menu items are pressed through Node's inspector there; that route has not run on
+  Windows or macOS yet, and a real click on the menu and the new window on a visible
+  screen was not tried.
 - Anything that needs a person at a real screen: how the tray or menu bar icon and its
   menu look, the close-window question, and the pages on real Windows and macOS
   displays (CI drives them hidden). The pages were rendered in light and dark themes
