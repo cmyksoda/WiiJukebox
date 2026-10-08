@@ -67,11 +67,9 @@ int wj_gfx_init(void) {
     return 0;
 }
 
-void wj_gfx_begin(void) {
+static void ui_state(void) {
     Mtx44 projection;
     Mtx identity;
-    copy_settings();
-    GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
     guOrtho(projection, 0, WJ_GFX_HEIGHT, 0, width, 0, 1);
     GX_LoadProjectionMtx(projection, GX_ORTHOGRAPHIC);
     guMtxIdentity(identity);
@@ -103,9 +101,19 @@ void wj_gfx_begin(void) {
     GX_SetColorUpdate(GX_TRUE);
     GX_SetAlphaUpdate(GX_FALSE);
     GX_SetDither(GX_FALSE);
-    GX_SetCopyClear((GXColor){ 0xee, 0xf0, 0xf3, 0xff }, 0x00ffffff);
     active = MODE_NONE;
     bound = NULL;
+}
+
+void wj_gfx_begin(void) {
+    copy_settings();
+    GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+    ui_state();
+    GX_SetCopyClear((GXColor){ 0xee, 0xf0, 0xf3, 0xff }, 0x00ffffff);
+}
+
+void wj_gfx_begin_overlay(void) {
+    ui_state();
 }
 
 void wj_gfx_present(void) {

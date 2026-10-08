@@ -12,6 +12,7 @@
 #include "ui.h"
 #include "pcm_snapshot.h"
 #include "visualizer.h"
+#include "tour.h"
 
 #define SEEK_STEP_MS 10000
 #define SEEK_SETTLE_MS 900
@@ -106,6 +107,14 @@ int main(int argc, char **argv) {
             up &= ~WPAD_BUTTON_B;
             toggle_visualizer();
         }
+#if WJ_PRESET_TOUR
+        if (visualizer && !(held & WPAD_BUTTON_B)) {
+            int step = (down & WPAD_BUTTON_RIGHT ? 1 : 0) - (down & WPAD_BUTTON_LEFT ? 1 : 0) +
+                       (down & WPAD_BUTTON_UP ? 10 : 0) - (down & WPAD_BUTTON_DOWN ? 10 : 0);
+            if (step) wj_visualizer_step(step);
+            if (down & WPAD_BUTTON_1) wj_visualizer_flag();
+        }
+#endif
         if (visualizer && !(held & WPAD_BUTTON_B))
             down &= ~(WPAD_BUTTON_A | WPAD_BUTTON_1 | WPAD_BUTTON_LEFT | WPAD_BUTTON_RIGHT | WPAD_BUTTON_UP | WPAD_BUTTON_DOWN);
         // The large cover takes A and B for closing; only volume reaches past it.
