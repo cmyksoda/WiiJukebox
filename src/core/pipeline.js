@@ -19,15 +19,18 @@ const { Broadcaster } = require('./broadcaster');
 const { Decoder } = require('./decoder');
 const { PlaybackTimeline } = require('./playback-timeline');
 const { Listening } = require('./listening');
+const { playModes } = require('./play-modes');
 
 // A jump-aware listener drops its stale buffer at a transport change; this much
 // new audio is sent at once so it refills to its usual depth immediately.
 const JUMP_BURST_MS = 4000;
 
 class Pipeline extends EventEmitter {
-    constructor({ ffmpegPath = 'ffmpeg', station = {}, audio = {} } = {}) {
+    constructor({ ffmpegPath = 'ffmpeg', station = {}, audio = {}, modes } = {}) {
         super();
         this._ffmpegPath = ffmpegPath;
+        // Shuffle and repeat belong to the player, not to a source: they outlive source changes.
+        this._modes = playModes(modes);
 
         this.encoder = new Encoder({ ffmpegPath, ...audio });
         this.broadcaster = new Broadcaster({ ...station,
@@ -146,7 +149,7 @@ class Pipeline extends EventEmitter {
     advanceEnded({ source, generation }) {
         return this.command(async () => {
             if (this._generation !== generation || this._source !== source || typeof source?.advance !== 'function') return;
-            const handle = await source.advance(1);
+            const handle = await source.advance();
             if (handle) await this.playHandle(handle);
             else await this.detach();
         });
@@ -165,6 +168,18 @@ class Pipeline extends EventEmitter {
 
     get activeSource() {
         return this._source;
+    }
+
+    get modes() {
+        return { ...this._modes };
+    }
+
+    /** Sets `shuffle` (a boolean) or `repeat` ('off', 'all' or 'one') and tells the active source. */
+    async setMode(name, value) {
+        this._modes[name] = value;
+        if (name === 'shuffle') await this._source?.setShuffle?.(value);
+        else await this._source?.setRepeat?.(value);
+        this.emit('status', this.status);
     }
 
     /** Finite URI inputs the source marked seekable can be reopened at an offset. */
@@ -217,6 +232,7 @@ class Pipeline extends EventEmitter {
     }
 
     get status() {
+        const caps = this._source?.capabilities;
         return {
             source: this._source
                 ? { id: this._source.id, label: this._source.label, state: this._source.state }
@@ -226,9 +242,10 @@ class Pipeline extends EventEmitter {
             listeners: this.broadcaster.listenerCount,
             starving: this.pacer.starving,
             paused: Boolean(this.pacer.paused),
-            capabilities: this._source
-                ? { ...this._source.capabilities, seek: this.seekable, volume: false, shuffle: false, repeat: false }
-                : {},
+            modes: this.modes,
+            capabilities: caps ? {
+                ...caps, seek: this.seekable, volume: false, shuffle: Boolean(caps.shuffle), repeat: Boolean(caps.repeat),
+            } : {},
         };
     }
 
@@ -251,6 +268,8 @@ class Pipeline extends EventEmitter {
         source.on('ended', this._onSourceEnded);
 
         try {
+            await source.setShuffle?.(this._modes.shuffle);
+            await source.setRepeat?.(this._modes.repeat);
             const handle = await source.open(item);
             this._consume(handle);
             this.markJump();

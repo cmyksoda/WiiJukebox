@@ -64,6 +64,9 @@ const DEFAULTS = {
         ytmusic: { binary: '', format: '', extraArgs: [], links: [] },
     },
 
+    // Shuffle and repeat ('off', 'all' or 'one'), kept across restarts.
+    playModes: { shuffle: false, repeat: 'off' },
+
     // Last source/item, restored at boot so the stream comes back by itself
     // after a restart without anyone touching the Wii.
     lastPlayed: null,

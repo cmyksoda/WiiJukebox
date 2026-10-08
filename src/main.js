@@ -27,6 +27,7 @@ async function main() {
             ...config.data.station,
         },
         audio: config.data.audio,
+        modes: config.data.playModes,
     });
 
     pipeline.on('warning', (msg) => console.warn(`! ${msg}`));
