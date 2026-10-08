@@ -129,12 +129,16 @@ int main(int argc, char **argv) {
         s.view = WJ_VIEW_SOURCES;
         snprintf(s.title, sizeof(s.title), "Music sources");
         item(&s, "radio", "source", "Internet Radio", "");
+        item(&s, "podcasts", "source", "Podcasts", "");
         item(&s, "subsonic", "source", "Navidrome / Subsonic", "");
         item(&s, "jellyfin", "source", "Jellyfin", "");
         item(&s, "plex", "source", "Plex", "");
         item(&s, "ytdlp", "source", "YouTube / SoundCloud", "");
-        item(&s, "desktop", "source", "Desktop audio", "");
-        s.selected = 1;
+        item(&s, "spotify", "source", "Spotify Connect", "");
+        item(&s, "airplay", "source", "AirPlay (Apple Music)", "");
+        item(&s, "ytmusic", "source", "YouTube Music", "");
+        item(&s, "desktop", "source", "Desktop audio (Linux)", "");
+        s.selected = 2;
         playing(&s);
         draw(&s, &none, 30);
         save(out, wide ? "5-sources-widescreen" : "3-sources");

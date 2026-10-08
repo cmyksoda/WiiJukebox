@@ -35,7 +35,8 @@
 #define DOCK_BOTTOM WJ_RGBA(0xc8, 0xce, 0xd4, 0xff)
 
 enum icon { ICON_NOTE, ICON_FOLDER, ICON_ALBUM, ICON_RADIO, ICON_ARTIST, ICON_PLAYLIST, ICON_SERVER,
-            ICON_VIDEO, ICON_DESKTOP, ICON_JELLYFIN, ICON_PLEX };
+            ICON_VIDEO, ICON_DESKTOP, ICON_JELLYFIN, ICON_PLEX, ICON_SPOTIFY, ICON_AIRPLAY, ICON_YTMUSIC,
+            ICON_PODCAST };
 
 static struct { float w, content_x, content_w, card_x, card_w; } L;
 static struct { float x, y, w, h; enum wj_target target; int index; } hits[MAX_HITS];
@@ -96,6 +97,23 @@ static float label(const char *text, float x, float baseline, int size, int bold
     wj_gfx_text(text, bytes, x, baseline, size, bold, color);
     if (truncated) wj_gfx_text("\xe2\x80\xa6", 3, x + width - ellipsis, baseline, size, bold, color);
     return width;
+}
+
+/* Breaks at the last space that fits, so a tile name uses its second line before an ellipsis. */
+static void label_two_lines(const char *text, float cx, float baseline, int size, int bold, u32 color, float max_width) {
+    int style[2] = { size, bold };
+    int truncated;
+    int cut = wj_fit_text(text, max_width, 0, measure, style, &truncated);
+    if (truncated)
+        while (cut > 0 && text[cut] != ' ') cut--;
+    if (!truncated || cut == 0) {
+        label(text, cx, baseline, size, bold, color, max_width, 1);
+        return;
+    }
+    char first[WJ_FIELD];
+    snprintf(first, sizeof(first), "%.*s", cut, text);
+    label(first, cx, baseline, size, bold, color, max_width, 1);
+    label(text + cut + 1, cx, baseline + size + 1, size, bold, color, max_width, 1);
 }
 
 /* Baseline that visually centers Latin capitals and kana around cy. */
@@ -166,6 +184,31 @@ static void icon(enum icon kind, float cx, float cy, float s, u32 color) {
         wj_gfx_triangle(cx - s * 0.3f, cy - s * 0.4f, cx + s * 0.34f, cy, cx - s * 0.3f, cy + s * 0.4f, color);
         wj_gfx_triangle(cx - s * 0.3f, cy - s * 0.16f, cx + s * 0.02f, cy, cx - s * 0.3f, cy + s * 0.16f, hole);
         break;
+    case ICON_SPOTIFY:
+        wj_gfx_circle(cx, cy, s * 0.46f, color);
+        for (int i = 0; i < 3; i++) {
+            float w = s * (0.56f - i * 0.1f);
+            wj_gfx_round(cx - w / 2, cy - s * 0.18f + i * s * 0.15f, w, s * 0.07f, s * 0.035f, hole, hole);
+        }
+        break;
+    case ICON_AIRPLAY:
+        wj_gfx_round(cx - s * 0.44f, cy - s * 0.38f, s * 0.88f, s * 0.58f, s * 0.08f, color, color);
+        wj_gfx_rect(cx - s * 0.36f, cy - s * 0.3f, s * 0.72f, s * 0.42f, hole, hole);
+        wj_gfx_rect(cx - s * 0.2f, cy + s * 0.1f, s * 0.4f, s * 0.12f, hole, hole);
+        wj_gfx_triangle(cx, cy + s * 0.02f, cx + s * 0.24f, cy + s * 0.42f, cx - s * 0.24f, cy + s * 0.42f, color);
+        break;
+    case ICON_YTMUSIC:
+        wj_gfx_circle(cx, cy, s * 0.46f, color);
+        wj_gfx_ring(cx, cy, s * 0.28f, s * 0.05f, hole);
+        // Centroid on the center, so the triangle reads as centered in the ring.
+        wj_gfx_triangle(cx - s * 0.08f, cy - s * 0.14f, cx + s * 0.16f, cy, cx - s * 0.08f, cy + s * 0.14f, hole);
+        break;
+    case ICON_PODCAST:
+        wj_gfx_ring(cx, cy - s * 0.08f, s * 0.38f, s * 0.07f, color);
+        wj_gfx_ring(cx, cy - s * 0.08f, s * 0.22f, s * 0.07f, color);
+        wj_gfx_circle(cx, cy - s * 0.08f, s * 0.1f, color);
+        wj_gfx_round(cx - s * 0.06f, cy - s * 0.02f, s * 0.12f, s * 0.48f, s * 0.06f, color, color);
+        break;
     }
 }
 
@@ -175,6 +218,8 @@ static enum icon icon_for(const char *type, const char *ref) {
         { "artist", ICON_ARTIST }, { "playlist", ICON_PLAYLIST }, { "server", ICON_SERVER },
         { "radio", ICON_RADIO }, { "subsonic", ICON_NOTE }, { "jellyfin", ICON_JELLYFIN },
         { "plex", ICON_PLEX }, { "ytdlp", ICON_VIDEO }, { "desktop", ICON_DESKTOP },
+        { "spotify", ICON_SPOTIFY }, { "airplay", ICON_AIRPLAY }, { "ytmusic", ICON_YTMUSIC },
+        { "podcasts", ICON_PODCAST }, { "show", ICON_PODCAST },
     };
     const char *key = !strcmp(type, "source") ? ref : type;
     for (size_t i = 0; i < sizeof(kinds) / sizeof(kinds[0]); i++)
@@ -189,6 +234,10 @@ static u32 icon_color(enum icon kind) {
     case ICON_PLEX: return WJ_RGBA(0xe2, 0xa0, 0x18, 0xff);
     case ICON_VIDEO: return WJ_RGBA(0xe5, 0x4f, 0x4a, 0xff);
     case ICON_DESKTOP: return WJ_RGBA(0x2c, 0xb0, 0xa0, 0xff);
+    case ICON_SPOTIFY: return WJ_RGBA(0x1d, 0xb9, 0x54, 0xff);
+    case ICON_AIRPLAY: return WJ_RGBA(0x6b, 0x75, 0x80, 0xff);
+    case ICON_YTMUSIC: return WJ_RGBA(0xe0, 0x2f, 0x3b, 0xff);
+    case ICON_PODCAST: return WJ_RGBA(0xd9, 0x4a, 0x8c, 0xff);
     default: return BLUE;
     }
 }
@@ -272,8 +321,10 @@ static void tiles(const struct wj_session *s, long long now) {
         } else wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 1.5f, BORDER);
         enum icon kind = icon_for(item->type, item->ref);
         icon(kind, tx + tile_w / 2, ty + 26, 26, icon_color(kind));
-        label(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8, 1);
-        if (item->subtitle[0]) label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, MUTED, tile_w - 8, 1);
+        if (item->subtitle[0]) {
+            label(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8, 1);
+            label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, MUTED, tile_w - 8, 1);
+        } else label_two_lines(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8);
         hit(tx, ty, tile_w, tile_h, WJ_TARGET_ITEM, i);
     }
 }
