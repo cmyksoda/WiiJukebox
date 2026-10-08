@@ -9,3 +9,6 @@ client/dist/*.zip
 
 client/dist/apps/wiijukebox/licenses/
 client/dist/apps/wiijukebox/THIRD_PARTY.txt
+
+# Local project notes and assistant settings.
+/project-notes/

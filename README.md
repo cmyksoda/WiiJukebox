@@ -7,10 +7,9 @@ fetches and decodes music; the Wii plays the stream and can browse and control i
 The web UI configures services, saves radio stations and links, and provides a
 Butterchurn visualizer for browser playback.
 
-The native client now builds with devkitPPC. Its networking code has been tested
-on the host against the server and a real isolated Navidrome instance. **Physical
-Wii playback and the native UI still need validation.** This is a development
-checkpoint, not a release. See [the morning handoff](MORNING-HANDOFF.md) and
+The native client builds with devkitPPC. Music playback, library browsing and
+the projectM visualizer have been tested on a physical Wii. This remains a
+development prototype; extended network and audio testing is ongoing. See
 [client setup and controls](client/README.md).
 
 ## Sources
@@ -53,8 +52,9 @@ credentials belong to the server; the Wii stores only the selected server ID.
 2. Enter the server's base URL, username and Navidrome password. Include any
    deployment prefix, such as `https://music.example.com/navidrome`; omit `/rest`.
 3. Connect, then browse Artists, Albums, Playlists or Starred. Search also works.
-4. On the Wii choose the same source. **A** opens an album/playlist; **2** plays
-   the complete selection. Left/right changes pages. A selected track plays alone.
+4. On the Wii choose the same source. **A** opens an album/playlist; **B + A**
+   plays the complete selection. **A** on a track starts there and continues the
+   album or playlist. Left/right changes pages; **2** toggles the visualizer.
 
 The adapter uses the documented Subsonic 1.16.1 API and salted-token auth. It does
 not depend on Navidrome's evolving native API. Password whitespace is preserved.
@@ -118,8 +118,7 @@ NAVIDROME_BINARY=/path/to/navidrome npm run test:navidrome
 The optional Navidrome test creates its own loopback instance, test account,
 13 generated FLAC tracks and cover image, tests a 151-track playlist, and removes
 its temporary instance afterward. It never uses a personal Navidrome library.
-Tested with the official 0.64.2 Linux amd64 binary. See
-[validation notes](client/VALIDATION.md) for exact evidence and remaining gaps.
+Tested with the official 0.64.2 Linux amd64 binary.
 
 ## Architecture and next work
 
@@ -141,8 +140,7 @@ visualization is available through Butterchurn.
 
 Other open work: extended Wii network/audio testing, Plex/Jellyfin account tests,
 desktop capture validation, receiver protocols, service controls, queue editing,
-and standalone server packaging. The earlier architecture notes are retained in
-[HANDOFF.md](HANDOFF.md).
+and standalone server packaging.
 
 ## Credits
 

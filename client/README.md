@@ -1,8 +1,8 @@
 # WiiJukebox native client prototype
 
 This is a real devkitPPC/libogc app, with a console UI, background control worker
-and libmad/ASND streaming audio. A successful build and host tests do not establish
-physical Wii playback. The current DOL needs a Wii test before wider use.
+and libmad/ASND streaming audio. Music playback, browsing and projectM rendering
+have been tested on a physical Wii; extended network and audio testing is ongoing.
 
 ## Build and install
 
