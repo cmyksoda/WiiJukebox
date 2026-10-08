@@ -98,12 +98,9 @@ Portions of this software are copyright © 2025 The FreeType Project
 
 The jukebox in the web UI (`public/images/jukebox.svg`, the favicons and
 `apple-touch-icon.png`), the Wii header (`client/assets/jukebox-mark.i8`) and the
-Homebrew Channel icon (`client/dist/apps/wiijukebox/icon.png`) is traced from
-"Jukebox icon isolated on white background from blue icon set" on Vecteezy,
-licensed to the project owner under Vecteezy's Pro license, which needs no
-attribution. **It is not covered by the GPL.** Reuse it outside WiiJukebox only
-under your own Vecteezy license. `tools/make-wii-logo.py` renders the Wii files
-from the SVG.
+Homebrew Channel icon (`client/dist/apps/wiijukebox/icon.png`) is licensed
+separately and **is not covered by the GPL**. `tools/make-wii-logo.py` renders the
+Wii files from the SVG.
 
 ## Original project and asset credits
 
