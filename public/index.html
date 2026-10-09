@@ -54,13 +54,19 @@ try {
       <p class="hint" id="stream-addr"></p>
     </div>
 
-    <div id="theme">
-      <div class="eyebrow" id="theme-label">Theme</div>
-      <div class="segmented" role="radiogroup" aria-labelledby="theme-label">
-        <button type="button" role="radio" data-theme-choice="system">System</button>
-        <button type="button" role="radio" data-theme-choice="light">Light</button>
-        <button type="button" role="radio" data-theme-choice="dark">Dark</button>
+    <div id="sidebar-foot">
+      <div id="theme">
+        <div class="eyebrow" id="theme-label">Theme</div>
+        <div class="segmented" role="radiogroup" aria-labelledby="theme-label">
+          <button type="button" role="radio" data-theme-choice="system">System</button>
+          <button type="button" role="radio" data-theme-choice="light">Light</button>
+          <button type="button" role="radio" data-theme-choice="dark">Dark</button>
+        </div>
       </div>
+      <button type="button" id="sidebar-settings" aria-haspopup="dialog">
+        <span>Sidebar settings</span>
+        <span class="foot-end"><span id="hidden-count" hidden></span><i class="g g-right" aria-hidden="true"></i></span>
+      </button>
     </div>
   </aside>
 

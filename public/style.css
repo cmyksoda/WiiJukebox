@@ -409,11 +409,11 @@ body.viz #viz-fullscreen { display: inline-grid; }
 
 /* Stays at the bottom edge when the channel list is taller than the screen. Its size is whole pixels
    (the sidebar is a fixed width on wide screens), so labels stay crisp on 1x screens. */
-#theme {
+#sidebar-foot {
     position: sticky;
     bottom: 0;
     margin: -8px -14px 0;
-    padding: 12px 22px calc(18px + env(safe-area-inset-bottom));
+    padding: 12px 22px calc(10px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--edge-soft);
     background: var(--surface);
 }
@@ -441,6 +441,31 @@ body.viz #viz-fullscreen { display: inline-grid; }
 .segmented button[aria-checked="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent-text); }
 .segmented button:focus-visible { box-shadow: var(--focus); }
 .segmented button[aria-checked="true"]:focus-visible { box-shadow: inset 0 0 0 1px var(--accent), var(--focus); }
+
+/* Quiet, like the Theme label above it; a count shows when something is hidden. */
+#sidebar-settings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: calc(100% + 16px);
+    height: 36px;
+    margin: 8px -8px 0;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--dim);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+}
+#sidebar-settings:hover { background: var(--tile); color: var(--text); }
+#sidebar-settings .g { font-size: 8px; margin-left: 2px; }
+.foot-end { display: flex; align-items: center; gap: 8px; }
+#hidden-count { padding: 0 9px; border-radius: 999px; background: var(--tile); font-size: 12px; line-height: 22px; }
+#sidebar-settings:hover #hidden-count { background: var(--surface); }
+.sources-empty { margin: 4px 12px; }
 
 #main {
     overflow-y: auto;
@@ -613,6 +638,7 @@ body.viz #viz-fullscreen { display: inline-grid; }
 .home-head .pill.quiet { min-height: 32px; padding: 0 12px; font-size: 14px; }
 .primary-row { display: flex; align-items: center; min-height: 36px; margin: 0 0 14px; }
 .primary-row .chip { min-height: 28px; }
+.grid > .home-note { grid-column: 1 / -1; }
 .home-note { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 0; font-size: 14px; color: var(--dim); }
 
 /* A row that scrolls on its own; on phones it runs to the screen edge so the next cover peeks in. */
@@ -872,10 +898,10 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 }
 #toast.error { background: var(--danger); border-color: var(--danger); color: #fff; }
 
-/* --- confirm dialog -------------------------------------------------------------------- */
+/* --- dialogs ---------------------------------------------------------------------------- */
 
-/* Whole-pixel size and offsets, so its text and edges stay crisp on 1x screens. */
-.confirm {
+/* Whole-pixel size and offsets, so text and edges stay crisp on 1x screens. */
+.confirm, .sheet {
     position: fixed;
     inset: 96px auto auto calc(50% - 200px);
     width: 400px;
@@ -891,13 +917,86 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     box-shadow: 0 12px 32px rgba(20, 40, 60, .3), var(--highlight);
 }
 @supports (left: round(down, 1.5px, 1px)) {
-    .confirm { left: round(down, calc((100vw - 400px) / 2), 1px); }
+    .confirm, .sheet { left: round(down, calc((100vw - 400px) / 2), 1px); }
 }
-.confirm::backdrop { background: rgba(20, 40, 60, .45); }
+.confirm::backdrop, .sheet::backdrop { background: rgba(20, 40, 60, .45); }
 .confirm form { display: flex; flex-direction: column; gap: 20px; padding: 22px; }
 .confirm p { margin: 0; font-size: 16px; line-height: 24px; text-wrap: pretty; }
 .confirm strong { display: block; font-size: 18px; font-weight: 800; }
-.confirm .buttons { display: flex; justify-content: flex-end; gap: 10px; }
+.confirm .buttons, .sheet .buttons { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Sidebar settings: a heading, the channel list (which scrolls on its own when the screen is short), then the buttons. */
+.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
+.sheet-head { padding: 22px 22px 16px; }
+.sheet-head h3 { font-size: 18px; line-height: 24px; font-weight: 800; }
+.sheet-head p { margin: 6px 0 0; font-size: 13px; line-height: 19px; color: var(--dim); text-wrap: pretty; }
+.sheet .buttons { align-items: center; padding: 16px 22px 22px; }
+.sheet .buttons .quiet { margin-right: auto; }
+
+.svc-list { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; overflow-y: auto; border: 0; border-block: 1px solid var(--edge-soft); }
+.svc { display: flex; align-items: center; gap: 14px; min-height: 44px; padding: 4px 22px; cursor: pointer; }
+.svc + .svc { border-top: 1px solid var(--edge-soft); }
+.svc:hover { background: var(--tile); }
+.svc-text { display: flex; flex-direction: column; min-width: 0; }
+.svc-name { font-size: 15px; line-height: 20px; font-weight: 700; }
+.svc-sub { font-size: 12px; line-height: 16px; color: var(--dim); }
+.svc:has(input:not(:checked)) .svc-name { color: var(--dim); }
+.svc input {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    border: 2px solid var(--edge);
+    border-radius: 7px;
+    background: var(--surface);
+    cursor: pointer;
+}
+.svc:hover input:not(:checked) { border-color: var(--accent); }
+.svc input:checked {
+    border-color: var(--accent-strong);
+    background: var(--accent-strong) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4.5 9.5l3 3 6-6.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+}
+.svc input:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (forced-colors: active) { .svc input { appearance: auto; } }
+
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* --- the channel context menu --------------------------------------------------------------- */
+
+.ctx {
+    position: fixed;
+    z-index: 20;
+    padding: 4px;
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(20, 40, 60, .25), var(--highlight);
+}
+.ctx button {
+    display: block;
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ctx button:hover, .ctx button:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.ctx .sep { height: 1px; margin: 4px 8px; background: var(--edge-soft); }
+/* Marks what the open menu is for, which a finger would otherwise cover. */
+.source-btn[data-menu] { background: var(--tile); }
+.channel[data-menu] { border-color: var(--accent); background: var(--tile-hover); }
+/* A held press should open the menu, not select the label or raise the system's own callout. */
+[data-source] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
 /* --- phones and tablets: drawer, transport bar, now-playing sheet ----------------------------- */
 
@@ -930,6 +1029,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
         visibility: hidden;
     }
     body.sources-open #sidebar { transform: none; visibility: visible; transition: transform .22s ease; }
+    /* A whole-pixel width, so what the drawer centers or right-aligns lands on whole pixels. */
+    @supports (width: round(down, 1.5px, 1px)) { #sidebar { width: round(down, min(86vw, 320px), 1px); } }
     body.sources-open #sidebar-shade { opacity: 1; pointer-events: auto; }
 
     #main { padding-bottom: calc(var(--mini-h) + 28px + env(safe-area-inset-bottom)); }
@@ -994,7 +1095,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     body.viz #mini-prev, body.viz #mini-next, body.viz #mini-monitor { display: none; }
 
     /* A card above the bottom edge, 16px in from both sides. */
-    .confirm { inset: auto 16px calc(16px + env(safe-area-inset-bottom)) 16px; width: auto; }
+    .confirm, .sheet { inset: auto 16px calc(16px + env(safe-area-inset-bottom)) 16px; width: auto; }
+    .sheet { max-height: calc(100dvh - 64px); }
 
     /* Room for the title and a Settings pill beside the menu button. */
     #sources-toggle { width: 44px; padding: 0; }

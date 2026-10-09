@@ -6,6 +6,7 @@
 
 import butterchurn from './vendor/butterchurn.min.js';
 import { isContainer, playRequest } from './play-request.mjs';
+import { bindMenuRequests, closeMenu, openMenu } from './context-menu.mjs';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -169,7 +170,7 @@ let sourcesSignature = '';
 function renderSources() {
     const playingId = state.status?.source?.id;
     const signature = JSON.stringify([
-        state.sources.map((s) => [s.id, s.state, s.configured]), playingId, state.activeSource,
+        state.sources.map((s) => [s.id, s.state, s.configured, s.hidden]), playingId, state.activeSource,
     ]);
     if (signature === sourcesSignature) return;
     sourcesSignature = signature;
@@ -178,21 +179,153 @@ function renderSources() {
         class: 'source-btn home', 'aria-current': String(state.activeSource === null), onclick: goHome,
     }, h('i', { class: 'g g-home', 'aria-hidden': 'true' }), h('span', { class: 'name', text: 'Home' }));
 
+    const shown = shownSources();
     const nav = $('#sources');
-    nav.replaceChildren(homeButton, ...state.sources.map((src) => {
+    nav.replaceChildren(...kids([homeButton, shown.map((src) => {
         const playing = playingId === src.id;
         const sub = playing ? 'playing' : src.configured ? 'ready' : 'needs setup';
         const btn = h('button', {
             class: `source-btn ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
             'aria-current': String(state.activeSource === src.id),
+            'data-source': src.id,
             onclick: () => openSource(src),
         }, h('span', { class: 'dot' }),
         h('span', {}, h('span', { class: 'name', text: src.label }), h('span', { class: 'sub', text: sub })));
         return btn;
-    }));
+    }), shown.length ? null : h('p', { class: 'hint sources-empty', text: 'Every channel is hidden.' })]));
 
+    const hiddenCount = hiddenIds().length;
+    $('#hidden-count').textContent = `${hiddenCount} hidden`;
+    $('#hidden-count').hidden = hiddenCount === 0;
+    sidebarSettings.paint?.();
     paintChannels();
 }
+
+// --- hiding channels -----------------------------------------------------------
+//
+// A channel can be hidden from the sidebar, Home and the Wii. The server keeps the list so every device agrees;
+// hiding only changes what is offered, and a hidden channel keeps its settings and keeps playing.
+
+const shownSources = () => state.sources.filter((src) => !src.hidden);
+const hiddenIds = () => state.sources.filter((src) => src.hidden).map((src) => src.id);
+const sidebarSettings = { paint: null };
+
+let homeRefresh;
+function refreshHome() {
+    clearTimeout(homeRefresh);
+    homeRefresh = setTimeout(() => {
+        if (homeVisible()) loadHome(++homeView.token);
+    }, 250);
+}
+
+/** Takes the server's list and repaints whatever lists channels. */
+function applyHidden(list) {
+    const hidden = new Set(list);
+    if (state.sources.every((src) => src.hidden === hidden.has(src.id))) return;
+    for (const src of state.sources) src.hidden = hidden.has(src.id);
+    if (hidden.has(state.activeSource)) {
+        goHome({ keepSidebar: true });
+        return;
+    }
+    renderSources();
+    refreshHome();
+}
+
+let hideRequests = Promise.resolve();
+let hidePending = 0;
+
+/** The page changes at once; the server's answer, or the truth after a failure, settles it once the last request is done. */
+function changeHidden(change) {
+    const before = hiddenIds();
+    const next = new Set(before);
+    for (const id of change.hide || []) next.add(id);
+    for (const id of change.show || []) next.delete(id);
+    applyHidden([...next]);
+    hidePending++;
+    hideRequests = hideRequests.then(async () => {
+        let hidden;
+        try {
+            ({ hidden } = await api('/ui/hidden-sources', { method: 'POST', body: change }));
+        } catch (err) {
+            toast(err.message, true);
+            hidden = await api('/ui/hidden-sources').then((answer) => answer.hidden, () => before);
+        }
+        if (--hidePending === 0) applyHidden(hidden);
+    });
+}
+
+function hideChannel(src, trigger) {
+    const list = trigger.parentElement;
+    const peers = [...list.querySelectorAll('[data-source]')];
+    const neighbor = peers[peers.indexOf(trigger) + 1] || peers[peers.indexOf(trigger) - 1];
+    changeHidden({ hide: [src.id] });
+    toast(`Hid ${SHORT[src.id] || src.label}. Bring it back in Sidebar settings.`);
+    // The control that had focus is gone; the keyboard stays where it was.
+    const fallback = list.id === 'sources' ? $('#sources .home') : $('#home-channels-title');
+    if (fallback) fallback.tabIndex = -1;
+    (neighbor && list.querySelector(`[data-source="${neighbor.dataset.source}"]`) || fallback)?.focus({ preventScroll: true });
+}
+
+function openChannelMenu(el, anchor) {
+    const src = state.sources.find((entry) => entry.id === el.dataset.source);
+    if (!src) return;
+    openMenu({
+        label: src.label, trigger: el, anchor,
+        items: [
+            { label: 'Open', run: () => openSource(src) },
+            SETTINGS[src.id] ? { label: 'Settings', run: () => { enterSource(src); renderSettings(src); } } : null,
+            'separator',
+            { label: `Hide “${src.label}”`, run: () => hideChannel(src, el) },
+        ].filter(Boolean),
+    });
+}
+bindMenuRequests('[data-source]', openChannelMenu);
+
+/** One checkbox per channel, ticked while it is shown. Changes apply and save at once. */
+function openSidebarSettings() {
+    const boxes = new Map();
+    const rows = state.sources.map((src) => {
+        const box = h('input', {
+            type: 'checkbox', onchange: () => changeHidden(box.checked ? { show: [src.id] } : { hide: [src.id] }),
+        });
+        const sub = h('span', { class: 'svc-sub' });
+        boxes.set(src.id, { box, sub });
+        return h('label', { class: 'svc' }, box,
+            h('span', { class: 'svc-text' }, h('span', { class: 'svc-name', text: src.label }), sub));
+    });
+    const showAll = h('button', { type: 'button', class: 'pill quiet', text: 'Show all', onclick: () => {
+        changeHidden({ show: hiddenIds() });
+        done.focus();
+    } });
+    const done = h('button', { type: 'button', class: 'pill primary', text: 'Done', onclick: () => dialog.close() });
+    const dialog = h('dialog', { class: 'sheet', 'aria-labelledby': 'sheet-title', 'aria-describedby': 'sheet-hint' },
+        h('div', { class: 'sheet-head' },
+            h('h3', { id: 'sheet-title', text: 'Sidebar settings' }),
+            h('p', { id: 'sheet-hint', text: 'Unticked channels are hidden from the sidebar, Home and your Wii. '
+                + 'They keep working, and anything playing carries on.' })),
+        h('fieldset', { class: 'svc-list' }, h('legend', { class: 'sr-only', text: 'Channels to show' }), rows),
+        h('div', { class: 'buttons' }, showAll, done));
+    sidebarSettings.paint = () => {
+        for (const src of state.sources) {
+            const { box, sub } = boxes.get(src.id);
+            box.checked = !src.hidden;
+            sub.textContent = [KINDS[src.id], src.configured ? '' : 'needs setup'].filter(Boolean).join(' · ');
+        }
+        showAll.disabled = hiddenIds().length === 0;
+    };
+    sidebarSettings.paint();
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+        sidebarSettings.paint = null;
+        dialog.remove();
+    });
+    document.body.append(dialog);
+    dialog.showModal();
+    boxes.values().next().value?.box.focus();
+}
+$('#sidebar-settings').onclick = openSidebarSettings;
 
 // --- home --------------------------------------------------------------------
 //
@@ -207,8 +340,8 @@ const SHORT = {
 const homeView = { token: 0, recentTimer: null };
 const homeVisible = () => state.activeSource === null && $('#content').dataset.view === 'home';
 
-function goHome() {
-    if (document.body.classList.contains('sources-open')) setSourcesOpen(false);
+function goHome({ keepSidebar = false } = {}) {
+    if (!keepSidebar && document.body.classList.contains('sources-open')) setSourcesOpen(false);
     state.activeSource = null;
     state.stack = [];
     sourcesSignature = '';
@@ -248,11 +381,19 @@ function paintChannels() {
     const grid = homeVisible() && $('#home-channels');
     if (!grid) return;
     const playingId = state.status?.source?.id;
-    grid.replaceChildren(...state.sources.map((src) => {
+    const shown = shownSources();
+    if (!shown.length) {
+        grid.replaceChildren(h('p', {
+            class: 'home-note', text: 'Every channel is hidden. Bring some back in Sidebar settings.',
+        }));
+        return;
+    }
+    grid.replaceChildren(...shown.map((src) => {
         const playing = playingId === src.id;
         const label = playing ? 'Playing' : src.configured ? 'Ready' : 'Needs setup';
         return h('button', {
             class: `channel ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
+            'data-source': src.id,
             onclick: () => openSource(src),
         }, h('span', { class: 'kind', text: KINDS[src.id] || '' }),
         h('span', { class: 'name', text: src.label }),
@@ -440,7 +581,8 @@ function openInLibrary(sourceId, item) {
     browse(item.id, item.title, 0, isContainer(item) ? item : null);
 }
 
-async function openSource(src) {
+/** Makes a channel the current one and clears the page for its view. */
+function enterSource(src) {
     setSourcesOpen(false);
     state.activeSource = src.id;
     state.stack = [];
@@ -448,6 +590,10 @@ async function openSource(src) {
     renderSources();
     $('#content').dataset.view = src.id;
     $('#content').replaceChildren(h('p', { class: 'empty', text: 'Loading…' }));
+}
+
+async function openSource(src) {
+    enterSource(src);
 
     // Every connect failure lands on the settings screen with the reason, so a
     // missing program or a bad login explains itself where it can be fixed.
@@ -1267,6 +1413,9 @@ function updateMediaSession(np, status) {
 function connectEvents() {
     const es = new EventSource('/events');
     es.addEventListener('status', (e) => applyStatus(JSON.parse(e.data)));
+    es.addEventListener('sources', (e) => {
+        if (!hidePending) applyHidden(JSON.parse(e.data).hidden);
+    });
     es.addEventListener('metadata', () => {
         /* status carries it too; nothing extra to do */
     });
@@ -1646,6 +1795,7 @@ $('#mini-expand').onclick = () => {
     $('#np-close').focus();
 };
 PHONE.addEventListener('change', () => {
+    closeMenu();
     setSourcesOpen(false);
     setNowPlayingOpen(false);
     syncNowPlayingColumn();
@@ -1681,6 +1831,7 @@ $('#back').onclick = () => {
 // The Android app asks this on its back button; true means the page used it.
 window.wiiJukeboxBack = () => {
     const dialog = document.querySelector('dialog[open]');
+    if (closeMenu({ restoreFocus: true })) return true;
     if (dialog) dialog.close('cancel');
     else if (document.body.classList.contains('viz')) toggleVisualizer();
     else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
