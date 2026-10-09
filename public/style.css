@@ -829,7 +829,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 }
 .confirm::backdrop { background: rgba(20, 40, 60, .45); }
 .confirm form { display: flex; flex-direction: column; gap: 20px; padding: 22px; }
-.confirm p { margin: 0; font-size: 16px; line-height: 24px; }
+.confirm p { margin: 0; font-size: 16px; line-height: 24px; text-wrap: pretty; }
 .confirm strong { display: block; font-size: 18px; font-weight: 800; }
 .confirm .buttons { display: flex; justify-content: flex-end; gap: 10px; }
 
