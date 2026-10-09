@@ -17,6 +17,8 @@ extern "C" {
 static projectM *engine;
 static char error[160];
 static long long next_preset;
+// The last frame carried UI over it, so projectM needs its GX state back.
+static bool overlaid;
 
 extern "C" const char *wj_visualizer_error(void) { return error; }
 
@@ -138,13 +140,14 @@ extern "C" int wj_visualizer_enter(void) {
     return -1;
 }
 
-extern "C" int wj_visualizer_render(void) {
+extern "C" int wj_visualizer_render(void (*overlay)(void *), void *context) {
     if (!engine) return -1;
     try {
 #if WJ_PRESET_TOUR
         // The overlay leaves UI state behind, so projectM gets its own back each frame.
         wj_gfx_prepare_visualizer();
 #else
+        if (overlaid) wj_gfx_prepare_visualizer();
         if (wj_milliseconds() >= next_preset) {
             engine->selectRandom(false);
             next_preset = wj_milliseconds() + 25000;
@@ -157,6 +160,8 @@ extern "C" int wj_visualizer_render(void) {
 #if WJ_PRESET_TOUR
         tour_overlay();
 #endif
+        if (overlay) overlay(context);
+        overlaid = overlay != NULL;
         GX_SetCopyClear((GXColor){0, 0, 0, 255}, 0x00ffffff);
         GX_SetAlphaUpdate(GX_TRUE);
         GX_SetColorUpdate(GX_TRUE);

@@ -17,7 +17,7 @@ struct wj_theme {
     u32 track, knob;
     u32 dock_top, dock_bottom, dock_edge;
     u32 art_top, art_bottom, art_note;
-    u32 clock, icon_gray, warn_fill;
+    u32 clock, icon_gray, warn_fill, danger;
     u32 toast_top, toast_bottom, toast_text, meter_off;
 };
 

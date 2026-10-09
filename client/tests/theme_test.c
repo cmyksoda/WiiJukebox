@@ -28,6 +28,7 @@ static void check(const struct wj_theme *t, const char *name, int dark) {
         }
     }
     assert(contrast(t->ink, t->bg_top) >= 7 && contrast(t->ink, t->bg_bottom) >= 7);
+    assert(contrast(t->danger, t->panel_top) >= 4.5 && contrast(t->danger, t->panel_bottom) >= 4.5);
     assert(contrast(t->toast_text, t->toast_top) >= 7 && contrast(t->toast_text, t->toast_bottom) >= 7);
     if (dark) {
         assert(contrast(t->ink, t->dock_top) >= 7 && contrast(t->ink, t->dock_bottom) >= 7);

@@ -146,6 +146,31 @@ static void panel(float x, float y, float w, float h, float r) {
 }
 
 /* `hole` is the surface behind the icon, for the parts cut out of it. */
+static int over(const struct wj_pointer *pointer, float x, float y, float w, float h) {
+    return pointer->valid && pointer->x >= x && pointer->x < x + w && pointer->y >= y && pointer->y < y + h;
+}
+
+/* The pulsing outline on whatever A would press. */
+static void focus_ring(float x, float y, float w, float h, float r, long long now) {
+    float pulse = 0.55f + 0.45f * sinf(now / 260.0f);
+    wj_gfx_round_line(x - 3, y - 3, w + 6, h + 6, r + 3, 3, wj_gfx_fade(T->blue, 0.25f * pulse));
+    wj_gfx_round_line(x, y, w, h, r, 3, T->blue);
+}
+
+/* A rounded text button. `primary` fills it blue; `focused` marks the one A presses. */
+static void pill(float x, float y, float w, float h, const char *text, int primary, int focused,
+                 const struct wj_pointer *pointer, enum wj_target target, long long now) {
+    int hover = over(pointer, x, y, w, h);
+    u32 top = primary ? (hover ? wj_gfx_mix(T->blue, WHITE, 0.25f) : T->blue) : hover ? T->select_top : T->key_top;
+    u32 bottom = primary ? (hover ? T->blue : T->deep_blue) : hover ? T->select_bottom : T->key_bottom;
+    wj_gfx_round(x, y + 2, w, h, h / 2, T->shadow, T->shadow);
+    wj_gfx_round(x, y, w, h, h / 2, top, bottom);
+    if (focused) focus_ring(x, y, w, h, h / 2, now);
+    else wj_gfx_round_line(x, y, w, h, h / 2, 1.5f, primary ? T->deep_blue : hover ? T->blue : T->border);
+    label(text, x + w / 2, centered(y + h / 2, 14), 14, 1, primary ? T->on_blue : hover ? T->accent : T->ink, w - 16, 1);
+    hit(x, y, w, h, target, 0);
+}
+
 static void icon(enum icon kind, float cx, float cy, float s, u32 color, u32 hole) {
     switch (kind) {
     case ICON_NOTE:
@@ -308,35 +333,38 @@ static void spinner(float cx, float cy, float r, long long now) {
     }
 }
 
-static void discovery(const struct wj_session *s, long long now) {
-    float x = L.content_x, w = L.w - 40;
+static void discovery(const struct wj_session *s, const struct wj_pointer *pointer, long long now) {
+    float x = L.content_x, w = L.w - 40, cx = L.w / 2;
     panel(x, TOP, w, PANEL_H, 18);
     int failed = !s->discovering && s->message[0];
     if (failed) {
         u32 amber = WJ_RGBA(0xf0, 0xa8, 0x30, 0xff);
-        wj_gfx_circle(L.w / 2, TOP + 96, 28, T->warn_fill);
-        wj_gfx_ring(L.w / 2, TOP + 96, 28, 3, amber);
-        wj_gfx_round(L.w / 2 - 3, TOP + 80, 6, 22, 3, amber, amber);
-        wj_gfx_circle(L.w / 2, TOP + 110, 3.5f, amber);
-    } else spinner(L.w / 2, TOP + 96, 26, now);
+        wj_gfx_circle(cx, TOP + 66, 28, T->warn_fill);
+        wj_gfx_ring(cx, TOP + 66, 28, 3, amber);
+        wj_gfx_round(cx - 3, TOP + 50, 6, 22, 3, amber, amber);
+        wj_gfx_circle(cx, TOP + 80, 3.5f, amber);
+    } else spinner(cx, TOP + 66, 26, now);
     const char *heading = s->discovering && s->phase ? s->phase : failed ? "Couldn't find your server" :
         "Looking for WiiJukebox servers";
-    label(heading, L.w / 2, TOP + 168, 19, 1, T->ink, w - 40, 1);
+    label(heading, cx, TOP + 132, 19, 1, T->ink, w - 40, 1);
     char line[96];
     if (s->discovering) snprintf(line, sizeof(line), "Attempt %d  \xc2\xb7  %llds", s->attempt,
                                  (now - s->discovery_started) / 1000);
     else snprintf(line, sizeof(line), "%s", s->network);
-    label(line, L.w / 2, TOP + 194, 15, 0, T->muted, w - 40, 1);
+    label(line, cx, TOP + 156, 15, 0, T->muted, w - 40, 1);
     // A failure here needs the whole sentence, so it sits in the panel, not in a toast.
-    if (failed) paragraph(s->message, L.w / 2, TOP + 228, 15, 0, T->ink, w - 80, 3);
-    else label("Press 1 to start again", L.w / 2, TOP + 236, 14, 0, T->faint, w - 40, 1);
+    if (failed) paragraph(s->message, cx, TOP + 186, 15, 0, T->ink, w - 80, 3);
+    else label("Press 1 to start again", cx, TOP + 190, 14, 0, T->faint, w - 40, 1);
+    pill(cx - 85, TOP + 252, 170, 34, "Enter address", failed, 1, pointer, WJ_TARGET_ENTER_ADDRESS, now);
 }
 
-static void tiles(const struct wj_session *s, long long now) {
+static void tiles(const struct wj_session *s, const struct wj_pointer *pointer, long long now) {
     float x = L.content_x, w = s->view == WJ_VIEW_SERVERS ? L.w - 40 : L.content_w;
     int cols = wj_ui_grid_columns(s->view);
     panel(x, TOP, w, PANEL_H, 18);
-    label(s->view == WJ_VIEW_SERVERS ? "Choose a server" : s->title, x + 18, TOP + 27, 19, 1, T->ink, w - 36, 0);
+    int servers = s->view == WJ_VIEW_SERVERS;
+    label(servers ? "Choose a server" : s->title, x + 18, TOP + 27, 19, 1, T->ink, w - 36 - (servers ? 150 : 0), 0);
+    if (servers) pill(x + w - 18 - 132, TOP + 9, 132, 26, "Enter address", 0, 0, pointer, WJ_TARGET_ENTER_ADDRESS, now);
     float gap = 12, tile_w = (w - 32 - gap * (cols - 1)) / cols, tile_h = 74;
     int first = s->selected / cols >= GRID_ROWS ? (s->selected / cols - GRID_ROWS + 1) * cols : 0;
     for (int i = first; i < s->count && i < first + cols * GRID_ROWS; i++) {
@@ -346,9 +374,7 @@ static void tiles(const struct wj_session *s, long long now) {
         wj_gfx_round(tx, ty + 2, tile_w, tile_h, 12, T->shadow, T->shadow);
         wj_gfx_round(tx, ty, tile_w, tile_h, 12, T->tile_top, T->tile_bottom);
         if (selected) {
-            float pulse = 0.55f + 0.45f * sinf(now / 260.0f);
-            wj_gfx_round_line(tx - 3, ty - 3, tile_w + 6, tile_h + 6, 15, 3, wj_gfx_fade(T->blue, 0.25f * pulse));
-            wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 3, T->blue);
+            focus_ring(tx, ty, tile_w, tile_h, 12, now);
         } else wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 1.5f, T->border);
         enum icon kind = icon_for(item->type, item->ref);
         icon(kind, tx + tile_w / 2, ty + 26, 26, icon_color(kind), T->tile_top);
@@ -410,10 +436,6 @@ static void list(const struct wj_session *s, long long now) {
         hit(x + 8, y, w - 16, ROW_H, WJ_TARGET_ITEM, i);
     }
     if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, T->muted, w - 60, 2);
-}
-
-static int over(const struct wj_pointer *pointer, float x, float y, float w, float h) {
-    return pointer->valid && pointer->x >= x && pointer->x < x + w && pointer->y >= y && pointer->y < y + h;
 }
 
 /* A lit button is a mode that is on: blue face, white glyph. `reach` widens the pointer target. */
@@ -609,8 +631,8 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
     wj_gfx_rect(0, y, L.w, WJ_GFX_HEIGHT - y, T->dock_top, T->dock_bottom);
     wj_gfx_rect(106, y - 1, L.w - 212, 1, T->border, T->border);
     wj_gfx_rect(106, y, L.w - 212, 2, T->dock_edge, T->dock_edge);
-    round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS, pointer, WJ_TARGET_BACK, glyph_back);
-    round_button(L.w - 58, y + 18, 26, 1, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
+    round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS || s->entry.open, pointer, WJ_TARGET_BACK, glyph_back);
+    round_button(L.w - 58, y + 18, 26, !s->entry.open, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
     label("B", 58, y + 64, 12, 1, T->muted, 40, 1);
     label("2", L.w - 58, y + 64, 12, 1, T->muted, 40, 1);
 
@@ -625,6 +647,161 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
     label(clock, L.w / 2 - 14, y + 46, 34, 1, T->clock, 200, 1);
     label(local->tm_hour < 12 ? "AM" : "PM", L.w / 2 - 14 + clock_w / 2 + 4, y + 46, 14, 1, T->faint, 40, 0);
     label(date, L.w / 2, y + 66, 13, 0, T->muted, 200, 1);
+}
+
+#define KEY_W 72
+#define ACTION_W 104
+#define KEY_H 48
+#define KEY_GAP 4
+#define KEY_RADIUS 14
+
+static void key_rect(const struct wj_key *key, float gx, float gy, float out[4]) {
+    out[0] = gx + key->column * (KEY_W + KEY_GAP);
+    out[1] = gy + key->row * (KEY_H + KEY_GAP);
+    out[2] = key->column == WJ_KEYPAD_COLUMNS - 1 ? ACTION_W : KEY_W;
+    out[3] = key->rows * KEY_H + (key->rows - 1) * KEY_GAP;
+}
+
+/* A tag pointing left with an x in it, drawn as outlines so it needs no background color. */
+static void glyph_backspace(float cx, float cy, u32 c) {
+    const float t = 2.4f, points[5][2] = { { -14, 0 }, { -6, -10 }, { 13, -10 }, { 13, 10 }, { -6, 10 } };
+    for (int i = 0; i < 5; i++) {
+        const float *a = points[i], *b = points[(i + 1) % 5];
+        stroke(cx + a[0], cy + a[1], cx + b[0], cy + b[1], t, c);
+        wj_gfx_circle(cx + a[0], cy + a[1], t / 2, c);
+    }
+    for (int d = -1; d <= 1; d += 2) {
+        stroke(cx + 1, cy - 4 * d, cx + 9, cy + 4 * d, t, c);
+        wj_gfx_circle(cx + 1, cy - 4 * d, t / 2, c);
+        wj_gfx_circle(cx + 9, cy + 4 * d, t / 2, c);
+    }
+}
+
+static void entry_screen(const struct wj_session *s, const struct wj_pointer *pointer, long long now) {
+    const struct wj_entry *e = &s->entry;
+    float x = L.content_x, w = L.w - 40;
+    panel(x, TOP, w, PANEL_H, 18);
+    float content_w = w - 36 < 600 ? w - 36 : 600, left = x + floorf((w - content_w) / 2);
+    float side = 150, field_x = left + side + 22, field_w = content_w - side - 22;
+    float field_y = TOP + 12, field_h = 46, cx = left + side / 2;
+
+    label("Server address", left, centered(field_y + field_h / 2, 19), 19, 1, T->ink, side, 0);
+    wj_gfx_round(field_x, field_y, field_w, field_h, 12, T->key_bottom, T->key_top);
+    wj_gfx_round_line(field_x, field_y, field_w, field_h, 12, 2.5f, e->failed ? T->danger : T->blue);
+    float text_x = field_x + 16, caret_x = text_x;
+    if (e->text[0]) caret_x += label(e->text, text_x, centered(field_y + field_h / 2, 26), 26, 1, T->ink, field_w - 40, 0);
+    else label("192.168.0.3", text_x, centered(field_y + field_h / 2, 26), 26, 1, T->faint, field_w - 40, 0);
+    if (!e->connecting && now / 500 % 2 == 0)
+        wj_gfx_rect(floorf(caret_x) + 2, field_y + 9, 2, field_h - 18, T->accent, T->accent);
+    const char *line = e->message[0] ? e->message : "The port is 4005 unless you type :port";
+    label(line, field_x + field_w / 2, TOP + 76, 13, 0, e->failed ? T->danger : T->muted, field_w, 1);
+
+    paragraph("Point at a key and press A, or move with the D-pad. B deletes.", cx, TOP + 100, 13, 0, T->muted, side, 6);
+    if (e->saved[0]) {
+        label("Saved address", cx, TOP + 224, 12, 0, T->muted, side, 1);
+        label(e->saved, cx, TOP + 240, 12, 1, T->ink, side, 1);
+        pill(cx - 70, TOP + 250, 140, 28, "Forget it", 0, 0, pointer, WJ_TARGET_FORGET, now);
+    }
+
+    float group_w = 3 * KEY_W + ACTION_W + 3 * KEY_GAP;
+    float gx = floorf(field_x + (field_w - group_w) / 2), gy = TOP + 84;
+    int focus = wj_keypad_at(e->column, e->row);
+    for (int i = 0; i < WJ_KEY_COUNT; i++) {
+        const struct wj_key *key = &wj_keypad[i];
+        float r[4];
+        key_rect(key, gx, gy, r);
+        int connect = key->kind == WJ_KEY_CONNECT;
+        int hover = !e->connecting && over(pointer, r[0], r[1], r[2], r[3]);
+        int lit = hover || (e->pressed == i && now - e->pressed_at < 140);
+        u32 top = connect ? (lit ? wj_gfx_mix(T->blue, WHITE, 0.25f) : T->blue) : lit ? T->select_top : T->key_top;
+        u32 bottom = connect ? (lit ? T->blue : T->deep_blue) : lit ? T->select_bottom : T->key_bottom;
+        wj_gfx_round(r[0], r[1] + 2, r[2], r[3], KEY_RADIUS, T->shadow, T->shadow);
+        wj_gfx_round(r[0], r[1], r[2], r[3], KEY_RADIUS, top, bottom);
+        if (focus == i && !e->connecting) {
+            focus_ring(r[0], r[1], r[2], r[3], KEY_RADIUS, now);
+            // A blue key needs a light inner ring, or its blue outline would vanish into it.
+            if (connect) wj_gfx_round_line(r[0] + 3, r[1] + 3, r[2] - 6, r[3] - 6, KEY_RADIUS - 3, 2, T->knob);
+        }
+        else wj_gfx_round_line(r[0], r[1], r[2], r[3], KEY_RADIUS, 1.5f, connect ? T->deep_blue : T->border);
+        float kx = r[0] + floorf(r[2] / 2), ky = r[1] + floorf(r[3] / 2);
+        u32 ink = e->connecting && !connect ? T->faint : hover ? T->accent : T->ink;
+        if (key->kind == WJ_KEY_CHAR) {
+            char text[2] = { key->character, 0 };
+            label(text, kx, centered(ky, 24), 24, 1, ink, r[2], 1);
+        } else if (key->kind == WJ_KEY_BACKSPACE) glyph_backspace(kx, ky, ink);
+        else if (key->kind == WJ_KEY_CLEAR) label("Clear", kx, centered(ky, 16), 16, 1, ink, r[2] - 8, 1);
+        else label(e->connecting ? "Connecting" : "Connect", kx, centered(ky, 17), 17, 1, T->on_blue, r[2] - 8, 1);
+        if (!e->connecting) hit(r[0], r[1], r[2], r[3], WJ_TARGET_KEY, i);
+    }
+}
+
+static void glyph_sun(float cx, float cy, float r, u32 c) {
+    wj_gfx_circle(cx, cy, r * 0.42f, c);
+    for (int i = 0; i < 8; i++) {
+        float angle = (float)M_PI / 4 * i, dx = cosf(angle), dy = sinf(angle);
+        stroke(cx + dx * r * 0.64f, cy + dy * r * 0.64f, cx + dx * r * 0.94f, cy + dy * r * 0.94f, r * 0.17f, c);
+    }
+}
+
+static void glyph_moon(float cx, float cy, float r, u32 c, u32 hole) {
+    wj_gfx_circle(cx, cy, r * 0.8f, c);
+    wj_gfx_circle(cx + r * 0.42f, cy - r * 0.3f, r * 0.68f, hole);
+}
+
+static void glyph_exit(float cx, float cy, float r, u32 c) {
+    float s = r * 0.8f, t = r * 0.18f;
+    float frame[4][2] = { { 0, -1 }, { -0.8f, -1 }, { -0.8f, 1 }, { 0, 1 } };
+    for (int i = 0; i < 3; i++) {
+        stroke(cx + frame[i][0] * s, cy + frame[i][1] * s, cx + frame[i + 1][0] * s, cy + frame[i + 1][1] * s, t, c);
+    }
+    stroke(cx - s * 0.35f, cy, cx + s * 0.6f, cy, t, c);
+    wj_gfx_triangle(cx + s * 0.3f, cy - s * 0.45f, cx + s * 0.98f, cy, cx + s * 0.3f, cy + s * 0.45f, c);
+}
+
+static void home_menu(const struct wj_session *s) {
+    hit_count = 0;
+    wj_gfx_rect(0, 0, L.w, WJ_GFX_HEIGHT, WJ_RGBA(0x10, 0x16, 0x1c, 0xa8), WJ_RGBA(0x10, 0x16, 0x1c, 0xc0));
+    const float w = 380, row_h = 46, header_h = 54, footer_h = 38;
+    float h = header_h + WJ_HOME_ITEMS * row_h + footer_h;
+    float x = floorf((L.w - w) / 2), y = floorf((WJ_GFX_HEIGHT - h) / 2) - 10;
+    hit(0, 0, L.w, WJ_GFX_HEIGHT, WJ_TARGET_HOME_DISMISS, 0);
+    hit(x, y, w, h, WJ_TARGET_NONE, 0);
+    panel(x, y, w, h, 18);
+    label("Menu", x + 24, centered(y + 28, 19), 19, 1, T->ink, 150, 0);
+    label("HOME", x + w - 24, centered(y + 28, 12), 12, 1, T->muted, 60, 2);
+    wj_gfx_rect(x + 14, y + 46, w - 28, 1, T->border, T->border);
+
+    static const char *const names[WJ_HOME_ITEMS] = {
+        "Server address\xe2\x80\xa6", "Theme", "Exit to Homebrew Channel"
+    };
+    for (int i = 0; i < WJ_HOME_ITEMS; i++) {
+        float rx = x + 10, ry = y + header_h + i * row_h, rw = w - 20, rh = row_h - 4, cy = ry + floorf(rh / 2);
+        int selected = i == s->home_selected;
+        if (selected) {
+            wj_gfx_round(rx, ry, rw, rh, 10, T->select_top, T->select_bottom);
+            wj_gfx_round_line(rx, ry, rw, rh, 10, 2, T->blue);
+        }
+        u32 icon_ink = selected ? T->accent : T->muted, hole = selected ? T->select_top : T->panel_top;
+        float icon_x = rx + 28;
+        if (i == WJ_HOME_ADDRESS) icon(ICON_SERVER, icon_x, cy, 22, icon_ink, hole);
+        else if (i == WJ_HOME_THEME) {
+            if (s->dark) glyph_moon(icon_x, cy, 11, icon_ink, hole);
+            else glyph_sun(icon_x, cy, 11, icon_ink);
+        } else glyph_exit(icon_x, cy, 11, icon_ink);
+        label(names[i], rx + 52, centered(cy, 16), 16, selected, T->ink, rw - 52 - (i == WJ_HOME_EXIT ? 12 : 140), 0);
+        if (i == WJ_HOME_ADDRESS && s->entry.saved[0])
+            label(s->entry.saved, rx + rw - 14, centered(cy, 12), 12, 0, T->muted, 130, 2);
+        if (i == WJ_HOME_THEME) {
+            float seg = 54, tx = rx + rw - 14 - seg * 2, ty = cy - 13;
+            wj_gfx_round(tx, ty, seg * 2, 26, 13, T->key_bottom, T->key_top);
+            wj_gfx_round_line(tx, ty, seg * 2, 26, 13, 1.5f, T->border);
+            wj_gfx_round(tx + (s->dark ? seg : 0) + 2, ty + 2, seg - 4, 22, 11, T->blue, T->deep_blue);
+            label("Light", tx + seg / 2, centered(cy, 12), 12, 1, s->dark ? T->muted : T->on_blue, seg - 8, 1);
+            label("Dark", tx + seg * 1.5f, centered(cy, 12), 12, 1, s->dark ? T->on_blue : T->muted, seg - 8, 1);
+        }
+        hit(rx, ry, rw, rh, WJ_TARGET_HOME_ITEM, i);
+    }
+    label("A choose   \xc2\xb7   B or HOME close", x + w / 2, y + h - 16, 12, 0, T->muted, w - 40, 1);
 }
 
 /* The cover grows out of the card over a dimmed screen; A or B closes it. */
@@ -650,7 +827,7 @@ static void expanded_art(const struct wj_session *s, long long now) {
 
 static void toast_and_volume(const struct wj_session *s, long long now) {
     // The finding-server panel already shows the whole message.
-    if (s->message[0] && !(s->view == WJ_VIEW_SERVERS && !s->count)) {
+    if (s->message[0] && !(s->view == WJ_VIEW_SERVERS && !s->count) && !s->entry.open) {
         snprintf(toast, sizeof(toast), "%s", s->message);
         toast_alpha += (1 - toast_alpha) * 0.25f;
     } else toast_alpha *= 0.85f;
@@ -685,6 +862,14 @@ static void cursor(const struct wj_pointer *pointer) {
     wj_gfx_circle(pointer->x, pointer->y, 2.5f, T->deep_blue);
 }
 
+void wj_ui_draw_overlay(const struct wj_session *s, const struct wj_pointer *pointer) {
+    T = wj_theme(s->dark);
+    seek_pointer = 0;
+    wj_gfx_begin_overlay();
+    if (s->home_open) home_menu(s);
+    cursor(pointer);
+}
+
 int wj_ui_seek_at(const struct wj_session *s, float x) {
     if (!(s->capabilities & WJ_CAN_SEEK) || !s->has_progress || s->duration_ms <= 0) return -1;
     return wj_seek_at(x, bar_x, bar_w, s->duration_ms);
@@ -712,13 +897,16 @@ void wj_ui_draw(const struct wj_session *s, const struct wj_pointer *pointer) {
     hit_count = 0;
     background();
     header(s, now);
-    if (s->view == WJ_VIEW_SERVERS && !s->count) discovery(s, now);
+    int content = !s->entry.open && s->view != WJ_VIEW_SERVERS;
+    if (s->entry.open) entry_screen(s, pointer, now);
+    else if (s->view == WJ_VIEW_SERVERS && !s->count) discovery(s, pointer, now);
     else if (s->view == WJ_VIEW_BROWSE) list(s, now);
-    else tiles(s, now);
-    if (s->view != WJ_VIEW_SERVERS) now_playing(s, pointer);
+    else tiles(s, pointer, now);
+    if (content) now_playing(s, pointer);
     dock(s, pointer);
     toast_and_volume(s, now);
-    if (s->view != WJ_VIEW_SERVERS) expanded_art(s, now);
+    if (content) expanded_art(s, now);
+    if (s->home_open) home_menu(s);
     cursor(pointer);
     last_view = (int)s->view;
     wj_gfx_present();
