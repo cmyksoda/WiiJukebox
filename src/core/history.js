@@ -84,21 +84,32 @@ class PlayHistory {
         return entries.slice(0, limit).map((entry) => structuredClone(entry));
     }
 
+    /** Forgets everything and rewrites the file at once; unlike a lazy save, a failure here is the caller's to report. */
+    clear() {
+        this._entries = [];
+        this._dirty = true;
+        this._write();
+    }
+
     /** Writes any pending change now; for shutdown and tests. */
     flush() {
-        clearTimeout(this._timer);
-        this._timer = null;
-        if (!this._dirty || !this.file) return;
-        this._dirty = false;
         try {
-            fs.mkdirSync(path.dirname(this.file), { recursive: true });
-            const temp = `${this.file}.tmp`;
-            // Artwork links can carry a service token, so keep it owner-only like config.json.
-            fs.writeFileSync(temp, JSON.stringify({ version: 1, entries: this._entries }), { mode: 0o600 });
-            fs.renameSync(temp, this.file);
+            this._write();
         } catch (err) {
             this._warn(`could not save play history (${err.message})`);
         }
+    }
+
+    _write() {
+        clearTimeout(this._timer);
+        this._timer = null;
+        if (!this._dirty || !this.file) return;
+        fs.mkdirSync(path.dirname(this.file), { recursive: true });
+        const temp = `${this.file}.tmp`;
+        // Artwork links can carry a service token, so keep it owner-only like config.json.
+        fs.writeFileSync(temp, JSON.stringify({ version: 1, entries: this._entries }), { mode: 0o600 });
+        fs.renameSync(temp, this.file);
+        this._dirty = false;
     }
 
     _changed() {

@@ -313,6 +313,11 @@ class WebServer {
             }
         }
 
+        if (section === 'home' && req.method === 'DELETE' && rest[0] === 'recent' && rest.length === 1) {
+            this.history.clear();
+            return this._json(res, 200, { ok: true });
+        }
+
         if (section === 'art' && req.method === 'GET' && rest.length === 1) {
             return this.art.serve(rest[0], res);
         }

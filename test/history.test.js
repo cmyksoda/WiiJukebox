@@ -109,3 +109,33 @@ test('the pipeline announces a source as attached only once it has opened', asyn
         await pipeline.shutdown();
     }
 });
+
+test('clearing the history empties the file at once, whatever was waiting to be saved', () => {
+    const file = path.join(tempDir(), 'history.json');
+    const history = new PlayHistory({ file });
+    history.record('subsonic', { ...album(1), artwork: 'https://music.example/getCoverArt.view?t=secret' });
+    history.flush();
+    assert.ok(fs.readFileSync(file, 'utf8').includes('secret'));
+
+    history.record('subsonic', album(2));
+    history.clear();
+    assert.deepEqual(history.list(), []);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { version: 1, entries: [] }, 'the link with its token is gone from disk');
+    assert.deepEqual(new PlayHistory({ file }).list(), []);
+
+    history.record('subsonic', album(3));
+    history.flush();
+    assert.deepEqual(new PlayHistory({ file }).list().map((entry) => entry.title), ['Album 3'], 'it keeps recording afterwards');
+});
+
+test('a clear that cannot be written throws instead of pretending', () => {
+    const blocker = path.join(tempDir(), 'not-a-folder');
+    fs.writeFileSync(blocker, 'x');
+    const warnings = [];
+    const history = new PlayHistory({ file: path.join(blocker, 'history.json'), warn: (message) => warnings.push(message) });
+    history.record('subsonic', album(1));
+    history.flush();
+    assert.ok(warnings.some((message) => /could not save/.test(message)));
+    assert.throws(() => history.clear());
+    assert.deepEqual(history.list(), []);
+});

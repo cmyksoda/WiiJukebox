@@ -176,6 +176,14 @@ test('playing from home queues the album from the chosen track, records it and r
         // A service that is no longer set up stops appearing.
         app.config.updateSource('subsonic', { url: '' });
         assert.deepEqual((await app.get('/api/home')).recent, []);
+        app.config.updateSource('subsonic', navidrome.config);
+
+        // Clearing forgets it all, on disk too, and the next play starts a fresh list.
+        assert.equal((await fetch(`${app.base}/api/home/recent`, { method: 'DELETE' })).status, 200);
+        assert.deepEqual((await app.get('/api/home')).recent, []);
+        assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).entries, []);
+        await play(first);
+        assert.deepEqual((await app.get('/api/home')).recent.map((entry) => entry.title), ['Paper Lanterns']);
     } finally {
         await app.close();
         await navidrome.close();
