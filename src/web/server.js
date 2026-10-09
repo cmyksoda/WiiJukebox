@@ -73,7 +73,7 @@ class WebServer {
     }
 
     _broadcast(event, data) {
-        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        const payload = `event: ${event}\ndata: ${JSON.stringify(this.art.publish(data))}\n\n`;
         for (const res of this._sseClients) {
             if (!res.writableEnded) res.write(payload);
         }
@@ -101,8 +101,9 @@ class WebServer {
         }
     }
 
+    // Every browser-bound body goes through here, so no art link leaves without the proxy.
     _json(res, status, body) {
-        const text = JSON.stringify(body);
+        const text = JSON.stringify(this.art.publish(body));
         res.writeHead(status, {
             'Content-Type': 'application/json; charset=utf-8',
             'Content-Length': Buffer.byteLength(text),
@@ -131,7 +132,7 @@ class WebServer {
             Connection: 'keep-alive',
         });
         res.write('retry: 2000\n\n');
-        res.write(`event: status\ndata: ${JSON.stringify(this.pipeline.status)}\n\n`);
+        res.write(`event: status\ndata: ${JSON.stringify(this.art.publish(this.pipeline.status))}\n\n`);
 
         this._sseClients.add(res);
         req.on('close', () => this._sseClients.delete(res));
@@ -254,7 +255,7 @@ class WebServer {
                     return this._json(res, 404, { error: `${source.label} has no such action` });
                 }
                 try {
-                    const body = await this._readBody(req);
+                    const body = this.art.restore(await this._readBody(req));
                     const result = await source.action(rest[2], body);
                     this.home.forget(id);
                     return this._json(res, 200, result);
@@ -291,7 +292,7 @@ class WebServer {
             }
 
             if (req.method === 'POST' && action === 'play') {
-                // Items from the home screen carry art proxy paths in place of the real links.
+                // Items that came from a page carry art proxy paths in place of the real links.
                 const item = this.art.restore(await this._readBody(req));
                 await this.pipeline.command(async () => {
                     const source = await this.registry.connect(id);

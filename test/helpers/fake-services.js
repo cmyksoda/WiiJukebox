@@ -139,9 +139,18 @@ async function fakeSubsonic({ password = 'secret', fail = false } = {}) {
             reply.albumList2 = { album: (ALBUMS[q.get('type')] || []).slice(0, Number(q.get('size') || 10))
                 .map(([id, name, artist]) => ({ id, name, artist, coverArt: id })) };
         }
-        if (endpoint === 'getAlbum.view') {
-            reply.album = { song: ['One', 'Two', 'Three', 'Four'].map((title, i) => ({
-                id: `${q.get('id')}-t${i + 1}`, title, artist: 'Fixture', album: albumName(q.get('id')), duration: 200, coverArt: q.get('id') })) };
+        const songs = (id) => ['One', 'Two', 'Three', 'Four'].map((title, i) => ({
+            id: `${id}-t${i + 1}`, title, artist: 'Fixture', album: albumName(id), duration: 200, coverArt: id }));
+        if (endpoint === 'getAlbum.view') reply.album = { song: songs(q.get('id')) };
+        if (endpoint === 'getArtists.view') {
+            reply.artists = { index: [{ artist: [{ id: 'a1', name: 'Mika Ito', albumCount: 2, coverArt: 'a1' }] }] };
+        }
+        if (endpoint === 'getPlaylists.view') reply.playlists = { playlist: [{ id: 'p1', name: 'Rainy Day', songCount: 4, coverArt: 'p1' }] };
+        if (endpoint === 'getPlaylist.view') reply.playlist = { entry: songs('p1') };
+        if (endpoint === 'getStarred2.view') reply.starred2 = { song: songs('n2').slice(0, 2) };
+        if (endpoint === 'search3.view') {
+            reply.searchResult3 = { artist: [{ id: 'a1', name: 'Mika Ito' }],
+                album: ALBUMS.newest.slice(0, 2).map(([id, name, artist]) => ({ id, name, artist, coverArt: id })), song: songs('n1').slice(0, 2) };
         }
         json(res, { 'subsonic-response': reply });
     });
@@ -165,9 +174,17 @@ async function fakeJellyfin() {
                 Id: `${parent}-t${i + 1}`, Name, Type: 'Audio', Artists: ['Fixture'], Album: parent,
                 RunTimeTicks: 2000000000, AlbumId: parent, AlbumPrimaryImageTag: 'tag' })) });
         }
+        if (url.pathname === '/Artists') {
+            return json(res, { TotalRecordCount: 1, Items: [{ Id: 'ja1', Name: 'Wren', ImageTags: { Primary: 'tag' } }] });
+        }
         if (url.pathname === '/Items') {
-            return json(res, { TotalRecordCount: albums.length, Items: albums.map(([Id, Name, AlbumArtist]) => ({
-                Id, Name, AlbumArtist, Type: 'MusicAlbum', ImageTags: { Primary: 'tag' } })) });
+            const items = albums.map(([Id, Name, AlbumArtist]) => ({
+                Id, Name, AlbumArtist, Type: 'MusicAlbum', ImageTags: { Primary: 'tag' } }));
+            if (url.searchParams.get('SearchTerm')) {
+                items.push({ Id: 'j1-t1', Name: 'One', Type: 'Audio', Artists: ['Fixture'], Album: 'Harbor Letters',
+                    RunTimeTicks: 2000000000, AlbumId: 'j1', AlbumPrimaryImageTag: 'tag' });
+            }
+            return json(res, { TotalRecordCount: items.length, Items: items });
         }
         res.writeHead(404);
         res.end();

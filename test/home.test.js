@@ -248,13 +248,22 @@ test('the art proxy serves only links the server made, and only pictures', async
         assert.equal(await status(art.link(`${hosts.url}/missing`)), 502);
         assert.equal(await status('/api/art/0123456789abcdef0123'), 404, 'an unknown key');
         assert.equal(art.link('file:///etc/passwd'), null);
-        assert.equal(art.link('data:image/png;base64,AAAA'), null);
+        assert.equal(art.link('data:text/html,<script>1</script>'), null);
+        assert.equal(art.link('data:image/png;base64,AAAA'), 'data:image/png;base64,AAAA', 'an inline picture holds no link to hide');
         assert.equal(art.link(undefined), null);
 
         const link = art.link('https://img.example/cover.png');
         assert.deepEqual(art.restore({ id: 1, artwork: link }), { id: 1, artwork: 'https://img.example/cover.png' });
         assert.deepEqual(art.restore({ id: 1, artwork: '/api/art/ffffffffffffffffffff' }), { id: 1 }, 'a stale key drops the art');
         assert.deepEqual(art.restore({ id: 1, artwork: 'https://x.example/a.png' }), { id: 1, artwork: 'https://x.example/a.png' });
+
+        // Anywhere in a body, both ways, and again on what is already a proxy path.
+        const body = { status: { nowPlaying: { artwork: 'https://img.example/cover.png', title: 'T' } }, items: [{ artwork: 'https://img.example/a.png' }] };
+        const published = art.publish(body);
+        assert.ok(published.status.nowPlaying.artwork.startsWith('/api/art/') && published.items[0].artwork.startsWith('/api/art/'));
+        assert.equal(body.items[0].artwork, 'https://img.example/a.png', 'the original is left alone');
+        assert.deepEqual(art.publish(published), published);
+        assert.deepEqual(art.restore(published), body);
     } finally {
         await app.close();
         await hosts.close();
