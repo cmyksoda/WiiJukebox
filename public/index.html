@@ -6,6 +6,8 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d141c" media="(prefers-color-scheme: dark)">
+<!-- Before the stylesheet, so a saved Light or Dark choice never flashes the other theme. -->
+<script>try { var t = localStorage.getItem('wiijukebox.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <title>WiiJukebox</title>
 <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="images/favicon.ico" sizes="16x16 32x32 48x48">
@@ -41,6 +43,15 @@
       <p class="hint">Open WiiJukebox on your Wii and it connects to this server by itself.</p>
       <p class="hint" id="wii-address"></p>
       <p class="hint" id="stream-addr"></p>
+    </div>
+
+    <div id="theme">
+      <div class="eyebrow" id="theme-label">Theme</div>
+      <div class="segmented" role="radiogroup" aria-labelledby="theme-label">
+        <button type="button" role="radio" data-theme-choice="system">System</button>
+        <button type="button" role="radio" data-theme-choice="light">Light</button>
+        <button type="button" role="radio" data-theme-choice="dark">Dark</button>
+      </div>
     </div>
   </aside>
 

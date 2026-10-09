@@ -1488,6 +1488,61 @@ function setNowPlayingOpen(open) {
     else if ($('#nowplaying').contains(document.activeElement)) $('#mini-open').focus();
 }
 
+// --- theme ---------------------------------------------------------------
+//
+// Light, Dark or System. The choice lives in localStorage and shows as data-theme on <html> (no attribute
+// means System); the inline script in index.html applies it before first paint.
+
+const THEME_KEY = 'wiijukebox.theme';
+const THEME_COLORS = { light: '#f3f6f9', dark: '#0d141c' };
+const themeButtons = [...document.querySelectorAll('[data-theme-choice]')];
+
+function savedTheme() {
+    try {
+        const saved = localStorage.getItem(THEME_KEY);
+        return saved === 'light' || saved === 'dark' ? saved : 'system';
+    } catch {
+        return 'system';
+    }
+}
+
+function applyTheme(choice) {
+    if (choice === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = choice;
+    for (const button of themeButtons) {
+        const on = button.dataset.themeChoice === choice;
+        button.setAttribute('aria-checked', String(on));
+        button.tabIndex = on ? 0 : -1;
+    }
+    // Phone browsers tint their own bars from these; a forced theme overrides the system pair.
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+        meta.content = THEME_COLORS[choice === 'system' ? (meta.media.includes('dark') ? 'dark' : 'light') : choice];
+    }
+}
+
+function chooseTheme(choice) {
+    applyTheme(choice);
+    try {
+        if (choice === 'system') localStorage.removeItem(THEME_KEY);
+        else localStorage.setItem(THEME_KEY, choice);
+    } catch {
+        /* the choice still applies until the page is reloaded */
+    }
+}
+
+for (const button of themeButtons) {
+    button.onclick = () => chooseTheme(button.dataset.themeChoice);
+    button.onkeydown = (event) => {
+        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+        if (!step) return;
+        event.preventDefault();
+        const next = themeButtons[(themeButtons.indexOf(button) + step + themeButtons.length) % themeButtons.length];
+        next.focus();
+        chooseTheme(next.dataset.themeChoice);
+    };
+}
+applyTheme(savedTheme());
+
 $('#home-link').onclick = goHome;
 $('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
 $('#sources-close').onclick = () => setSourcesOpen(false);

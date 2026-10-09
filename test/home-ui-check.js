@@ -199,6 +199,73 @@ const check = (label, ok) => {
         check('covers came through the proxy, never from a service', direct.length === 0
             && await page.$$eval('img', (imgs) => imgs.every((img) => new URL(img.src).pathname.startsWith('/api/art/'))));
 
+        // --- Light, Dark or System ----------------------------------------------------------
+        const backdrop = (view) => view.evaluate(() => getComputedStyle(document.body).backgroundColor);
+        const LIGHT = 'rgb(243, 246, 249)';
+        const DARK = 'rgb(13, 20, 28)';
+        const choices = (view) => view.$$eval('[data-theme-choice]', (nodes) => nodes.map((n) => `${n.dataset.themeChoice}:${n.getAttribute('aria-checked')}`).join());
+        for (const [name, viewport, phone] of [['desktop', { width: 1280, height: 800 }, false], ['phone', { width: 390, height: 844 }, true]]) {
+            const view = await open(viewport, phone);
+            if (phone) {
+                await view.click('#sources-toggle');
+                await view.waitForTimeout(400);
+            }
+            check(`${name}: the sidebar offers System, Light and Dark, with System chosen`, await choices(view) === 'system:true,light:false,dark:false');
+            check(`${name}: and no data-theme is set`, await view.evaluate(() => !('theme' in document.documentElement.dataset)));
+            check(`${name}: the control is on whole pixels and inside the sidebar`, await view.$eval('.segmented', (el) => {
+                const r = el.getBoundingClientRect();
+                const side = document.querySelector('#sidebar').getBoundingClientRect();
+                return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.height % 2 === 0 && r.width % 2 === 0
+                    && r.left >= side.left && r.right <= side.right && r.bottom <= side.bottom;
+            }));
+            await view.emulateMedia({ colorScheme: 'dark' });
+            check(`${name}: System follows a dark system`, await backdrop(view) === DARK);
+            await view.click('[data-theme-choice="light"]');
+            check(`${name}: Light stays light on a dark system`, await backdrop(view) === LIGHT && await choices(view) === 'system:false,light:true,dark:false');
+            await view.emulateMedia({ colorScheme: 'light' });
+            await view.click('[data-theme-choice="dark"]');
+            check(`${name}: Dark stays dark on a light system`, await backdrop(view) === DARK
+                && await view.evaluate(() => getComputedStyle(document.documentElement).colorScheme) === 'dark');
+            check(`${name}: the choice is stored and shown on <html>`, await view.evaluate(() => localStorage.getItem('wiijukebox.theme') === 'dark' && document.documentElement.dataset.theme === 'dark'));
+            check(`${name}: the browser bar color follows it`, (await view.$$eval('meta[name="theme-color"]', (m) => m.map((x) => x.content))).every((c) => c === '#0d141c'));
+            await view.reload();
+            await view.waitForSelector('.channel');
+            check(`${name}: it survives a reload`, await backdrop(view) === DARK && await choices(view) === 'system:false,light:false,dark:true');
+            check(`${name}: and is applied by a script that runs before the stylesheet`, await view.evaluate(() => {
+                const nodes = [...document.head.children];
+                return nodes.findIndex((n) => n.tagName === 'SCRIPT') < nodes.findIndex((n) => n.rel === 'stylesheet');
+            }));
+            if (phone) {
+                await view.click('#sources-toggle');
+                await view.waitForTimeout(400);
+            } else {
+                await view.focus('[data-theme-choice="dark"]');
+                await view.keyboard.press('ArrowRight');
+                check(`${name}: arrow keys move through the choices and wrap`, await choices(view) === 'system:true,light:false,dark:false');
+                await view.keyboard.press('ArrowLeft');
+                check(`${name}: and arrow left goes back`, await choices(view) === 'system:false,light:false,dark:true');
+            }
+            await view.click('[data-theme-choice="system"]');
+            check(`${name}: System clears the stored choice`, await view.evaluate(() => localStorage.getItem('wiijukebox.theme') === null && !('theme' in document.documentElement.dataset))
+                && await backdrop(view) === LIGHT);
+            await view.context().close();
+        }
+        {
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+            const view = await context.newPage();
+            await view.addInitScript(() => {
+                const refuse = () => { throw new Error('storage is blocked'); };
+                Storage.prototype.getItem = refuse;
+                Storage.prototype.setItem = refuse;
+                Storage.prototype.removeItem = refuse;
+            });
+            await view.goto(app.base);
+            await view.waitForSelector('.channel');
+            await view.click('[data-theme-choice="dark"]');
+            check('blocked storage still lets the choice apply for this visit', await backdrop(view) === DARK);
+            await context.close();
+        }
+
         // The dialog's edges and text stay on whole pixels at 1x, at odd and even widths and on a phone.
         for (const [name, viewport, phone] of [['1281x801', { width: 1281, height: 801 }, false], ['1280x800', { width: 1280, height: 800 }, false],
             ['390x844', { width: 390, height: 844 }, true], ['375x667', { width: 375, height: 667 }, true], ['361x640', { width: 361, height: 640 }, true]]) {
