@@ -7,7 +7,8 @@ extern "C" {
 /* The visualizer shares the UI's GX FIFO and framebuffers; each entry
    restores projectM's GX state, and the UI restores its own every frame. */
 int wj_visualizer_enter(void);
-int wj_visualizer_render(void);
+/* `overlay`, when given, draws UI over the finished frame before it is shown. */
+int wj_visualizer_render(void (*overlay)(void *), void *context);
 void wj_visualizer_leave(void);
 void wj_visualizer_shutdown(void);
 const char *wj_visualizer_error(void);

@@ -22,6 +22,7 @@ LIBS := -L$(PORTLIBS_PPC)/lib -lfreetype -lpng16 -lbz2 -lbrotlidec -lbrotlicommo
 FONT_LATIN := vendor/fonts/Nunito-SemiBold-WiiJukebox.ttf
 FONT_GREEK := vendor/fonts/NotoSans-Greek-WiiJukebox.ttf
 FONT_CJK := vendor/fonts/NotoSansCJKjp-Medium-WiiJukebox.otf
+FONT_KR := vendor/fonts/NotoSansCJKkr-Medium-WiiJukebox.otf
 LOGO_MARK := assets/jukebox-mark.i8
 OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o build/logo_data.o
 include projectm.mk
@@ -42,26 +43,34 @@ build/%.o: source/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 build/logo_data.o: source/logo_data.S $(LOGO_MARK) | build
 	$(CC) $(MACHDEP) -DLOGO_MARK='"$(LOGO_MARK)"' -c $< -o $@
-build/font_data.o: source/font_data.S $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) | build
-	$(CC) $(MACHDEP) -DFONT_LATIN='"$(FONT_LATIN)"' -DFONT_GREEK='"$(FONT_GREEK)"' -DFONT_CJK='"$(FONT_CJK)"' -c $< -o $@
+build/font_data.o: source/font_data.S $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) $(FONT_KR) | build
+	$(CC) $(MACHDEP) -DFONT_LATIN='"$(FONT_LATIN)"' -DFONT_GREEK='"$(FONT_GREEK)"' -DFONT_CJK='"$(FONT_CJK)"' -DFONT_KR='"$(FONT_KR)"' -c $< -o $@
 build/wiijukebox.elf: $(OBJECTS) build/libprojectM.a
 	$(CXX) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wiijukebox.map -o $@
 dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
 	$(DEVKITPRO)/tools/bin/elf2dol $< $@
 HOST_CC ?= cc
 HOST_CFLAGS ?= -O2 -g
-host-test: | build
+host-test: build/discovery_port.h | build
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/playback_clock.c tests/playback_clock_test.c -o build/playback_clock_test
 	./build/playback_clock_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/utf8.c source/layout.c tests/layout_test.c -o build/layout_test
 	./build/layout_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/font.c tests/font_test.c $(shell pkg-config --libs freetype2) -lm -o build/font_test
-	./build/font_test $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK)
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
-	./build/ui_render $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) $(LOGO_MARK)
+	./build/font_test $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) $(FONT_KR)
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/theme.c source/address.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
+	./build/ui_render $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) $(FONT_KR) $(LOGO_MARK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/address.c tests/address_test.c -o build/address_test
+	./build/address_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/settings.c tests/settings_test.c -o build/settings_test
+	./build/settings_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource source/theme.c tests/theme_test.c -lm -o build/theme_test
+	./build/theme_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Itests/session_shim -Isource -Ibuild source/wire.c source/menu.c source/utf8.c source/init_wait.c source/playback_clock.c source/address.c source/settings.c tests/session_test.c -o build/session_test
+	./build/session_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c source/utf8.c tests/menu_test.c -o build/menu_test
 	./build/menu_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/init_wait.c tests/init_wait_test.c -o build/init_wait_test
 	./build/init_wait_test

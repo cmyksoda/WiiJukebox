@@ -41,6 +41,8 @@ static void copy_settings(void) {
 }
 
 int wj_gfx_init(void) {
+    // Quads already queued read the atlas when the GPU gets to them, so let it finish before a reset.
+    wj_font_set_reset_hook(GX_DrawDone);
     mode = VIDEO_GetPreferredMode(NULL);
     // 16:9 sets stretch 640 pixels wider, so lay out on a wider canvas.
     if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) width = 854;
@@ -311,7 +313,7 @@ static void emit(void *context, float x0, float y0, float x1, float y1, float u0
 void wj_gfx_text(const char *text, int bytes, float x, float baseline, int size, int bold, u32 color) {
     if (!bytes || !(color & 0xff)) return;
     // Rasterize first, so the GPU never reads atlas texels still in the CPU cache.
-    wj_font_measure(text, bytes, size, bold);
+    wj_font_prepare(text, bytes, size, bold);
     int changed;
     unsigned char *texels = (unsigned char *)wj_font_atlas(&changed);
     if (!atlas_ready) {

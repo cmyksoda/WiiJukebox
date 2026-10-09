@@ -83,14 +83,17 @@ Source: https://github.com/devkitPro/libogc/blob/v3.1.0/libmad/mp3player.c
 
 `fonts/Nunito-SemiBold-WiiJukebox.ttf` (Nunito, the web UI's typeface: Latin,
 Cyrillic, punctuation and symbols) is the primary face. `fonts/NotoSans-Greek-WiiJukebox.ttf`
-(Noto Sans 2.015: Greek) and `fonts/NotoSansCJKjp-Medium-WiiJukebox.otf` (Noto Sans
-CJK JP 2.004: kana, fullwidth forms and the 2,965 JIS level 1 kanji) supply, in
-that order, characters it lacks. All are under the SIL Open Font License 1.1
+(Noto Sans 2.015: Greek), `fonts/NotoSansCJKjp-Medium-WiiJukebox.otf` (Noto Sans
+CJK JP 2.004: kana, fullwidth forms and the 6,355 JIS X 0208 level 1 and 2 kanji) and
+`fonts/NotoSansCJKkr-Medium-WiiJukebox.otf` (Noto Sans CJK KR 2.004: the 11,172 Hangul syllables and
+the compatibility jamo) supply, in that order, characters it lacks. The KR face holds no Han
+characters, so those always take the Japanese forms. All are under the SIL Open Font License 1.1
 (`fonts/OFL.txt`, with every copyright notice, ships in the install archive).
 `tools/subset-font.py` made them from `ofl/nunito/Nunito[wght].ttf` in
 <https://github.com/google/fonts> at commit 604936664fd6 (weight 600), and Fedora's
 `google-noto-sans-vf-fonts` 20251201 (weight 600) and `google-noto-sans-cjk-vf-fonts`
-2.004 (weight 500), unmodified packages of <https://github.com/notofonts>. It
+2.004 (weight 500; the JP and KR faces of its `NotoSansCJK-VF.ttc`), unmodified packages of
+<https://github.com/notofonts>. It
 flattens Nunito's GPOS kerning into a legacy `kern` table, which FreeType's
 `FT_Get_Kerning` reads. `fonts/FONT.json` records source and output SHA-256,
 ranges and the fontTools version. Nunito and Noto Sans have no Reserved Font

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """Build the Wii UI fonts: Nunito, the web UI's typeface, for Latin and Cyrillic,
-then Noto Sans for Greek and Noto Sans CJK JP for kana and common kanji.
+then Noto Sans for Greek, Noto Sans CJK JP for kana and kanji, and its KR face for Hangul.
 
 Usage: python3 -I tools/subset-font.py /path/to/Nunito[wght].ttf /path/to/NotoSans[wght].ttf \
            /path/to/NotoSansCJK-VF.ttc
@@ -23,6 +23,7 @@ DROP = ['GSUB', 'GPOS', 'GDEF', 'BASE', 'VORG', 'STAT', 'VVAR', 'HVAR', 'MVAR', 
 MAX_KERN_PAIRS = 10920
 FONTS = [
     {
+        'source': 0,
         'output': 'Nunito-SemiBold-WiiJukebox.ttf',
         'source_sha256': 'bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207',
         'source_file': 'ofl/nunito/Nunito[wght].ttf from google/fonts at 604936664fd62c14271209b51f98e7f495dd1a3e',
@@ -32,42 +33,64 @@ FONTS = [
         'ranges': [(0x20, 0x7E), (0xA0, 0x24F), (0x2B0, 0x36F), (0x400, 0x4FF),
                    (0x1E00, 0x1EFF), (0x2000, 0x206F), (0x20A0, 0x20BF), (0x2100, 0x214F),
                    (0x2190, 0x21FF), (0x25A0, 0x25FF), (0x2600, 0x266F)],
-        'kanji': False,
+        'sets': [],
         'kern': True,
     },
     {
+        'source': 1,
         'output': 'NotoSans-Greek-WiiJukebox.ttf',
         'source_sha256': 'fb53504de62e767a54695416123d68d67f71c9b69722175184ad56e7dd13547b',
         'source_file': 'NotoSans[wght].ttf, Fedora google-noto-sans-vf-fonts 20251201 (Noto Sans 2.015)',
         'upstream': 'https://github.com/notofonts/latin-greek-cyrillic (OFL-1.1)',
         'weight': 600,
         'ranges': [(0x370, 0x3FF), (0x1F00, 0x1FFF)],
-        'kanji': False,
+        'sets': [],
         'kern': False,
     },
     {
+        'source': 2,
+        'face': 0,
         'output': 'NotoSansCJKjp-Medium-WiiJukebox.otf',
         'source_sha256': 'd3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32',
         'source_file': 'NotoSansCJK-VF.ttc face 0 (Noto Sans CJK JP), Fedora google-noto-sans-cjk-vf-fonts 2.004',
         'upstream': 'https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)',
         'weight': 500,
         'ranges': [(0x20, 0x7E), (0x3000, 0x30FF), (0x31F0, 0x31FF), (0xFF00, 0xFFEF)],
-        'kanji': True,
+        'sets': ['JIS X 0208 level 1 kanji', 'JIS X 0208 level 2 kanji'],
+        'kern': False,
+    },
+    {
+        'source': 2,
+        'face': 1,
+        'output': 'NotoSansCJKkr-Medium-WiiJukebox.otf',
+        'source_sha256': 'd3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32',
+        'source_file': 'NotoSansCJK-VF.ttc face 1 (Noto Sans CJK KR), Fedora google-noto-sans-cjk-vf-fonts 2.004',
+        'upstream': 'https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)',
+        'weight': 500,
+        'ranges': [(0x3131, 0x318E), (0xAC00, 0xD7A3)],
+        'sets': [],
         'kern': False,
     },
 ]
 
 
-def jis_level_1():
-    """The 2,965 JIS X 0208 level 1 kanji (rows 16-47), via EUC-JP."""
-    kanji = set()
-    for row in range(16, 48):
+def euc_jp_characters(lead_bytes):
+    """The characters EUC-JP gives to these lead bytes, one row of 94 cells each."""
+    found = set()
+    for row in lead_bytes:
         for cell in range(0xA1, 0xFF):
             try:
-                kanji.add(bytes([row + 0xA0, cell]).decode('euc_jp'))
+                found.add(bytes([row, cell]).decode('euc_jp'))
             except UnicodeDecodeError:
                 pass
-    return kanji
+    return found
+
+
+# JIS X 0208 rows 16-47 (level 1) and 48-84 (level 2) sit at EUC-JP lead bytes 0xB0-0xCF and 0xD0-0xF4.
+SETS = {
+    'JIS X 0208 level 1 kanji': lambda: euc_jp_characters(range(0xB0, 0xD0)),
+    'JIS X 0208 level 2 kanji': lambda: euc_jp_characters(range(0xD0, 0xF5)),
+}
 
 
 def kern_pairs(font):
@@ -107,7 +130,7 @@ def build(spec, path):
     digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
     if digest != spec['source_sha256']:
         raise SystemExit(f'{path}: unexpected SHA-256 {digest}')
-    font = TTCollection(path).fonts[0] if path.endswith('.ttc') else TTFont(path)
+    font = TTCollection(path).fonts[spec.get('face', 0)] if path.endswith('.ttc') else TTFont(path)
     font = instancer.instantiateVariableFont(font, {'wght': spec['weight']})
     options = subset.Options()
     options.layout_features = ['kern'] if spec['kern'] else []
@@ -115,8 +138,8 @@ def build(spec, path):
     options.name_IDs = ['*']
     options.drop_tables += [] if spec['kern'] else DROP
     chars = {chr(code) for start, end in spec['ranges'] for code in range(start, end + 1)}
-    if spec['kanji']:
-        chars |= jis_level_1()
+    for name in spec['sets']:
+        chars |= SETS[name]()
     subsetter = subset.Subsetter(options)
     subsetter.populate(text=''.join(sorted(chars)))
     subsetter.subset(font)
@@ -139,8 +162,7 @@ def build(spec, path):
     record.update({
         'weight': spec['weight'],
         'kern_pairs': len(pairs),
-        'ranges': [f'U+{start:04X}-U+{end:04X}' for start, end in spec['ranges']] +
-                  (['JIS X 0208 level 1 kanji'] if spec['kanji'] else []),
+        'ranges': [f'U+{start:04X}-U+{end:04X}' for start, end in spec['ranges']] + spec['sets'],
         'glyphs': font['maxp'].numGlyphs,
         'sha256': hashlib.sha256(output.getvalue()).hexdigest(),
         'copyright': font['name'].getDebugName(0),
@@ -149,12 +171,13 @@ def build(spec, path):
 
 
 def main():
-    if len(sys.argv) != len(FONTS) + 1:
+    sources = sys.argv[1:]
+    if len(sources) != 1 + max(spec['source'] for spec in FONTS):
         raise SystemExit(__doc__)
     root = Path(__file__).resolve().parents[1] / 'client/vendor/fonts'
     records = []
-    for spec, path in zip(FONTS, sys.argv[1:]):
-        data, record = build(spec, path)
+    for spec in FONTS:
+        data, record = build(spec, sources[spec['source']])
         (root / spec['output']).write_bytes(data)
         records.append(record)
         print(f"{spec['output']}: {len(data)} bytes, {record['glyphs']} glyphs")

@@ -16,3 +16,8 @@ wj_font_greek_end:
 wj_font_cjk:
     .incbin FONT_CJK
 wj_font_cjk_end:
+    .balign 32
+    .global wj_font_kr, wj_font_kr_end
+wj_font_kr:
+    .incbin FONT_KR
+wj_font_kr_end:

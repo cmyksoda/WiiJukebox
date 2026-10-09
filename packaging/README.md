@@ -149,7 +149,7 @@ Nothing in the app opens them to the internet; they are for the local network.
 | Linux | Most systems allow it. With ufw or firewalld, TCP 4005 and UDP 4005 need to be opened. | The Connect page shows the exact `ufw` and `firewalld` commands for the current ports. |
 
 The Connect page also asks the discovery port the way a Wii does, so a port that is
-taken or blocked on this computer is reported with "type the address on the Wii".
+taken or blocked on this computer is reported with "press HOME on the Wii, choose Server address, and type the address".
 
 ### FFmpeg and yt-dlp
 

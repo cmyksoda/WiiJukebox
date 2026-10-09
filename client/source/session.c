@@ -4,6 +4,8 @@
 #include "wire.h"
 #include "init_wait.h"
 #include "playback_clock.h"
+#include "settings.h"
+#include "utf8.h"
 #include "discovery_port.h"
 #include <gccore.h>
 #include <asndlib.h>
@@ -25,17 +27,21 @@
 #endif
 
 #define DEPTH 16
+#define SETTINGS_FILE "sd:/apps/wiijukebox/settings.txt"
+#define ADDRESS_FILE "sd:/apps/wiijukebox/server.addr"
 #define ART_BYTES (WJ_ART_SIZE * WJ_ART_SIZE * 2)
 #define LARGE_ART_BYTES (WJ_ART_LARGE * WJ_ART_LARGE * 2)
 
-enum job_kind { JOB_NONE, JOB_DISCOVER, JOB_REDISCOVER, JOB_LIST, JOB_STATUS, JOB_CONTROL, JOB_ART };
+enum job_kind { JOB_NONE, JOB_DISCOVER, JOB_REDISCOVER, JOB_CONNECT, JOB_LIST, JOB_STATUS, JOB_CONTROL, JOB_ART };
 enum network_phase { NETWORK_INIT, NETWORK_IP, NETWORK_LOOKUP, NETWORK_SCAN, NETWORK_CLEANUP };
 struct location { char ref[64], type[24], title[257]; int offset, selected; };
 
 static struct wj_session S = { .volume = 160 };
-static struct wj_server servers[WJ_SERVERS], server;
+static struct wj_server servers[WJ_SERVERS], server, typed;
 static struct location stack[DEPTH], location;
-static char source[64], source_title[257], saved_id[37], direct_address[32];
+static char source[64], source_title[257], saved_id[37], direct_address[32], wii_ip[16];
+/* direct_address came from the remembered address, not a launch argument. */
+static int direct_saved, network_up;
 static int storage, decode_epoch, status_failures, pending_command;
 /* The last jump marker seen; -1 until the first status sets the baseline, so a
    change made before this client connected is never replayed. */
@@ -71,7 +77,7 @@ const unsigned char *wj_session_art(void) { return art; }
 const unsigned char *wj_session_large_art(void) { return art_large; }
 void wj_session_want_large_art(int want) { want_large = want; }
 
-static void copy(char *out, size_t size, const char *in) { snprintf(out, size, "%s", in); }
+static void copy(char *out, size_t size, const char *in) { wj_utf8_copy(out, size, in); }
 /* Transient messages fade after a few seconds; held ones stay until replaced
    or cleared, because they describe a condition that still applies. */
 static void post(const char *text, int held) {
@@ -161,6 +167,14 @@ static void *run_job(void *unused) {
     int result;
     if (job == JOB_REDISCOVER) {
         result = rediscover();
+    } else if (job == JOB_CONNECT) {
+        job_ip[0] = 0;
+        job_network_result = network_up ? 0 : initialize_network();
+        result = job_network_result;
+        if (result >= 0) {
+            set_network_phase(NETWORK_LOOKUP);
+            result = wj_lookup(&typed, job_path) ? -1 : 1;
+        }
     } else if (job == JOB_DISCOVER) {
         job_ip[0] = 0;
         job_direct = 0;
@@ -261,12 +275,17 @@ static void clear_playing(void) {
     art_key[0] = 0;
 }
 
-static void choose_server(int index) {
+static void select_server(const struct wj_server *chosen) {
     stop_audio();
     LWP_MutexLock(mutex);
-    server = servers[index];
+    server = *chosen;
     LWP_MutexUnlock(mutex);
     save_server();
+    S.entry.open = S.entry.connecting = 0;
+    // A server picked while browsing another one must not inherit its playback state.
+    clear_playing();
+    jump_seen = -1;
+    pending_command = S.seek_until = 0;
     copy(S.server_name, sizeof(S.server_name), server.name);
     copy(S.server_id, sizeof(S.server_id), server.id);
     S.view = WJ_VIEW_SOURCES;
@@ -277,6 +296,8 @@ static void choose_server(int index) {
     if (!S.audio_running) hold("Could not start the audio connection");
     load_list();
 }
+
+static void choose_server(int index) { select_server(&servers[index]); }
 
 static s32 audio_read(void *unused, void *buffer, s32 size) {
     (void)unused;
@@ -319,9 +340,13 @@ static void finish_discovery(void) {
     log_event("init attempt=%d result=%d deadline=%d discover=%d elapsed_ms=%lld",
               S.attempt, job_network_result, job_init_deadline, job_result,
               wj_milliseconds() - job_started);
+    network_up = job_network_result >= 0;
     if (job_network_result < 0)
         copy(S.network, sizeof(S.network), job_init_deadline ? "Network timed out" : "Not connected to the network");
-    else snprintf(S.network, sizeof(S.network), "Wii %s", job_ip);
+    else {
+        copy(wii_ip, sizeof(wii_ip), job_ip);
+        snprintf(S.network, sizeof(S.network), "Wii %s", job_ip);
+    }
     next_discovery = wj_milliseconds() + 5000;
     int found = job_result > 0 ? job_result : 0;
     memset(&S.menu, 0, sizeof(S.menu));
@@ -332,20 +357,24 @@ static void finish_discovery(void) {
         copy(S.menu.items[i].title, sizeof(S.menu.items[i].title), servers[i].name);
         snprintf(S.menu.items[i].subtitle, sizeof(S.menu.items[i].subtitle), "ID %.8s", servers[i].id);
         copy(S.menu.items[i].type, sizeof(S.menu.items[i].type), "server");
-        if (job_direct || (saved_id[0] && !strcmp(saved_id, servers[i].id))) {
+        if (!S.entry.open && (job_direct || (saved_id[0] && !strcmp(saved_id, servers[i].id)))) {
             choose_server(i);
             return;
         }
     }
-    char text[200];
+    char text[220];
     if (found) S.message[0] = 0;
     else if (job_network_result < 0) hold("The Wii couldn't join the network. Check its Internet settings, then press 1 to retry.");
     else if (direct_address[0]) {
-        snprintf(text, sizeof(text), "The server at %s didn't answer. Check that it's running, then press 1 to retry.", direct_address);
+        if (direct_saved)
+            snprintf(text, sizeof(text), "The saved address %s didn't answer. Check that the server is running "
+                     "and press 1, or change it from the HOME menu.", direct_address);
+        else snprintf(text, sizeof(text), "The server at %s didn't answer. Check that it's running, "
+                      "then press 1 to retry.", direct_address);
         hold(text);
     } else if (job_result < 0)
-        hold("Server discovery isn't available on this network. Launch with the server's address (see README), or press 1 to retry.");
-    else hold("No server answered. Check that it's running on this network, or launch with its address (see README).");
+        hold("Server discovery isn't available on this network. Enter the server's address, or press 1 to retry.");
+    else hold("No server answered. Check that it's running on this network, or enter its address.");
 }
 
 static void finish_status(struct wj_document *doc) {
@@ -411,6 +440,44 @@ static void finish_art(void) {
     }
 }
 
+static void remember_address(const char *text) {
+    struct wj_address address;
+    if (wj_address_parse(text, &address)) return;
+    char line[WJ_ADDRESS_TEXT];
+    wj_address_format(&address, line, sizeof(line));
+    copy(direct_address, sizeof(direct_address), line);
+    copy(S.entry.saved, sizeof(S.entry.saved), line);
+    direct_saved = 1;
+    if (!storage) return;
+    char contents[WJ_ADDRESS_TEXT + 2];
+    wj_address_file_text(&address, contents, sizeof(contents));
+    FILE *file = fopen(ADDRESS_FILE, "w");
+    if (file) { fputs(contents, file); fclose(file); }
+}
+
+static void finish_connect(void) {
+    log_event("connect result=%d network=%d elapsed_ms=%lld", job_result, job_network_result,
+              wj_milliseconds() - job_started);
+    network_up = job_network_result >= 0;
+    if (job_ip[0]) {
+        copy(wii_ip, sizeof(wii_ip), job_ip);
+        snprintf(S.network, sizeof(S.network), "Wii %s", job_ip);
+    }
+    struct wj_entry *entry = &S.entry;
+    // Closing the numpad while it waited abandons the attempt, and so does retyping since.
+    if (!entry->open || !entry->connecting || strcmp(job_path, entry->text)) return;
+    entry->connecting = 0;
+    entry->failed = 1;
+    if (job_network_result < 0) {
+        copy(entry->message, sizeof(entry->message), "The Wii couldn't join the network. Check its Internet settings.");
+    } else if (job_result <= 0) {
+        snprintf(entry->message, sizeof(entry->message), "No server answered at %s. Is it running?", entry->text);
+    } else {
+        remember_address(entry->text);
+        select_server(&typed);
+    }
+}
+
 static void finish_job(void) {
     LWP_MutexLock(mutex);
     int done = job_done;
@@ -419,6 +486,7 @@ static void finish_job(void) {
     LWP_JoinThread(worker, NULL);
     S.busy = 0;
     if (job == JOB_DISCOVER) { finish_discovery(); return; }
+    if (job == JOB_CONNECT) { finish_connect(); return; }
     if (job == JOB_REDISCOVER) {
         log_event("rediscover result=%d", job_result);
         if (job_result > 0) {
@@ -619,6 +687,9 @@ static void perform(enum wj_action action, int argument) {
         start_job(JOB_CONTROL, "POST", path);
         break;
     }
+    case WJ_ACT_CONNECT:
+        if (S.entry.open && S.entry.connecting) start_job(JOB_CONNECT, "GET", S.entry.text);
+        break;
     case WJ_ACT_NONE: break;
     }
 }
@@ -658,6 +729,34 @@ void wj_session_volume(int delta) {
     MP3Player_Volume(S.volume);
 }
 
+/* A remembered address is used like a launch argument, which still wins. */
+static void load_address(void) {
+    char text[64];
+    FILE *file = fopen(ADDRESS_FILE, "r");
+    if (!file) return;
+    size_t length = fread(text, 1, sizeof(text) - 1, file);
+    fclose(file);
+    text[length] = 0;
+    struct wj_address address;
+    if (wj_address_from_file(text, &address)) return;
+    wj_address_format(&address, S.entry.saved, sizeof(S.entry.saved));
+    if (direct_address[0]) return;
+    copy(direct_address, sizeof(direct_address), S.entry.saved);
+    direct_saved = 1;
+}
+
+static void load_settings(void) {
+    char text[256];
+    FILE *file = fopen(SETTINGS_FILE, "r");
+    if (!file) return;
+    size_t length = fread(text, 1, sizeof(text) - 1, file);
+    fclose(file);
+    text[length] = 0;
+    struct wj_settings settings = { S.dark };
+    wj_settings_parse(text, &settings);
+    S.dark = settings.dark;
+}
+
 void wj_session_init(int argc, char **argv) {
     // wiiload can put the first application argument in argv[0]; HBC can
     // prepend the executable path. Accept the endpoint in either position.
@@ -682,6 +781,8 @@ void wj_session_init(int argc, char **argv) {
             if (fgets(saved_id, sizeof(saved_id), file)) saved_id[strcspn(saved_id, "\r\n")] = 0;
             fclose(file);
         }
+        load_address();
+        load_settings();
     }
     log_event("launch gui-1 discovery_port=%d", WJ_DISCOVERY_PORT);
     start_job(JOB_DISCOVER, NULL, NULL);
@@ -721,7 +822,7 @@ void wj_session_update(void) {
         return;
     }
     if (S.view == WJ_VIEW_SERVERS) {
-        if (!S.count && now >= next_discovery) start_job(JOB_DISCOVER, NULL, NULL);
+        if (!S.count && !S.entry.open && now >= next_discovery) start_job(JOB_DISCOVER, NULL, NULL);
         return;
     }
     if ((S.audio.failures >= 3 || status_failures >= 3) && now >= next_rediscovery) {
@@ -745,6 +846,126 @@ void wj_session_update(void) {
     } else if (want_large && S.has_art && strcmp(art_key, large_loaded) && strcmp(art_key, large_failed)) {
         request_art(WJ_ART_LARGE);
     }
+}
+
+void wj_session_home(int open) {
+    S.home_open = open;
+    if (open) S.home_selected = 0;
+}
+
+void wj_session_home_select(int index) {
+    if (index >= 0 && index < WJ_HOME_ITEMS) S.home_selected = index;
+}
+
+void wj_session_home_move(int delta) {
+    S.home_selected = ((S.home_selected + delta) % WJ_HOME_ITEMS + WJ_HOME_ITEMS) % WJ_HOME_ITEMS;
+}
+
+void wj_session_set_dark(int dark) {
+    S.dark = dark;
+    if (!storage) return;
+    char text[32];
+    struct wj_settings settings = { dark };
+    wj_settings_format(&settings, text, sizeof(text));
+    FILE *file = fopen(SETTINGS_FILE, "w");
+    if (file) { fputs(text, file); fclose(file); }
+    else say("The theme couldn't be saved to the SD card");
+}
+
+enum wj_home_item wj_session_home_activate(void) {
+    enum wj_home_item item = (enum wj_home_item)S.home_selected;
+    if (item == WJ_HOME_ADDRESS) wj_session_entry_open();
+    else if (item == WJ_HOME_THEME) wj_session_set_dark(!S.dark);
+    return item;
+}
+
+void wj_session_entry_open(void) {
+    struct wj_entry *entry = &S.entry;
+    S.home_open = 0;
+    if (entry->open) return;
+    entry->open = 1;
+    entry->connecting = entry->failed = 0;
+    entry->message[0] = 0;
+    entry->column = entry->row = 1;
+    entry->pressed = -1;
+    wj_address_prefix(wii_ip, entry->prefix, sizeof(entry->prefix));
+    copy(entry->text, sizeof(entry->text), entry->prefix);
+}
+
+void wj_session_entry_close(void) {
+    S.entry.open = S.entry.connecting = 0;
+}
+
+void wj_session_entry_focus(int key) {
+    if (key < 0 || key >= WJ_KEY_COUNT) return;
+    S.entry.column = wj_keypad[key].column;
+    S.entry.row = wj_keypad[key].row;
+}
+
+void wj_session_entry_move(int dx, int dy) {
+    wj_keypad_move(&S.entry.column, &S.entry.row, dx, dy);
+}
+
+static void entry_connect(void) {
+    struct wj_entry *entry = &S.entry;
+    struct wj_address address;
+    enum wj_address_error error = wj_address_parse(entry->text, &address);
+    entry->failed = error != WJ_ADDRESS_OK;
+    if (error) {
+        copy(entry->message, sizeof(entry->message), wj_address_error_text(error));
+        return;
+    }
+    wj_address_format(&address, entry->text, sizeof(entry->text));
+    snprintf(entry->message, sizeof(entry->message), "Connecting to %s...", entry->text);
+    entry->connecting = 1;
+    wj_session_act(WJ_ACT_CONNECT, 0);
+}
+
+void wj_session_entry_press(int key) {
+    struct wj_entry *entry = &S.entry;
+    if (!entry->open || entry->connecting) return;
+    if (key < 0) key = wj_keypad_at(entry->column, entry->row);
+    if (key < 0 || key >= WJ_KEY_COUNT) return;
+    const struct wj_key *pressed = &wj_keypad[key];
+    wj_session_entry_focus(key);
+    entry->pressed = key;
+    entry->pressed_at = wj_milliseconds();
+    entry->message[0] = 0;
+    entry->failed = 0;
+    switch (pressed->kind) {
+    case WJ_KEY_CHAR: wj_address_append(entry->text, sizeof(entry->text), pressed->character); break;
+    case WJ_KEY_BACKSPACE: wj_address_backspace(entry->text); break;
+    case WJ_KEY_CLEAR: wj_address_clear(entry->text); break;
+    case WJ_KEY_CONNECT: entry_connect(); break;
+    }
+}
+
+void wj_session_entry_delete(void) {
+    struct wj_entry *entry = &S.entry;
+    if (!entry->open || entry->connecting) return;
+    entry->message[0] = 0;
+    entry->failed = 0;
+    wj_address_backspace(entry->text);
+}
+
+/* Text that is still just the Wii's prefix counts as nothing typed. */
+void wj_session_entry_back(void) {
+    struct wj_entry *entry = &S.entry;
+    if (!entry->open) return;
+    if (entry->connecting || !entry->text[0] || !strcmp(entry->text, entry->prefix)) wj_session_entry_close();
+    else wj_session_entry_delete();
+}
+
+void wj_session_entry_forget(void) {
+    if (!S.entry.saved[0]) return;
+    S.entry.saved[0] = 0;
+    if (storage) remove(ADDRESS_FILE);
+    if (direct_saved) {
+        direct_address[0] = 0;
+        direct_saved = 0;
+    }
+    copy(S.entry.message, sizeof(S.entry.message), "Saved address forgotten.");
+    S.entry.failed = 0;
 }
 
 void wj_session_shutdown(void) {

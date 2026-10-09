@@ -52,10 +52,26 @@
         "U+3000-U+30FF",
         "U+31F0-U+31FF",
         "U+FF00-U+FFEF",
-        "JIS X 0208 level 1 kanji"
+        "JIS X 0208 level 1 kanji",
+        "JIS X 0208 level 2 kanji"
       ],
-      "glyphs": 3554,
-      "sha256": "90878913b6d28428e8d1da5ae92b8cd467d14c8898247f0a860a20c526942c1f",
+      "glyphs": 6944,
+      "sha256": "89a0a374762b01ad9fc927c8223f72019158f026941e0027de6b9af68f4e89a8",
+      "copyright": "\u00a9 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
+    },
+    {
+      "output": "NotoSansCJKkr-Medium-WiiJukebox.otf",
+      "source_file": "NotoSansCJK-VF.ttc face 1 (Noto Sans CJK KR), Fedora google-noto-sans-cjk-vf-fonts 2.004",
+      "source_sha256": "d3d8256cdec8dbcb3552284bc6b20c734dd60c2ee9df83b5758e34807c4bac32",
+      "upstream": "https://github.com/notofonts/noto-cjk (Noto Sans CJK 2.004, OFL-1.1)",
+      "weight": 500,
+      "kern_pairs": 0,
+      "ranges": [
+        "U+3131-U+318E",
+        "U+AC00-U+D7A3"
+      ],
+      "glyphs": 11267,
+      "sha256": "fa8a88fdc655115e40a299a138aa7f8b4454abe2be1dceec03afba20cb35024e",
       "copyright": "\u00a9 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'."
     }
   ]

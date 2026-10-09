@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "utf8.h"
+#include <string.h>
 
 unsigned wj_utf8_next(const char **text) {
     const unsigned char *s = (const unsigned char *)*text;
@@ -18,4 +19,15 @@ unsigned wj_utf8_next(const char **text) {
     }
     *text += length;
     return code;
+}
+
+void wj_utf8_copy(char *out, size_t size, const char *in) {
+    if (!size) return;
+    size_t length = strlen(in);
+    if (length >= size) {
+        length = size - 1;
+        while (length && ((unsigned char)in[length] & 0xC0) == 0x80) length--;
+    }
+    memcpy(out, in, length);
+    out[length] = 0;
 }

@@ -28,6 +28,7 @@ static struct glyph glyphs[GLYPHS];
 static short slots[SLOTS];
 static int glyph_count, shelf_x, shelf_y, shelf_h, atlas_changed;
 static int rendered, resets;
+static void (*reset_hook)(void);
 
 static void reset_atlas(void) {
     memset(atlas, 0, WJ_ATLAS_WIDTH * WJ_ATLAS_HEIGHT);
@@ -42,15 +43,17 @@ int wj_font_init(const struct wj_font_face *list, int count, float sx, float sy)
     memset(face_sizes, 0, sizeof(face_sizes));
     if (!atlas) atlas = memalign(32, WJ_ATLAS_WIDTH * WJ_ATLAS_HEIGHT);
     if (!atlas || count < 1 || FT_Init_FreeType(&library)) return -1;
+    int failed = 0;
     for (int i = 0; i < count && i < WJ_FONT_FACES; i++) {
         if (FT_New_Memory_Face(library, list[i].data, list[i].size, 0, &faces[i])) {
             faces[i] = NULL;
             if (!i) return -1;
+            failed++;
         }
     }
     reset_atlas();
     rendered = resets = 0;
-    return 0;
+    return failed;
 }
 
 void wj_font_shutdown(void) {
@@ -61,6 +64,14 @@ void wj_font_shutdown(void) {
     if (library) FT_Done_FreeType(library);
     library = NULL;
 }
+
+int wj_font_covers(unsigned code) {
+    for (int i = 0; i < WJ_FONT_FACES; i++)
+        if (faces[i] && FT_Get_Char_Index(faces[i], code)) return 1;
+    return 0;
+}
+
+void wj_font_set_reset_hook(void (*hook)(void)) { reset_hook = hook; }
 
 static FT_Face set_size(int which, int size) {
     if (size != face_sizes[which]) {
@@ -91,6 +102,7 @@ static struct glyph *rasterize(unsigned code, int size, int bold) {
     int w = (int)bitmap->width, h = (int)bitmap->rows;
     if (shelf_x + w + PAD > WJ_ATLAS_WIDTH) { shelf_x = 0; shelf_y += shelf_h + PAD; shelf_h = 0; }
     if (shelf_y + h + PAD > WJ_ATLAS_HEIGHT || glyph_count == GLYPHS) {
+        if (reset_hook) reset_hook();
         reset_atlas();
         resets++;
     }
@@ -161,6 +173,13 @@ float wj_font_run(const char *text, int bytes, int size, int bold, float x, floa
 
 float wj_font_measure(const char *text, int bytes, int size, int bold) {
     return wj_font_run(text, bytes, size, bold, 0, 0, NULL, NULL);
+}
+
+void wj_font_prepare(const char *text, int bytes, int size, int bold) {
+    int before = resets;
+    wj_font_measure(text, bytes, size, bold);
+    // A reset partway through dropped the glyphs cached before it.
+    if (resets != before) wj_font_measure(text, bytes, size, bold);
 }
 
 const unsigned char *wj_font_atlas(int *changed) {
