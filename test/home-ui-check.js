@@ -66,6 +66,8 @@ const check = (label, ok) => {
             .filter((name) => /Navidrome|Jellyfin|Plex/.test(name)).every((name) => name === 'Navidrome'));
         check('there is no Jump back in before anything was played', !titles.includes('Jump back in'));
         check('rows end with All channels', titles.at(-1) === 'All channels');
+        check('Home has no Your Wii panel, while the sidebar keeps its Your Wii section', await page.$$eval('#content h3', (nodes) => nodes.every((n) => n.textContent !== 'Your Wii'))
+            && await page.$eval('#sidebar #setup h3', (n) => n.textContent) === 'Your Wii');
         // Covers below the fold are lazy, so only the ones in view need to have arrived.
         check('art comes through the proxy only', await page.$$eval('.home-section img', (imgs) =>
             imgs.length > 10 && imgs.every((img) => new URL(img.src).pathname.startsWith('/api/art/')) && imgs[0].naturalWidth > 0));

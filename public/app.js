@@ -362,15 +362,7 @@ function renderHome() {
         h('div', { id: 'home-rows' }),
         h('section', { class: 'home-section', 'aria-labelledby': 'home-channels-title' },
             h('div', { class: 'home-head' }, h('h3', { id: 'home-channels-title', text: 'All channels' })),
-            h('div', { class: 'grid', id: 'home-channels' })),
-        h('div', { class: 'panel', style: 'margin-top:18px' },
-            h('h3', { text: 'Your Wii' }),
-            h('p', { class: 'hint', text: 'Open WiiJukebox on your Wii and it connects to this server by itself.' }),
-            h('p', { class: 'hint', text: $('#wii-address').textContent }),
-            window.WiiJukeboxApp
-                ? h('div', { class: 'buttons' }, h('button', { class: 'pill small', text: 'Choose another server',
-                    onclick: () => window.WiiJukeboxApp.switchServer() }))
-                : null));
+            h('div', { class: 'grid', id: 'home-channels' })));
     paintChannels();
     loadHome(token);
 }
