@@ -5,7 +5,7 @@
 // --login also ticks "start at login", which changes the system's login items; remove them afterwards.
 // --ytdlp also ticks the yt-dlp download, which needs the network.
 // --default-ports also runs the app with the server's own default ports; do not use it next to a real server.
-// --only titlebar runs just the title bar checks.
+// --only titlebar runs just the title bar checks, and --only live just the ones in a window that renders.
 
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const dgram = require('node:dgram');
@@ -32,6 +32,7 @@ const LOGIN = args.includes('--login');
 const YTDLP = args.includes('--ytdlp');
 const DEFAULT_PORTS = args.includes('--default-ports');
 const ONLY_TITLEBAR = option('--only', null) === 'titlebar';
+const ONLY_LIVE = option('--only', null) === 'live';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let failures = 0;
@@ -1155,6 +1156,8 @@ async function checkLiveBar() {
         await until('the window to grow', async () => (await windowViews()).root.width === 1280, 10000);
         bar = await pageClient('titlebar.html');
         page = await devtoolsClient({ urlPart: state.serverUrl });
+        // The page's own buttons do nothing until its script has run, which shows as the sidebar's channels.
+        await until('the web UI to start', () => page.evaluate("document.querySelectorAll('#sources .source-btn').length > 0"), 30000);
         await checkThemeSync(app, bar, page);
         await checkMenuHover(bar);
         check('app quits', Boolean(await app.quit()));
@@ -1391,7 +1394,7 @@ async function main() {
     for (const port of [PORT, DEBUG_PORT, INSPECT_PORT]) {
         if (await portOpen(port)) throw new Error(`port ${port} is already in use; pick another with --port`);
     }
-    if (!ONLY_TITLEBAR) {
+    if (!ONLY_TITLEBAR && !ONLY_LIVE) {
         await checkReturningUser();
         await checkSharedPort();
         if (DEFAULT_PORTS) await checkDefaultPorts();
@@ -1403,10 +1406,12 @@ async function main() {
         await checkSystemFfmpegProblems();
         await checkSystemFfmpeg();
     }
-    await checkTitleBar();
+    if (!ONLY_LIVE) await checkTitleBar();
     await checkLiveBar();
-    await checkSystemTitleBar();
-    await checkCloseDialog();
+    if (!ONLY_LIVE) {
+        await checkSystemTitleBar();
+        await checkCloseDialog();
+    }
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
     process.exit(failures ? 1 : 0);
 }
