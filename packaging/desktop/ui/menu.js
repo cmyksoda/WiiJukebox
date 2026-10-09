@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The ≡ menu. Main sends the entries and stretches this view over the window; clicks and keys are answered
-// here, and an entry that is chosen goes back to main by id alone.
+// The ≡ menu. Main sends the entries and stretches this view over the window; clicks, keys and the pointer are
+// answered here, and an entry that is chosen goes back to main by id alone.
 
 (() => {
     const api = window.titlebar;
@@ -8,8 +8,12 @@
     const scrim = document.querySelector('#menu-scrim');
     const root = document.querySelector('#menu-root');
     const sub = document.querySelector('#menu-sub');
+    // How long a pointer must rest on another entry before an open submenu closes behind it.
+    const CLOSE_DELAY = 200;
     let open = false;
     let owner = null;
+    let closeTimer = null;
+    let switchTimer = null;
 
     const span = (className, text) => {
         const node = document.createElement('span');
@@ -50,11 +54,40 @@
 
     const rows = (container) => [...container.querySelectorAll('.item:not([aria-disabled="true"])')];
     const levelOf = (node) => (sub.contains(node) ? sub : root);
+    const usable = (row) => Boolean(row) && row.getAttribute('aria-disabled') !== 'true';
+
+    // One entry is lit per level, and the keys continue from it. Where it came from decides whether the pointer may take it away.
+    function light(row, by) {
+        if (!row) return;
+        for (const other of levelOf(row).querySelectorAll('.item.active')) {
+            other.classList.remove('active');
+            delete other.dataset.by;
+        }
+        row.classList.add('active');
+        row.dataset.by = by;
+        row.focus({ preventScroll: true });
+    }
+
+    // What the pointer lit goes when it leaves, except the parent of an open submenu; an entry the keys chose stays.
+    function unlightPointerRows(container) {
+        for (const row of container.querySelectorAll('.item.active[data-by="pointer"]')) {
+            if (row === owner) continue;
+            row.classList.remove('active');
+            delete row.dataset.by;
+        }
+    }
+
+    function cancelTimers() {
+        clearTimeout(closeTimer);
+        clearTimeout(switchTimer);
+        closeTimer = switchTimer = null;
+    }
 
     function closeSub() {
         sub.hidden = true;
         owner?.setAttribute('aria-expanded', 'false');
         owner = null;
+        cancelTimers();
     }
 
     // Beside its row, on whichever side of the menu has room, and on whole pixels.
@@ -75,11 +108,11 @@
         sub.style.top = `${Math.max(top, 38)}px`;
     }
 
-    function choose(row) {
+    function choose(row, byKey) {
         if (row.getAttribute('aria-disabled') === 'true') return;
         if (row.entries) {
             openSub(row);
-            rows(sub)[0]?.focus();
+            if (byKey) light(rows(sub)[0], 'key');
         } else {
             api.activateMenu(row.dataset.id);
         }
@@ -92,7 +125,8 @@
         scrim.hidden = false;
         document.body.classList.add('menu-open');
         button.setAttribute('aria-expanded', 'true');
-        (byKeyboard ? rows(root)[0] : root)?.focus();
+        if (byKeyboard) light(rows(root)[0], 'key');
+        else root.focus();
     }
 
     function hide() {
@@ -123,17 +157,60 @@
         if (open) api.closeMenu();
     });
 
-    // The row under the pointer is the one the keys continue from; a row with a submenu opens it.
+    // The last two places the pointer was, so a layout change under a resting pointer is not taken for it moving,
+    // and so it is known which way it is heading.
+    let prevPoint = { x: NaN, y: NaN };
+    let point = { x: NaN, y: NaN };
+    document.addEventListener('pointermove', (event) => {
+        prevPoint = point;
+        point = { x: event.clientX, y: event.clientY };
+    }, true);
+
+    // True while the pointer is inside the triangle from where it just was to the near edge of the open submenu:
+    // crossing other entries on the way there must not count as going to them.
+    function aimingAtSub() {
+        if (sub.hidden || Number.isNaN(prevPoint.x)) return false;
+        const box = sub.getBoundingClientRect();
+        const rootBox = root.getBoundingClientRect();
+        const edge = box.left >= rootBox.left + rootBox.width / 2 ? box.left : box.right;
+        const corners = [[prevPoint.x, prevPoint.y], [edge, box.top], [edge, box.bottom]];
+        const side = ([ax, ay], [bx, by]) => (point.x - bx) * (ay - by) - (ax - bx) * (point.y - by);
+        const signs = [side(corners[0], corners[1]), side(corners[1], corners[2]), side(corners[2], corners[0])];
+        return signs.every((value) => value >= 0) || signs.every((value) => value <= 0);
+    }
+
+    // The pointer is on `row` of the main list (or on nothing it can use): light it, and let go of the submenu behind
+    // it a moment later unless that is the submenu's own parent.
+    function pointerOnRoot(row) {
+        cancelTimers();
+        if (row) light(row, 'pointer');
+        else unlightPointerRows(root);
+        if (row?.entries) openSub(row);
+        else if (owner && row !== owner) closeTimer = setTimeout(closeSub, CLOSE_DELAY);
+    }
+
     scrim.addEventListener('pointermove', (event) => {
+        const moved = point.x !== prevPoint.x || point.y !== prevPoint.y;
+        const menu = event.target.closest('.menu');
+        if (!menu || !moved || event.pointerType === 'touch') return;
         const row = event.target.closest('.item');
-        if (!row || row.getAttribute('aria-disabled') === 'true') return;
-        if (document.activeElement !== row) row.focus({ preventScroll: true });
-        if (row.entries) openSub(row);
-        else if (levelOf(row) === root) closeSub();
+        const target = usable(row) ? row : null;
+        if (menu === sub) {
+            cancelTimers();
+            if (target) light(target, 'pointer');
+            else unlightPointerRows(sub);
+        } else if (target !== owner && aimingAtSub()) {
+            // On the way to the submenu: leave it open, and only follow the pointer if it settles here.
+            clearTimeout(switchTimer);
+            switchTimer = setTimeout(() => pointerOnRoot(target), CLOSE_DELAY);
+        } else {
+            pointerOnRoot(target);
+        }
     });
+    for (const menu of [root, sub]) menu.addEventListener('pointerleave', () => unlightPointerRows(menu));
     scrim.addEventListener('click', (event) => {
         const row = event.target.closest('.item');
-        if (row) choose(row);
+        if (row) choose(row, false);
     });
 
     document.addEventListener('keydown', (event) => {
@@ -142,31 +219,35 @@
         const level = levelOf(document.activeElement);
         const list = rows(level);
         const at = list.indexOf(current);
-        const move = (index) => list[(index + list.length) % list.length]?.focus();
+        const move = (index) => {
+            const next = list[(index + list.length) % list.length];
+            if (next) light(next, 'key');
+        };
+        cancelTimers();
         switch (event.key) {
             case 'ArrowDown': move(at + 1); break;
             case 'ArrowUp': move(at < 0 ? -1 : at - 1); break;
             case 'Home': move(0); break;
             case 'End': move(-1); break;
             case 'ArrowRight':
-                if (current?.entries) choose(current);
+                if (current?.entries) choose(current, true);
                 break;
             case 'ArrowLeft':
                 if (level === sub) {
                     const parent = owner;
                     closeSub();
-                    parent?.focus();
+                    light(parent, 'key');
                 }
                 break;
             case 'Enter':
             case ' ':
-                if (current) choose(current);
+                if (current) choose(current, true);
                 break;
             case 'Escape':
                 if (level === sub) {
                     const parent = owner;
                     closeSub();
-                    parent?.focus();
+                    light(parent, 'key');
                 } else {
                     api.closeMenu();
                 }

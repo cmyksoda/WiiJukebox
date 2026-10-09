@@ -1064,6 +1064,76 @@ async function checkTitleBar() {
     }
 }
 
+// The ≡ menu's hover, with real pointer events: the lit entry follows the pointer and goes when it leaves, an open submenu
+// closes a moment after the pointer rests on another entry but stays while it crosses the list on its way to the submenu.
+async function checkMenuHover(bar) {
+    const moveTo = (x, y) => bar.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, pointerType: 'mouse' });
+    const click = async (x, y) => {
+        for (const type of ['mousePressed', 'mouseReleased']) await bar.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1, pointerType: 'mouse' });
+    };
+    const centerOf = (selector, label) => bar.evaluate(`(() => {
+        const node = ${label === undefined ? `document.querySelector(${JSON.stringify(selector)})` : `[...document.querySelectorAll(${JSON.stringify(selector)})].find((n) => n.querySelector('.label').textContent === ${JSON.stringify(label)})`};
+        const r = node.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    })()`);
+    const rowCenter = (label, level = 'root') => centerOf(`#menu-${level} > .item`, label);
+    const lit = async () => JSON.parse(await bar.evaluate("JSON.stringify([...document.querySelectorAll('.item.active')].map((n) => n.querySelector('.label').textContent))"));
+    const subShown = () => bar.evaluate("!document.querySelector('#menu-sub').hidden");
+    const subLabels = () => bar.evaluate("[...document.querySelectorAll('#menu-sub .label')].map((n) => n.textContent).join()");
+    const glide = async (from, to, steps, ms) => {
+        for (let i = 1; i <= steps; i++) {
+            await moveTo(from.x + ((to.x - from.x) * i) / steps, from.y + ((to.y - from.y) * i) / steps);
+            await sleep(ms);
+        }
+    };
+    const key = (name) => bar.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(name)}, bubbles: true })); true`);
+    const away = { x: 300, y: 600 };
+
+    await moveTo(away.x, away.y);
+    await click(...Object.values(await centerOf('#menu')));
+    await until('the menu', () => barMenuShown(bar), 5000);
+    check('a menu opened with the mouse has no entry lit until the pointer or a key moves', (await lit()).length === 0);
+
+    await glide(away, await rowCenter('Theme'), 6, 20);
+    await sleep(60);
+    check('the entry under the pointer is lit, and a submenu entry opens its submenu', (await lit()).join() === 'Theme' && await subShown() && await subLabels() === 'System,Light,Dark');
+
+    // Straight down to another entry: the light follows at once, the submenu goes a moment later.
+    const theme = await rowCenter('Theme');
+    const other = await rowCenter('Show server log');
+    await glide(theme, other, 6, 20);
+    check('moving to another entry moves the light there, one entry at a time', (await lit()).join() === 'Show server log');
+    check('while the submenu is still open for a moment', await subShown());
+    await sleep(450);
+    check('and it closes by itself once the pointer has rested elsewhere', !(await subShown()));
+
+    // Back onto Theme, then diagonally across the entry below it to the submenu, slowly enough that a plain delay would shut it.
+    await glide(other, theme, 6, 20);
+    await sleep(60);
+    const dark = await rowCenter('Dark', 'sub');
+    await glide(await rowCenter('Theme'), dark, 12, 55);
+    check('a slow diagonal across other entries to the submenu does not close it', await subShown());
+    await sleep(350);
+    check('and it stays open with its parent lit while the pointer is in it, lighting the entry under it', await subShown() && (await lit()).join() === 'Theme,Dark', (await lit()).join());
+    await glide(dark, away, 6, 20);
+    await sleep(60);
+    check('leaving the menus clears what the pointer lit, but not the parent of the open submenu', (await lit()).join() === 'Theme' && await subShown());
+
+    // The keys: they continue from the last entry, and what they chose stays when the pointer is elsewhere.
+    await key('Escape');
+    check('Escape closes the submenu first and lights its parent for the keys', !(await subShown()) && (await lit()).join() === 'Theme');
+    await key('ArrowDown');
+    await moveTo(away.x + 40, away.y + 20);
+    await moveTo(away.x + 80, away.y - 30);
+    check('an entry chosen by the keys stays lit while the pointer wanders outside the menu', (await lit()).join() === 'Sidebar settings…', (await lit()).join());
+    await glide(away, await rowCenter('Quit'), 6, 20);
+    check('and the pointer takes the light when it comes back over an entry', (await lit()).join() === 'Quit');
+    await glide(await rowCenter('Quit'), away, 6, 20);
+    check('leaving again clears it', (await lit()).length === 0);
+    await key('Escape');
+    await until('the menu to close', async () => !(await barMenuShown(bar)), 5000);
+}
+
 // A window that is never shown renders no frames, so its page never reports a changed theme-color tag and its timers run
 // slowly. This one is shown on Chromium's headless platform with no display variables, so it renders and nothing reaches a screen.
 async function checkLiveBar() {
@@ -1080,9 +1150,13 @@ async function checkLiveBar() {
     try {
         const state = await app.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
         await until('the web UI to load into the window', async () => viewOf(await windowViews(), 'page'), 30000);
+        // The headless platform starts windows at their minimum size.
+        await inMain("electron.BaseWindow.getAllWindows()[0].setBounds({ x: 0, y: 0, width: 1280, height: 820 }); return true;");
+        await until('the window to grow', async () => (await windowViews()).root.width === 1280, 10000);
         bar = await pageClient('titlebar.html');
         page = await devtoolsClient({ urlPart: state.serverUrl });
         await checkThemeSync(app, bar, page);
+        await checkMenuHover(bar);
         check('app quits', Boolean(await app.quit()));
     } catch (err) {
         check('live title bar flow', false, err.message);
