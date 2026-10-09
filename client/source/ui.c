@@ -628,9 +628,11 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
         wj_gfx_circle(cx, y + 34, 50, T->border);
         wj_gfx_circle(cx, y + 35, 49, T->dock_top);
     }
-    wj_gfx_rect(0, y, L.w, WJ_GFX_HEIGHT - y, T->dock_top, T->dock_bottom);
-    wj_gfx_rect(106, y - 1, L.w - 212, 1, T->border, T->border);
-    wj_gfx_rect(106, y, L.w - 212, 2, T->dock_edge, T->dock_edge);
+    // The edge sits a little below the pods so a toast fits evenly between it and the panels.
+    float edge = y + 6;
+    wj_gfx_rect(0, edge, L.w, WJ_GFX_HEIGHT - edge, T->dock_top, T->dock_bottom);
+    wj_gfx_rect(106, edge - 1, L.w - 212, 1, T->border, T->border);
+    wj_gfx_rect(106, edge, L.w - 212, 2, T->dock_edge, T->dock_edge);
     round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS || s->entry.open, pointer, WJ_TARGET_BACK, glyph_back);
     round_button(L.w - 58, y + 18, 26, !s->entry.open, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
     label("B", 58, y + 64, 12, 1, T->muted, 40, 1);
@@ -833,7 +835,7 @@ static void toast_and_volume(const struct wj_session *s, long long now) {
     if (toast_alpha > 0.02f && toast[0]) {
         float w = wj_font_measure(toast, (int)strlen(toast), 14, 0) + 32;
         if (w > L.w - 260) w = L.w - 260;
-        float x = L.w / 2 - w / 2, y = 378;
+        float x = L.w / 2 - w / 2, y = 380;
         wj_gfx_round(x, y + 2, w, 24, 12, wj_gfx_fade(T->shadow, toast_alpha), wj_gfx_fade(T->shadow, toast_alpha));
         wj_gfx_round(x, y, w, 24, 12, wj_gfx_fade(T->toast_top, toast_alpha), wj_gfx_fade(T->toast_bottom, toast_alpha));
         label(toast, L.w / 2, y + 17, 14, 0, wj_gfx_fade(T->toast_text, toast_alpha), w - 24, 1);
