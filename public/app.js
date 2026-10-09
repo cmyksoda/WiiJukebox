@@ -1065,6 +1065,7 @@ async function toggleVisualizer() {
         document.body.classList.remove('viz');
         setVizPressed(false);
         $('#viz-overlay').hidden = true;
+        if (document.fullscreenElement === $('#viz-stage')) document.exitFullscreen().catch(() => {});
         cancelAnimationFrame(viz.raf);
         clearInterval(viz.cycleTimer);
         if (!viz.monitoring) $('#monitor-audio').pause();
@@ -1125,13 +1126,48 @@ function loadPreset(i) {
     $('#viz-preset').textContent = name;
 }
 
-window.addEventListener('resize', () => {
+function fitVisualizer() {
     if (!viz.instance) return;
     const canvas = $('#visualizer');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     viz.instance.setRendererSize(canvas.width, canvas.height);
-});
+}
+window.addEventListener('resize', fitVisualizer);
+
+// --- fullscreen ----------------------------------------------------------
+//
+// F11 fullscreens the visualizer's stage while it is up, so the top layer covers every bar around it,
+// and the page otherwise. Same approach as Feishin's F11 fix.
+
+function toggleFullscreen() {
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+        return;
+    }
+    const target = document.body.classList.contains('viz') ? $('#viz-stage') : document.documentElement;
+    target.requestFullscreen?.()?.catch(() => {});
+}
+
+function syncFullscreenButton() {
+    const on = Boolean(document.fullscreenElement);
+    const button = $('#viz-fullscreen');
+    const label = on ? 'Exit fullscreen' : 'Enter fullscreen';
+    button.setAttribute('aria-label', label);
+    button.title = `${label} (F11)`;
+    button.querySelector('.g').className = on ? 'g g-shrink' : 'g g-expand';
+    fitVisualizer();
+}
+
+// Capture phase, so it still fires while a text field has focus.
+window.addEventListener('keydown', (event) => {
+    if (event.key !== 'F11') return;
+    event.preventDefault();
+    toggleFullscreen();
+}, true);
+document.addEventListener('fullscreenchange', syncFullscreenButton);
+$('#viz-fullscreen').hidden = !document.fullscreenEnabled;
+$('#viz-fullscreen').onclick = toggleFullscreen;
 
 // --- wire up -------------------------------------------------------------
 
@@ -1173,6 +1209,8 @@ PHONE.addEventListener('change', () => {
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+        // In fullscreen Escape only leaves it; the visualizer closes on the next press.
+        if (document.fullscreenElement) return;
         if (document.body.classList.contains('viz')) toggleVisualizer();
         else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
         else setSourcesOpen(false);

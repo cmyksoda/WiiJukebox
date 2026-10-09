@@ -16,9 +16,13 @@
 <body>
 
 <!-- The visualizer sits behind everything, so it can be revealed by fading the
-     UI rather than swapping views. -->
-<canvas id="visualizer"></canvas>
-<div id="viz-overlay" hidden><span id="viz-preset"></span></div>
+     UI rather than swapping views. Fullscreen takes this stage, so it covers whatever
+     bars the app has around it. -->
+<div id="viz-stage">
+  <canvas id="visualizer"></canvas>
+  <div id="viz-overlay" hidden><span id="viz-preset"></span></div>
+  <button id="viz-fullscreen" class="round small" aria-label="Enter fullscreen" title="Enter fullscreen (F11)"><i class="g g-expand" aria-hidden="true"></i></button>
+</div>
 
 <div id="app">
   <button id="sidebar-shade" aria-label="Close channels" tabindex="-1"></button>

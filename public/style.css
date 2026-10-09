@@ -111,6 +111,19 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 }
 .g-playlist::before { left: 52%; top: 62%; width: 30%; height: 30%; border-radius: 50%; }
 .g-playlist::after { left: 74%; top: 30%; width: 9%; height: 48%; }
+/* Fullscreen: four corner brackets, pointing out to enter and in to leave. */
+.g-expand {
+    background: linear-gradient(currentColor 0 0) 0 0 / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 0 0 / 2px 38% no-repeat,
+        linear-gradient(currentColor 0 0) 100% 0 / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 100% 0 / 2px 38% no-repeat,
+        linear-gradient(currentColor 0 0) 0 100% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 0 100% / 2px 38% no-repeat,
+        linear-gradient(currentColor 0 0) 100% 100% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 100% 100% / 2px 38% no-repeat;
+}
+.g-shrink {
+    background: linear-gradient(currentColor 0 0) 0 38% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 38% 0 / 2px 38% no-repeat,
+        linear-gradient(currentColor 0 0) 100% 38% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 62% 0 / 2px 38% no-repeat,
+        linear-gradient(currentColor 0 0) 0 62% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 38% 100% / 2px 38% no-repeat,
+        linear-gradient(currentColor 0 0) 100% 62% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 62% 100% / 2px 38% no-repeat;
+}
 .g-star { background: currentColor; clip-path: polygon(50% 4%, 61% 37%, 96% 37%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 4% 37%, 39% 37%); }
 .g-note::before { left: 12%; top: 58%; width: 38%; height: 38%; border-radius: 50%; }
 .g-note::after { inset: 0; clip-path: polygon(42% 6%, 84% 24%, 84% 42%, 52% 30%, 52% 76%, 42% 76%); }
@@ -246,6 +259,9 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 
 /* --- visualizer sits behind the whole UI -------------------------------------------- */
 
+#viz-stage { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#viz-stage:fullscreen { width: 100vw; height: 100vh; background: #05080c; }
+
 #visualizer {
     position: fixed;
     inset: 0;
@@ -273,6 +289,22 @@ body.viz #app { opacity: 0; pointer-events: none; }
     text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
     pointer-events: none;
 }
+
+/* Floats in the corner, and only while the visualizer is up. */
+#viz-fullscreen {
+    display: none;
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    z-index: 3;
+    pointer-events: auto;
+    color: #e3ebf2;
+    background: rgba(13, 20, 28, .55);
+    border-color: rgba(255, 255, 255, .22);
+    box-shadow: none;
+}
+#viz-fullscreen:hover { background: rgba(255, 255, 255, .16); }
+body.viz #viz-fullscreen { display: inline-grid; }
 
 /* --- layout -------------------------------------------------------------------------- */
 
