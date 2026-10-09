@@ -768,7 +768,6 @@ static void home_menu(const struct wj_session *s) {
     hit(x, y, w, h, WJ_TARGET_NONE, 0);
     panel(x, y, w, h, 18);
     label("Menu", x + 24, centered(y + 28, 19), 19, 1, T->ink, 150, 0);
-    label("HOME", x + w - 24, centered(y + 28, 12), 12, 1, T->muted, 60, 2);
     wj_gfx_rect(x + 14, y + 46, w - 28, 1, T->border, T->border);
 
     static const char *const names[WJ_HOME_ITEMS] = {
