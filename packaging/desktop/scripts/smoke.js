@@ -779,6 +779,7 @@ async function checkBarMenu(app, bar, page) {
     check('Quit shows its keyboard shortcut on Linux and Windows', process.platform === 'darwin' || menu.quit === (process.platform === 'win32' ? '' : 'Ctrl+Q'), menu.quit);
     check('the bar stops dragging the window while the menu is up, so a click beside it reaches the menu', menu.drag === 'no-drag' && menu.expanded === 'true');
     check('opened by the keyboard-style click, the first entry has focus', menu.firstFocused === 'Connect your Wii…', menu.firstFocused);
+    check('the submenu takes no room until it opens, so nothing but the menu shows', await bar.evaluate("getComputedStyle(document.querySelector('#menu-sub')).display") === 'none');
 
     await key('ArrowDown');
     check('Down moves to the next entry', await focused() === 'Copy Wii address');

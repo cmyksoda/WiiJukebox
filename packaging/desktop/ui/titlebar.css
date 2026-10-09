@@ -6,6 +6,8 @@
 }
 :root { --bar: 34px; }
 *, *::before, *::after { box-sizing: border-box; }
+/* Without this the menus' own display wins over the attribute, and a closed submenu shows as an empty box in the corner. */
+[hidden] { display: none !important; }
 /* The strip paints its own background, so the page shows through the rest of the view while the menu has it stretched over the window. */
 html, body { margin: 0; height: 100%; overflow: hidden; user-select: none; }
 body { color: var(--text); font: 700 13px/1 "Nunito", "Avenir Next Rounded", "Segoe UI", system-ui, sans-serif; }
