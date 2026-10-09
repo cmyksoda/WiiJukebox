@@ -839,7 +839,9 @@ static void expanded_art(const struct wj_session *s, long long now) {
     u32 text = wj_gfx_fade(WHITE, open), soft = wj_gfx_fade(WJ_RGBA(0xc4, 0xcc, 0xd4, 0xff), open);
     label(s->song, L.w / 2, y + size + 34, 20, 1, text, L.w - 80, 1);
     label(s->artist, L.w / 2, y + size + 58, 15, 0, soft, L.w - 80, 1);
-    label("A or B to close", L.w / 2, y + size + 88, 13, 0, wj_gfx_fade(WJ_RGBA(0x8c, 0x96, 0xa0, 0xff), open), 200, 1);
+    // In the toast zone, centered between the panels' bottom edge and the dock's valley.
+    label("A or B to close", L.w / 2, centered((TOP + PANEL_H + DOCK_VALLEY) / 2, 13), 13, 0,
+          wj_gfx_fade(WJ_RGBA(0x8c, 0x96, 0xa0, 0xff), open), 200, 1);
 }
 
 static void toast_and_volume(const struct wj_session *s, long long now) {

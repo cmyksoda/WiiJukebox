@@ -223,6 +223,16 @@ static void sources_and_list(struct wj_session *s, struct wj_pointer *none) {
     assert_surface(layout_width() - 60, 100);
 }
 
+/* The gray of the cover view's close hint at the middle of the frame, which nothing else in that strip is. */
+static int hint_ink(int y) {
+    for (int x = 270; x < 370; x++) {
+        unsigned char c[3];
+        pixel(x, y, c);
+        if (c[0] > 105 && abs(c[0] - c[2]) < 30) return 1;
+    }
+    return 0;
+}
+
 /* The playing card's pixels, to show it keeps its shapes under every overlay test. */
 static void album(struct wj_session *s, struct wj_pointer *none) {
     memset(&s->menu, 0, sizeof(s->menu));
@@ -264,6 +274,14 @@ static void album(struct wj_session *s, struct wj_pointer *none) {
     assert(wj_ui_art_open());
     draw(s, none, 15);
     save("06-cover-expanded");
+    // The close hint sits in the toast zone, centered between the panels (376) and the dock's valley (410).
+    int hint_top = 0, hint_bottom = 0;
+    for (int y = 384; y < 420; y++) {
+        if (!hint_ink(y)) continue;
+        if (!hint_top) hint_top = y;
+        hint_bottom = y + 1;
+    }
+    assert(hint_top >= 386 && hint_bottom <= 402 && hint_top + hint_bottom == 376 + 410);
     assert(wj_ui_hit(art_x, 72 + 14 + 60).target == WJ_TARGET_NONE);
     pixel(4, 470, c);
     assert(c[0] < 90 && c[1] < 90 && c[2] < 100);
