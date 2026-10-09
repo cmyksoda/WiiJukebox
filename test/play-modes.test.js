@@ -257,3 +257,17 @@ test('the Wii status carries the modes and its controls change them', async () =
         assert.equal(pipeline.modes.shuffle, false);
     } finally { await pipeline.shutdown(); }
 });
+
+test('status says which track of the list is playing, counted from 1, and nothing for sources without a list', async () => {
+    const pipeline = new Pipeline();
+    const config = fakeConfig();
+    try {
+        assert.equal(pipeline.status.queue, null, 'nothing is playing yet');
+        await pipeline.attach(new Library());
+        assert.deepEqual(pipeline.status.queue, { position: 1, total: 3 });
+        await control(pipeline, config, 'next');
+        assert.deepEqual(pipeline.status.queue, { position: 2, total: 3 });
+        await pipeline.attach(new Radio());
+        assert.equal(pipeline.status.queue, null);
+    } finally { await pipeline.shutdown(); }
+});

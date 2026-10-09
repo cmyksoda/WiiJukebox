@@ -238,6 +238,7 @@ class Pipeline extends EventEmitter {
                 ? { id: this._source.id, label: this._source.label, state: this._source.state }
                 : null,
             nowPlaying: this.nowPlaying,
+            queue: this._queuePlace(),
             jump: this.jump,
             listeners: this.broadcaster.listenerCount,
             starving: this.pacer.starving,
@@ -248,6 +249,12 @@ class Pipeline extends EventEmitter {
                 ...caps, seek: this.seekable, volume: false, shuffle: Boolean(caps.shuffle), repeat: Boolean(caps.repeat),
             } : { shuffle: true, repeat: true },
         };
+    }
+
+    /** Which track of the album or playlist this is, counted from 1; null for sources without a list. */
+    _queuePlace() {
+        const queue = this._source?.queue;
+        return queue && queue.index >= 0 ? { position: queue.index + 1, total: queue.items.length } : null;
     }
 
     /**
