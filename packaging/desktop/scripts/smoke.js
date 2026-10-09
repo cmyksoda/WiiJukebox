@@ -5,6 +5,7 @@
 // --login also ticks "start at login", which changes the system's login items; remove them afterwards.
 // --ytdlp also ticks the yt-dlp download, which needs the network.
 // --default-ports also runs the app with the server's own default ports; do not use it next to a real server.
+// --only titlebar runs just the title bar checks.
 
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const dgram = require('node:dgram');
@@ -13,6 +14,7 @@ const http = require('node:http');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
+const { startFakeSubsonic } = require('./fake-subsonic');
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
@@ -29,6 +31,7 @@ const ARCH = option('--arch', null);
 const LOGIN = args.includes('--login');
 const YTDLP = args.includes('--ytdlp');
 const DEFAULT_PORTS = args.includes('--default-ports');
+const ONLY_TITLEBAR = option('--only', null) === 'titlebar';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let failures = 0;
@@ -211,12 +214,20 @@ async function devtoolsClient({ port = DEBUG_PORT, type = 'page', urlPart = 'app
         pending.get(message.id)?.(message);
         pending.delete(message.id);
     };
+    const send = (method, params) => new Promise((resolve, reject) => {
+        const call = ++id;
+        const timer = setTimeout(() => reject(new Error(`${method} got no answer`)), 60000);
+        pending.set(call, (message) => {
+            clearTimeout(timer);
+            if (message.error) reject(new Error(message.error.message));
+            else resolve(message.result);
+        });
+        socket.send(JSON.stringify({ id: call, method, params }));
+    });
     return {
-        evaluate: (expression) => new Promise((resolve, reject) => {
-            const call = ++id;
-            pending.set(call, (message) => (message.error ? reject(new Error(message.error.message)) : resolve(message.result.result.value)));
-            socket.send(JSON.stringify({ id: call, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
-        }),
+        send,
+        // `userGesture` lets the page do what only a click or key press may, such as going fullscreen.
+        evaluate: async (expression, { userGesture = false } = {}) => (await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture })).result.value,
         close: () => socket.close(),
     };
 }
@@ -679,21 +690,270 @@ async function checkSystemFfmpeg() {
     }
 }
 
+// Runs code in the app's main process through the inspector. The connection is closed at once: with a
+// debugger still attached the app waits for it before quitting.
+async function inMain(expression) {
+    const main = await devtoolsClient({ port: INSPECT_PORT, type: 'node', urlPart: '' });
+    try {
+        return await main.evaluate(`(async () => { const electron = process.mainModule.require('electron'); ${expression} })()`);
+    } finally {
+        main.close();
+    }
+}
+
+// The main window's views, from the page and the bar's point of view, and whether the window is fullscreen.
+const windowViews = async () => JSON.parse(await inMain(`
+    const windows = electron.BaseWindow.getAllWindows();
+    const window = windows[0];
+    return JSON.stringify({
+        windows: windows.length,
+        title: window.getTitle(),
+        fullscreen: window.isFullScreen(),
+        root: window.contentView.getBounds(),
+        views: window.contentView.children.map((view) => ({ url: view.webContents.getURL(), visible: view.getVisible(), bounds: view.getBounds() })),
+    });`));
+const viewOf = (layout, kind) => layout.views.find((view) => (kind === 'bar' ? view.url.endsWith('titlebar.html') : view.url.startsWith('http')));
+
+const press = (client, key, vk) => Promise.all(['rawKeyDown', 'keyUp'].map((type) => client.send('Input.dispatchKeyEvent', { type, key, code: key, windowsVirtualKeyCode: vk })));
+
+async function checkTitleBar() {
+    console.log('\n== title bar: its view, the playback title, the window buttons and fullscreen ==');
+    const app = new App('titlebar', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'background' },
+    });
+    app.start();
+    let bar;
+    let page;
+    let fixture;
+    try {
+        const state = await app.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
+        check('the custom title bar is the default, and the title starts as the plain name', state.systemTitleBar === false && state.windowTitle === 'WiiJukebox');
+        let layout = await until('the web UI to load into the window', async () => {
+            const current = await windowViews();
+            return viewOf(current, 'page') && viewOf(current, 'bar') && current;
+        }, 30000);
+        const barView = viewOf(layout, 'bar');
+        const pageView = viewOf(layout, 'page');
+        check('the window holds the web UI under a bar view', layout.windows === 1 && Boolean(barView) && Boolean(pageView), layout.views.map((view) => view.url.slice(-20)).join(', '));
+        check('the bar sits on top, 34 px high and as wide as the window, with the page filling the rest',
+            barView.visible && JSON.stringify(barView.bounds) === JSON.stringify({ x: 0, y: 0, width: layout.root.width, height: 34 })
+            && JSON.stringify(pageView.bounds) === JSON.stringify({ x: 0, y: 34, width: layout.root.width, height: layout.root.height - 34 }), JSON.stringify([barView.bounds, pageView.bounds]));
+
+        bar = await pageClient('titlebar.html');
+        page = await devtoolsClient({ urlPart: state.serverUrl });
+        // The window is never shown, so without this the page would not count as focused and get no key presses.
+        await page.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+        const parts = JSON.parse(await bar.evaluate(`JSON.stringify({
+            buttons: [...document.querySelectorAll('.controls button')].map((button) => button.id),
+            now: document.querySelector('#title .now').textContent, brand: document.querySelector('#title .brand').textContent,
+            separatorShown: getComputedStyle(document.querySelector('#title .sep')).display !== 'none',
+            hasSetupBridge: typeof window.desktop !== 'undefined', hasBar: typeof window.titlebar !== 'undefined',
+            region: getComputedStyle(document.querySelector('#bar')).webkitAppRegion,
+            controlsRegion: getComputedStyle(document.querySelector('.controls')).webkitAppRegion,
+        })`));
+        check('the bar has a menu, minimize, maximize and close button, and drags the window around them',
+            parts.buttons.join() === 'menu,minimize,maximize,close' && parts.region === 'drag' && parts.controlsRegion === 'no-drag', parts.buttons.join());
+        check('the bar shows just the app name until something plays', parts.now === '' && parts.brand === 'WiiJukebox' && !parts.separatorShown, JSON.stringify([parts.now, parts.brand]));
+        check('the bar page gets its own bridge and none of the setup channels', parts.hasBar && !parts.hasSetupBridge);
+        check('the web UI gets no bridge to the window at all', await page.evaluate("typeof window.titlebar === 'undefined' && typeof window.desktop === 'undefined'") === true);
+
+        // Something to play: a stand-in Subsonic server with a five-track album.
+        fixture = await startFakeSubsonic(state.ffmpeg.path);
+        const api = (action, body) => fetch(`${state.serverUrl}api/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((res) => res.json());
+        await api('sources/subsonic/config', { url: fixture.url, username: 'smoke', password: 'smoke' });
+        await api('sources/subsonic/play', { id: 'album/living-room', type: 'album' });
+        const titled = (text) => app.waitState(`the title ${text}`, (s) => s.windowTitle === text, 20000);
+        await titled('(1 / 5) Rain on the Roof — Wii Quartet — WiiJukebox');
+        check('playing an album shows "(n / total) Song — Artist — WiiJukebox" as the window title', (await windowViews()).title === '(1 / 5) Rain on the Roof — Wii Quartet — WiiJukebox');
+        check('the bar shows the same, with the song cut short before the app name',
+            await until('the bar title', async () => (await bar.evaluate("document.querySelector('#title .now').textContent")) === '(1 / 5) Rain on the Roof — Wii Quartet', 10000).then(() => true, () => false));
+        await api('control/pause');
+        await titled('(Paused) (1 / 5) Rain on the Roof — Wii Quartet — WiiJukebox');
+        check('pausing adds "(Paused)"', true);
+        await api('control/play');
+        await api('control/next');
+        await titled('(2 / 5) Channel Surfing — Wii Quartet — WiiJukebox');
+        check('the next track moves the count on', true);
+        await api('control/stop');
+        await titled('WiiJukebox');
+        check('stopping brings the plain name back', (await windowViews()).title === 'WiiJukebox');
+        await api('sources/subsonic/play', { id: 'album/living-room', type: 'album' });
+        await titled('(1 / 5) Rain on the Roof — Wii Quartet — WiiJukebox');
+
+        // The window is never shown here, so its maximize, minimize and hide are recorded instead of asked of
+        // the desktop, with maximize answered as a window manager would.
+        await inMain(`
+            const window = electron.BaseWindow.getAllWindows()[0];
+            globalThis.calls = [];
+            let maximized = false;
+            window.isMaximized = () => maximized;
+            window.maximize = () => { calls.push('maximize'); maximized = true; window.emit('maximize'); };
+            window.unmaximize = () => { calls.push('unmaximize'); maximized = false; window.emit('unmaximize'); };
+            window.minimize = () => calls.push('minimize');
+            window.hide = () => calls.push('hide');
+            electron.Menu.prototype.popup = (options) => calls.push('menu ' + options.x + ',' + options.y);
+            return true;`);
+        const clicked = async (id) => {
+            await bar.evaluate(`document.querySelector('#${id}').click(); true`);
+            await sleep(300);
+            return JSON.parse(await inMain('return JSON.stringify(globalThis.calls);'));
+        };
+        check('Minimize minimizes the window', (await clicked('minimize')).at(-1) === 'minimize');
+        check('Maximize maximizes it, and the bar shows Restore',
+            (await clicked('maximize')).at(-1) === 'maximize'
+            && await until('the Restore button', () => bar.evaluate("document.querySelector('#maximize').getAttribute('aria-label') === 'Restore' && document.querySelector('#maximize .g').className === 'g g-restore'"), 5000).then(() => true, () => false));
+        check('Restore puts it back, and the bar shows Maximize again',
+            (await clicked('maximize')).at(-1) === 'unmaximize'
+            && await until('the Maximize button', () => bar.evaluate("document.querySelector('#maximize').getAttribute('aria-label') === 'Maximize'"), 5000).then(() => true, () => false));
+        check('the menu button opens the menu under itself', (await clicked('menu')).at(-1).startsWith('menu '));
+        check('Close asks what closing does: here it keeps playing in the background', (await clicked('close')).at(-1) === 'hide');
+        check('the music kept going while the window was closed', (await get(`${state.serverUrl}api/status`)).status === 200);
+
+        // Fullscreen: the bar steps aside for the web UI. The window changes size a moment after the page asks, so wait for all of it.
+        const covers = (current) => JSON.stringify(viewOf(current, 'page').bounds) === JSON.stringify({ x: 0, y: 0, width: current.root.width, height: current.root.height });
+        const settled = (full) => until(`the window to ${full ? 'fill the display' : 'be back to normal'}`, async () => {
+            const current = await windowViews();
+            const done = full
+                ? current.fullscreen && !viewOf(current, 'bar').visible && covers(current)
+                : !current.fullscreen && viewOf(current, 'bar').visible && viewOf(current, 'page').bounds.y === 34;
+            return done && current;
+        }, 20000);
+        const soon = (expression) => until(expression, () => page.evaluate(expression), 10000).then(() => true, () => false);
+
+        await page.evaluate('document.documentElement.requestFullscreen().then(() => true)', { userGesture: true });
+        layout = await settled(true);
+        check('a fullscreen page hides the bar and fills the whole display', true, `${layout.root.width}x${layout.root.height}`);
+        await page.evaluate('document.exitFullscreen().then(() => true)');
+        await settled(false);
+        check('leaving fullscreen brings the bar back under it', true);
+
+        // F11 with the visualizer up fullscreens its stage (the page is given the "viz" look without audio or WebGL).
+        await page.evaluate("document.body.classList.add('viz'); true");
+        await press(page, 'F11', 122);
+        await settled(true);
+        check('F11 with the visualizer open fullscreens the visualizer\'s own stage, with no bar over it', await soon("document.fullscreenElement?.id === 'viz-stage'"));
+        check('the fullscreen button is there and now offers to leave', await soon("document.querySelector('#viz-fullscreen').getAttribute('aria-label') === 'Exit fullscreen'"));
+        check('the button\'s corner glyph points inward', await soon("document.querySelector('#viz-fullscreen .g').className === 'g g-shrink'"));
+        await page.evaluate("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true");
+        await sleep(300);
+        check('an Escape the page sees in fullscreen does not close the visualizer', await page.evaluate("document.body.classList.contains('viz') && document.fullscreenElement?.id === 'viz-stage'") === true);
+        await press(page, 'Escape', 27);
+        await sleep(800);
+        check('a real Escape leaves the visualizer open too', await page.evaluate("document.body.classList.contains('viz')") === true);
+        // Whether the key press already left fullscreen depends on who sees it first, so go back in for the next check.
+        if (!(await page.evaluate('document.fullscreenElement?.id'))) {
+            await settled(false);
+            await page.evaluate("document.querySelector('#viz-fullscreen').click(); true", { userGesture: true });
+            await settled(true);
+        }
+        await page.evaluate("document.querySelector('#viz-toggle').click(); true");
+        await settled(false);
+        check('closing the visualizer leaves fullscreen and closes it', await page.evaluate("!document.fullscreenElement && !document.body.classList.contains('viz')") === true);
+
+        await page.evaluate("document.body.classList.add('viz'); true");
+        await page.evaluate("document.querySelector('#viz-fullscreen').click(); true", { userGesture: true });
+        await settled(true);
+        check('the fullscreen button does the same as F11', await soon("document.fullscreenElement?.id === 'viz-stage'"));
+        await press(page, 'F11', 122);
+        await settled(false);
+        check('F11 again leaves fullscreen', await soon('!document.fullscreenElement'));
+        await press(page, 'Escape', 27);
+        check('Escape with nothing fullscreen closes the visualizer as before', await soon("!document.body.classList.contains('viz')"));
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('title bar flow', false, err.message);
+        app.dump();
+    } finally {
+        bar?.close();
+        page?.close();
+        await fixture?.close();
+        app.kill();
+    }
+}
+
+// "Use system title bar": the menu item rebuilds the window around the same page, with no restart, and the choice is remembered.
+async function checkSystemTitleBar() {
+    console.log('\n== system title bar: the menu item and the saved choice ==');
+    const app = new App('systembar', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'background' },
+    });
+    app.start();
+    let fixture;
+    try {
+        const state = await app.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
+        await until('the web UI to load into the window', async () => viewOf(await windowViews(), 'page'), 30000);
+        fixture = await startFakeSubsonic(state.ffmpeg.path);
+        const api = (action, body) => fetch(`${state.serverUrl}api/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((res) => res.json());
+        await api('sources/subsonic/config', { url: fixture.url, username: 'smoke', password: 'smoke' });
+        await api('sources/subsonic/play', { id: 'album/living-room', type: 'album' });
+        await app.waitState('the title', (s) => s.windowTitle.startsWith('(1 / 5)'), 20000);
+
+        const item = (id) => `electron.Menu.getApplicationMenu().getMenuItemById(${JSON.stringify(id)})`;
+        check('the menu has the checkbox, unticked', JSON.parse(await inMain(`const i = ${item('system-title-bar')}; return JSON.stringify([i.type, i.checked, i.enabled]);`)).join() === 'checkbox,false,true');
+        await inMain(`${item('system-title-bar')}.click(); return true;`);
+        const system = await app.waitState('the system title bar', (s) => s.systemTitleBar === true && s.page === 'player', 30000);
+        let layout = await windowViews();
+        check('the window was rebuilt with the page alone, still showing the web UI', layout.windows === 1 && layout.views.length === 1 && layout.views[0].url === state.serverUrl, layout.views.map((view) => view.url).join(', '));
+        check('the page fills the window, with no bar view', JSON.stringify(layout.views[0].bounds) === JSON.stringify({ x: 0, y: 0, width: layout.root.width, height: layout.root.height }));
+        check('the choice is saved', JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8')).systemTitleBar === true);
+        check('the window title still follows playback with the system frame', layout.title.startsWith('(1 / 5) Rain on the Roof') && system.windowTitle === layout.title, layout.title);
+        await api('control/next');
+        await app.waitState('the next title', (s) => s.windowTitle.startsWith('(2 / 5)'), 20000);
+        check('and keeps following it', (await windowViews()).title.startsWith('(2 / 5) Channel Surfing'));
+        check('the menu item stays ticked', JSON.parse(await inMain(`return JSON.stringify(${item('system-title-bar')}.checked);`)) === true);
+
+        await inMain(`${item('system-title-bar')}.click(); return true;`);
+        await app.waitState('the custom bar again', (s) => s.systemTitleBar === false && s.page === 'player', 30000);
+        layout = await until('the bar view', async () => { const current = await windowViews(); return viewOf(current, 'bar') && current; }, 30000);
+        check('unticking builds the bar window again', layout.windows === 1 && layout.views.length === 2 && viewOf(layout, 'page').bounds.y === 34);
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('system title bar flow', false, err.message);
+        app.dump();
+    } finally {
+        await fixture?.close();
+        app.kill();
+    }
+
+    const saved = new App('systemsaved', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'background', systemTitleBar: true },
+    });
+    saved.start();
+    try {
+        await saved.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
+        const layout = await windowViews();
+        check('a saved choice of the system title bar starts the app without the bar', saved.state().systemTitleBar === true && layout.views.length === 1);
+        check('app quits', Boolean(await saved.quit()));
+    } catch (err) {
+        check('saved system title bar flow', false, err.message);
+        saved.dump();
+    } finally {
+        saved.kill();
+    }
+}
+
 async function main() {
     console.log(`smoke test of ${executable}${ARCH ? ` as ${ARCH}` : ''} on ${process.platform}-${process.arch}`);
     for (const port of [PORT, DEBUG_PORT, INSPECT_PORT]) {
         if (await portOpen(port)) throw new Error(`port ${port} is already in use; pick another with --port`);
     }
-    await checkReturningUser();
-    await checkSharedPort();
-    if (DEFAULT_PORTS) await checkDefaultPorts();
-    await checkFirstRun();
-    await checkCustomServer();
-    await checkServerWindow();
-    await checkPortInUse();
-    await checkMissingFfmpeg();
-    await checkSystemFfmpegProblems();
-    await checkSystemFfmpeg();
+    if (!ONLY_TITLEBAR) {
+        await checkReturningUser();
+        await checkSharedPort();
+        if (DEFAULT_PORTS) await checkDefaultPorts();
+        await checkFirstRun();
+        await checkCustomServer();
+        await checkServerWindow();
+        await checkPortInUse();
+        await checkMissingFfmpeg();
+        await checkSystemFfmpegProblems();
+        await checkSystemFfmpeg();
+    }
+    await checkTitleBar();
+    await checkSystemTitleBar();
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
     process.exit(failures ? 1 : 0);
 }

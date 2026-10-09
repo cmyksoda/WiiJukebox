@@ -2,7 +2,7 @@
 // Desktop shell: runs the WiiJukebox server, shows its web UI in a window and keeps the
 // music playing from the tray or menu bar after the window is closed.
 
-const { app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, shell, dialog, clipboard, ipcMain } = require('electron');
+const { app, BaseWindow, BrowserWindow, WebContentsView, Menu, Tray, nativeImage, nativeTheme, shell, dialog, clipboard, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { detect, searchPath, findTool, ffmpegProblem, ffmpegVersionNumber } = require('./lib/tools');
@@ -14,6 +14,8 @@ const { serverConfig, checkServerChoice, validatePort, MAX_NAME_LENGTH } = requi
 const { wiiAddress, probeDiscovery, findFreePort, portIsFree } = require('./lib/network');
 const { guidance, allowWindowsFirewall } = require('./lib/firewall');
 const { openLog } = require('./lib/logfile');
+const { APP_NAME, TitleFeed } = require('./lib/window-title');
+const { BAR_HEIGHT, layoutViews } = require('./lib/window-layout');
 
 const APP_ID = 'org.wiijukebox.desktop';
 const TRAY_NAMES = { darwin: 'menu bar', win32: 'notification area', linux: 'system tray' };
@@ -45,7 +47,11 @@ const neverShow = Boolean(process.env.WIIJUKEBOX_HIDDEN);
 const startedQuietly = process.argv.includes(HIDDEN_ARG) ||
     (process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAtLogin);
 
+// The main window holds the page (the web UI or one of our local pages) and, unless the system's own
+// title bar is chosen, a small view of our own above it.
 let win = null;
+let content = null;
+let bar = null;
 let guideWin = null;
 let serverWin = null;
 let tray = null;
@@ -57,6 +63,11 @@ let quitting = false;
 let setupChosen = false;
 let withoutFfmpeg = false;
 let currentPage = 'starting';
+let lastLoad = null;
+let hiddenToTray = false;
+let titleFeed = null;
+let playbackTitle = APP_NAME;
+let windowTitleText = APP_NAME;
 let queue = Promise.resolve();
 const notes = [];
 
@@ -91,6 +102,8 @@ function writeState() {
         setupDone: settings.get('setupDone'),
         openAtLogin: autostart.isEnabled(),
         useBundledFfmpeg: useBundled(),
+        systemTitleBar: settings.get('systemTitleBar'),
+        windowTitle: windowTitleText,
         tray: Boolean(tray),
         serverUrl,
         ffmpeg: tools?.ffmpeg || null,
@@ -125,42 +138,159 @@ async function loadPage(target, page, params = {}) {
     });
 }
 
+// What the main window shows is remembered so a rebuilt window can show it again.
 async function showPage(page, params = {}) {
     currentPage = page;
+    lastLoad = () => loadPage(content.webContents, page, params);
     writeState();
-    await loadPage(win, page, params);
+    await lastLoad();
+    refreshTitle();
 }
 
 function showMainWindow() {
     if (neverShow) return;
     if (!win) createWindow();
+    hiddenToTray = false;
+    titleFeed?.resume();
     if (win.isMinimized()) win.restore();
     win.show();
     win.focus();
+    content.webContents.focus();
 }
 
-function createWindow() {
-    win = new BrowserWindow(windowOptions({ width: 1280, height: 820, minWidth: 360, minHeight: 560 }));
+const customBar = () => !settings.get('systemTitleBar');
+
+function mainWindowOptions() {
+    const base = {
+        width: 1280,
+        height: 820,
+        minWidth: 360,
+        minHeight: 560,
+        backgroundColor: bg(),
+        title: APP_NAME,
+        icon: path.join(__dirname, 'assets', 'icon.png'),
+        autoHideMenuBar: true,
+        show: false,
+    };
+    if (!customBar()) return base;
+    // A Mac keeps its own window buttons, inset into our bar; elsewhere the bar draws them.
+    return process.platform === 'darwin'
+        ? { ...base, titleBarStyle: 'hidden', trafficLightPosition: { x: 14, y: Math.round((BAR_HEIGHT - 12) / 2) } }
+        : { ...base, frame: false };
+}
+
+function createWindow(geometry) {
+    const window = new BaseWindow({ ...mainWindowOptions(), ...geometry?.bounds });
+    const view = new WebContentsView({
+        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
+    });
+    const barView = customBar()
+        ? new WebContentsView({
+            webPreferences: { preload: path.join(__dirname, 'titlebar-preload.js'), contextIsolation: true, sandbox: true },
+        })
+        : null;
+    for (const child of [view, barView]) {
+        if (!child) continue;
+        child.setBackgroundColor(bg());
+        window.contentView.addChildView(child);
+    }
+    barView?.webContents.loadFile(path.join(__dirname, 'ui', 'titlebar.html'));
+    if (geometry?.maximized) window.maximize();
+
+    // A page that goes fullscreen (the visualizer, F11) takes the whole display, so the bar steps aside.
+    let htmlFullScreen = false;
+    const layout = () => {
+        if (window.isDestroyed()) return;
+        const { width, height } = window.contentView.getBounds();
+        const plan = layoutViews({ width, height, showBar: Boolean(barView) && !htmlFullScreen && !window.isFullScreen() });
+        barView?.setVisible(Boolean(plan.bar));
+        if (plan.bar) barView.setBounds(plan.bar);
+        view.setBounds(plan.page);
+    };
+    const fullScreenChanged = (entered) => () => {
+        htmlFullScreen = entered;
+        layout();
+    };
+    view.webContents.on('enter-html-full-screen', fullScreenChanged(true));
+    view.webContents.on('leave-html-full-screen', fullScreenChanged(false));
+    window.contentView.on('bounds-changed', layout);
+    for (const event of ['enter-full-screen', 'leave-full-screen']) window.on(event, layout);
+    layout();
+
     // Links to other sites (such as a service's sign-in page) open in the real browser.
-    win.webContents.setWindowOpenHandler(({ url }) => {
+    view.webContents.setWindowOpenHandler(({ url }) => {
         if (/^https?:/.test(url)) shell.openExternal(url);
         return { action: 'deny' };
     });
-    win.webContents.on('will-navigate', (event, url) => {
+    view.webContents.on('will-navigate', (event, url) => {
         if (serverUrl && !url.startsWith(serverUrl) && /^https?:/.test(url)) {
             event.preventDefault();
             shell.openExternal(url);
         }
     });
-    win.on('close', onWindowClose);
-    win.on('closed', () => { win = null; });
+    for (const event of ['maximize', 'unmaximize', 'focus', 'blur']) window.on(event, sendBarState);
+    window.on('close', onWindowClose);
+    window.on('closed', () => {
+        // A view's page outlives its window until it is closed too.
+        for (const child of [view, barView]) {
+            if (child && !child.webContents.isDestroyed()) child.webContents.close();
+        }
+        if (win === window) win = content = bar = null;
+    });
+    win = window;
+    content = view;
+    bar = barView;
+    window.setTitle(windowTitleText);
+    return window;
+}
+
+// The setting only decides how a window is built, so a change builds a new one around the same page.
+async function rebuildWindow() {
+    const old = win;
+    const geometry = { bounds: old.getNormalBounds(), maximized: old.isMaximized() };
+    const shown = !hiddenToTray && (old.isVisible() || old.isMinimized());
+    createWindow(geometry);
+    await lastLoad?.();
+    if (shown) showMainWindow();
+    old.destroy();
+}
+
+async function setSystemTitleBar(enabled) {
+    settings.set('systemTitleBar', enabled);
+    buildMenus();
+    if (win) await rebuildWindow();
+    writeState();
+}
+
+function barState() {
+    return { title: windowTitleText, maximized: Boolean(win?.isMaximized()), focused: Boolean(win?.isFocused()) };
+}
+
+function sendBarState() {
+    if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('titlebar:state', barState());
+}
+
+// Page titles of the web UI are ignored: the title comes from the server's status, so it reads the same everywhere.
+function refreshTitle() {
+    const next = currentPage === 'player' ? playbackTitle : APP_NAME;
+    if (next === windowTitleText) return;
+    windowTitleText = next;
+    win?.setTitle(next);
+    sendBarState();
+    writeState();
+}
+
+function hideToTray() {
+    hiddenToTray = true;
+    titleFeed?.pause();
+    win.hide();
 }
 
 function onWindowClose(event) {
     const action = closeAction({ quitting, mode: settings.get('onClose'), setupDone: settings.get('setupDone') });
     if (action === 'close') return;
     event.preventDefault();
-    if (action === 'hide') win.hide();
+    if (action === 'hide') hideToTray();
     else askWhatClosingDoes();
 }
 
@@ -177,7 +307,7 @@ async function askWhatClosingDoes() {
     if (response === 2) return;
     settings.set('onClose', response === 0 ? 'background' : 'quit');
     buildMenus();
-    if (response === 0) win.hide();
+    if (response === 0) hideToTray();
     else app.quit();
 }
 
@@ -190,7 +320,7 @@ function openGuide() {
     guideWin = new BrowserWindow(windowOptions({ width: 600, height: 780, minWidth: 380, minHeight: 480, title: 'Connect your Wii' }));
     guideWin.removeMenu();
     guideWin.on('closed', () => { guideWin = null; });
-    loadPage(guideWin, 'connect', { help: '1' }).then(() => { if (!neverShow) guideWin?.show(); });
+    loadPage(guideWin.webContents, 'connect', { help: '1' }).then(() => { if (!neverShow) guideWin?.show(); });
 }
 
 function openServerSettings() {
@@ -202,11 +332,11 @@ function openServerSettings() {
     serverWin = new BrowserWindow(windowOptions({ width: 560, height: 640, minWidth: 380, minHeight: 520, title: 'Server name and port' }));
     serverWin.removeMenu();
     serverWin.on('closed', () => { serverWin = null; });
-    loadPage(serverWin, 'server').then(() => { if (!neverShow) serverWin?.show(); });
+    loadPage(serverWin.webContents, 'server').then(() => { if (!neverShow) serverWin?.show(); });
 }
 
 function step(text) {
-    win?.webContents.send('desktop:step', text);
+    content?.webContents.send('desktop:step', text);
 }
 
 async function describeServer() {
@@ -319,9 +449,11 @@ async function launchNow() {
 
 async function showPlayer() {
     currentPage = 'player';
+    const url = serverUrl;
+    lastLoad = () => content.webContents.loadURL(url);
     writeState();
-    await win.loadURL(serverUrl);
-    win.setTitle('WiiJukebox');
+    await lastLoad();
+    refreshTitle();
 }
 
 async function openPlayer() {
@@ -443,10 +575,34 @@ function commonItems() {
             checked: settings.get('onClose') !== 'quit',
             click: (item) => setKeepRunning(item.checked),
         },
+        {
+            id: 'system-title-bar',
+            label: 'Use system title bar',
+            type: 'checkbox',
+            checked: settings.get('systemTitleBar'),
+            enabled: Boolean(settings.get('setupDone')),
+            click: (item) => setSystemTitleBar(item.checked),
+        },
         { type: 'separator' },
         { label: 'Show settings folder', click: () => shell.openPath(path.dirname(serverSettings.file)) },
         { label: 'Show server log', click: () => shell.showItemInFolder(logFile) },
     ];
+}
+
+const viewItems = () => [
+    { role: 'reload' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'togglefullscreen' },
+];
+
+// The custom bar has no menu bar to hide behind Alt, so its menu button opens the same entries as a list.
+function popupMenu({ x, y }) {
+    const menu = Menu.buildFromTemplate([
+        ...commonItems(),
+        { type: 'separator' },
+        { label: 'View', submenu: viewItems() },
+        { type: 'separator' },
+        { role: 'quit' },
+    ]);
+    menu.popup({ window: win, x: Math.round(x), y: Math.round(y), callback: () => content?.webContents.focus() });
 }
 
 function buildMenus() {
@@ -463,7 +619,7 @@ function buildMenus() {
             ],
         },
         { role: 'editMenu' },
-        { label: 'View', submenu: [{ role: 'reload' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'togglefullscreen' }] },
+        { label: 'View', submenu: viewItems() },
     ]));
     tray?.setContextMenu(Menu.buildFromTemplate([
         { label: serverUrl ? 'WiiJukebox is running' : 'WiiJukebox is not running', enabled: false },
@@ -493,6 +649,24 @@ function handle(channel, fn) {
         return fn(...args);
     });
 }
+
+// Only our own bar page may press the window buttons, and the web UI has no bridge at all.
+const fromBar = (event) => Boolean(bar) && event.sender === bar.webContents;
+const fromBarOnly = (channel, action) => ipcMain.on(channel, (event, ...args) => {
+    if (fromBar(event)) action(...args);
+});
+
+ipcMain.handle('titlebar:ready', (event) => (fromBar(event) ? barState() : null));
+fromBarOnly('titlebar:minimize', () => win.minimize());
+fromBarOnly('titlebar:toggle-maximize', () => {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+    content.webContents.focus();
+});
+fromBarOnly('titlebar:close', () => win.close());
+fromBarOnly('titlebar:menu', (at) => {
+    if (Number.isFinite(at?.x) && Number.isFinite(at?.y)) popupMenu(at);
+});
 
 handle('desktop:info', () => describeServer());
 handle('desktop:begin-setup', (options) => beginSetup(options));
@@ -541,6 +715,7 @@ if (!app.requestSingleInstanceLock()) {
         server.stop().finally(() => app.quit());
     });
     app.on('will-quit', () => {
+        titleFeed?.stop();
         tray?.destroy();
         log?.close();
     });
@@ -552,8 +727,20 @@ if (!app.requestSingleInstanceLock()) {
         createWindow();
         createTray();
         buildMenus();
+        titleFeed = new TitleFeed({
+            getUrl: () => (currentPage === 'player' ? serverUrl : null),
+            onTitle: (title) => {
+                playbackTitle = title;
+                refreshTitle();
+            },
+        });
+        titleFeed.start();
         await showPage('starting');
         if (!startedQuietly) showMainWindow();
+        else {
+            hiddenToTray = true;
+            titleFeed.pause();
+        }
         await launch();
     });
 }

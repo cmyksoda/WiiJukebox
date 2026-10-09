@@ -11,6 +11,8 @@ const DEFAULTS = {
     onClose: 'ask',
     // Prefer the FFmpeg that ships with the app; off means the one already on this computer.
     useBundledFfmpeg: true,
+    // Off draws the window's own title bar; on keeps the operating system's.
+    systemTitleBar: false,
 };
 
 class Settings {

@@ -88,14 +88,32 @@ WebKit packages.
   items; Linux writes `~/.config/autostart/wiijukebox.desktop`.
 - **One copy.** Starting the app again brings the window forward. Starting it with
   `--quit` makes the running copy quit (scripts, installers).
+- **Window bar.** The main window draws its own title bar in the web UI's colors, light or dark
+  with the system: the jukebox mark and the title on the left, a menu button and minimize,
+  maximize or restore, and close on the right. A Mac keeps its own traffic lights, inset into
+  the bar, and its menu bar. The bar moves the window, and a double click maximizes it where the
+  system does that. The bar covers the setup and error pages as well as the web UI.
+  - **The title follows playback**, shaped like Feishin's: `(Paused) (2 / 34) Song — Artist —
+    WiiJukebox`, or just `WiiJukebox` when nothing plays. It comes from the server's
+    `/api/status` once a second while the player is showing (the `queue` field holds the place
+    in the album or playlist; a station has none, so no count is shown), and it is also the title
+    in the taskbar and the window switcher, with the system title bar too.
+  - **Use system title bar** (menu and tray) turns the custom bar off. The window is rebuilt around
+    the same page at once, so there is no restart, but the web UI reloads and the browser
+    "Monitor" playback stops. It is grayed out until the first-run setup is done.
+  - **The menu button** opens the menu entries below as a list, since a window without a system
+    frame has no menu bar to show with Alt. The tray menu has them too.
+  - **Fullscreen.** When a page goes fullscreen (F11 in the web UI, or the visualizer's own
+    button) the bar steps aside and the page fills the whole display, on whichever monitor the
+    window is on.
 - **Menu and tray entries.** Connect your Wii, Copy Wii address, Copy stream address,
   Open in browser, Restart server, Server name and port, Install or update yt-dlp, Use
-  included FFmpeg, Start at login, Keep playing when the window is closed, Show settings
-  folder, Show server log (`logs/server.log` in the app's data folder).
+  included FFmpeg, Start at login, Keep playing when the window is closed, Use system title
+  bar, Show settings folder, Show server log (`logs/server.log` in the app's data folder).
   - **Server name and port…** opens a small window with the same two fields as the
     welcome page. Saving stops the server, writes `config.json` and starts it again (a
     change of nothing does not restart it). Keeping the port the server already holds is
-    allowed; a different one must be free. It is greyed out until the first-run setup is done.
+    allowed; a different one must be free. It is grayed out until the first-run setup is done.
   - **Use included FFmpeg** is a checkbox; changing it restarts the server. It is not
     shown when the app has no included FFmpeg (a development run).
 - **Errors are pages, not console text.** A busy port shows "Port 4005 is in use" with
@@ -228,7 +246,15 @@ Then it runs:
 - the busy-port flow and the missing-FFmpeg flow;
 - the included FFmpeg unticked: no FFmpeg on the computer, an FFmpeg without MP3 (a
   stand-in shell script, so not on Windows), and the computer's own FFmpeg followed by the
-  switch back to the included one.
+  switch back to the included one;
+- the title bar: the bar view above the page, the window title while a stand-in Subsonic server
+  (`scripts/fake-subsonic.js`) plays a five-track album (count, paused, next, stopped), the bar
+  buttons reaching the window (with the window's maximize, minimize and hide recorded, since
+  the window is never shown), the bar being the only page with the window bridge, fullscreen of
+  the page and of the visualizer's stage hiding the bar and filling the window, F11, the
+  fullscreen button, Escape and closing the visualizer;
+- Use system title bar: the menu item rebuilds the window without the bar and back, the title
+  keeps following playback, and a saved choice starts the app without the bar.
 
 It exits non-zero if any check fails. The tests use 4680 and 4681 (once also 4681 as a TCP
 web port, to try a port change) so they never touch a server on the default port; CI also
@@ -323,6 +349,14 @@ problems, port busy, crash, FFmpeg missing) was rendered and read.
   menu look, the close-window question, and the pages on real Windows and macOS
   displays (CI drives them hidden). The pages were rendered in light and dark themes
   on Linux only.
+- The custom title bar on a real desktop: dragging the window by the bar and a double click
+  maximizing it (the bar sets `-webkit-app-region: drag`, which the smoke test reads but cannot
+  press), the resize edges of the frameless window on X11, Wayland and KDE, the snap and
+  maximize behavior on Windows, the traffic lights inset into the bar on macOS, the bar's menu
+  button popping up in place, and fullscreen on the monitor the window is on (the smoke test
+  checks the bar and the page against the window's own size, hidden, not a second display).
+  Screenshots of the bar were taken on Chromium's headless platform, one view at a time, and
+  laid together.
 - A real Wii connecting through each system's firewall: the Windows Defender prompt
   and the Public network profile, the macOS firewall and Local Network prompts
   (macOS 15 and later), and ufw or firewalld. The runners' firewalls are not

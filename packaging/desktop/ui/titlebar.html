@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'">
+<title>WiiJukebox</title>
+<link rel="stylesheet" href="titlebar.css">
+</head>
+<body>
+<header id="bar">
+    <img class="mark" src="jukebox.svg" alt="">
+    <div id="title" class="title"><span class="now"></span><span class="sep">—</span><span class="brand"><span class="wii">Wii</span>Jukebox</span></div>
+    <div class="controls">
+        <button id="menu" class="control" aria-label="Menu" title="Menu"><i class="g g-menu" aria-hidden="true"></i></button>
+        <button id="minimize" class="control" aria-label="Minimize" title="Minimize"><i class="g g-min" aria-hidden="true"></i></button>
+        <button id="maximize" class="control" aria-label="Maximize" title="Maximize"><i class="g g-max" aria-hidden="true"></i></button>
+        <button id="close" class="control close" aria-label="Close" title="Close"><i class="g g-close" aria-hidden="true"></i></button>
+    </div>
+</header>
+<script src="titlebar.js"></script>
+</body>
+</html>

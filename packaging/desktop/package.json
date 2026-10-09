@@ -36,6 +36,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "titlebar-preload.js",
       "ui/**",
       "assets/**",
       "lib/**",
