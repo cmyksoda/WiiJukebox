@@ -207,7 +207,8 @@ const check = (label, ok) => {
         const reveal = async () => fetch(`${app.base}/api/ui/hidden-sources`, { method: 'POST', body: JSON.stringify({ show: await everyId() }) });
         const listed = (view, where) => view.$$eval(`${where} [data-source]`, (nodes) => nodes.map((node) => node.dataset.source));
         const menuRows = (view) => view.$$eval('.ctx [role="menuitem"]', (nodes) => nodes.map((node) => node.textContent));
-        const focusedRow = (view) => view.evaluate(() => document.activeElement?.closest('.ctx') ? document.activeElement.textContent : null);
+        const focusedRow = (view) => view.evaluate(() => (document.activeElement?.matches('.ctx button') ? document.activeElement.textContent : null));
+        const litRows = (view) => view.$$eval('.ctx button.active', (rows) => rows.map((row) => row.textContent));
         const whole = (rect) => [rect.x, rect.y, rect.width, rect.height].every(Number.isInteger);
         const menuIsCrisp = (view) => view.$eval('.ctx', (menu) => {
             const rects = [menu, ...menu.querySelectorAll('button, .sep, .head')].map((node) => node.getBoundingClientRect());
@@ -261,7 +262,7 @@ const check = (label, ok) => {
             && menu.getAttribute('aria-label') === 'Plex' && getComputedStyle(menu).position === 'fixed'));
         check('with Open, Settings and Hide "Plex"', (await menuRows(page)).join('|') === 'Open|Settings|Hide “Plex”');
         check('on whole pixels and inside the window', await menuIsCrisp(page));
-        check('keyboard focus is in it, and the channel it is for stays marked', await focusedRow(page) === 'Open'
+        check('no entry is lit until the pointer or a key moves, and the channel it is for stays marked', await focusedRow(page) === null && (await litRows(page)).length === 0
             && await page.$eval('#sources [data-source="plex"]', (el) => el.dataset.menu === 'open'));
         check('in light it is the white surface', await page.$eval('.ctx', (menu) => getComputedStyle(menu).backgroundColor) === 'rgb(255, 255, 255)');
         await page.keyboard.press('Escape');
@@ -288,11 +289,32 @@ const check = (label, ok) => {
         check('right-clicking again moves the one menu', await page.locator('.ctx').count() === 1);
         await page.keyboard.press('Escape');
 
+        // Hover works like a native menu: the highlight follows the pointer and goes when it leaves; keys keep theirs.
+        await page.click('#sources [data-source="plex"]', { button: 'right' });
+        await page.waitForSelector('.ctx');
+        const rowCenter = async (label) => {
+            const box = await page.locator(`.ctx button:has-text("${label}")`).boundingBox();
+            return [box.x + 40, box.y + box.height / 2];
+        };
+        await page.mouse.move(...await rowCenter('Settings'), { steps: 3 });
+        check('the entry under the pointer is lit', (await litRows(page)).join() === 'Settings');
+        await page.mouse.move(...await rowCenter('Hide'), { steps: 3 });
+        check('the highlight follows the pointer, one entry at a time', (await litRows(page)).join() === 'Hide “Plex”' && await focusedRow(page) === 'Hide “Plex”');
+        await page.mouse.move(700, 560, { steps: 4 });
+        check('leaving the menu clears it', (await litRows(page)).length === 0 && await page.$$eval('.ctx button', (rows) => rows.every((row) => getComputedStyle(row).backgroundColor === 'rgba(0, 0, 0, 0)')));
+        await page.keyboard.press('ArrowDown');
+        check('and the keys continue from the last entry the pointer was on', (await litRows(page)).join() === 'Open');
+        await page.mouse.move(760, 600, { steps: 3 });
+        check('an entry the keys chose stays lit while the pointer is away from the menu', (await litRows(page)).join() === 'Open' && await focusedRow(page) === 'Open');
+        await page.mouse.move(...await rowCenter('Settings'), { steps: 3 });
+        check('and the pointer takes the highlight back when it moves over the menu', (await litRows(page)).join() === 'Settings');
+        await page.keyboard.press('Escape');
+
         // The keyboard: Menu key and Shift+F10, arrows, Home, End, Tab.
         await page.focus('#sources [data-source="plex"]');
         await page.keyboard.press('ContextMenu');
         await page.waitForSelector('.ctx');
-        check('the Menu key opens it below the focused channel, with the first entry focused', await focusedRow(page) === 'Open'
+        check('the Menu key opens it below the focused channel, with the first entry focused and lit', await focusedRow(page) === 'Open' && (await litRows(page)).join() === 'Open'
             && await page.evaluate(() => document.querySelector('.ctx').getBoundingClientRect().top >= document.activeElement.closest('.ctx').getBoundingClientRect().top)
             && await menuIsCrisp(page));
         await page.keyboard.press('ArrowDown');
@@ -620,7 +642,8 @@ const check = (label, ok) => {
             if (!phone) {
                 await view.focus('#page-menu');
                 await view.keyboard.press('Enter');
-                check(`${name}: Enter on the button opens the menu with the first choice focused`, await view.evaluate(() => document.activeElement.textContent) === 'System');
+                check(`${name}: Enter on the button opens the menu with the first choice highlighted`, await view.evaluate(() => document.activeElement.textContent) === 'System'
+                    && await view.$eval('.ctx .active', (row) => row.textContent) === 'System');
                 for (let i = 0; i < 3; i++) await view.keyboard.press('ArrowDown');
                 check(`${name}: arrows skip the heading and the rule`, await view.evaluate(() => document.activeElement.textContent) === 'Sidebar settings…');
                 await view.keyboard.press('ArrowDown');

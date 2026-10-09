@@ -1682,12 +1682,12 @@ applyTheme(savedTheme());
 const pageMenu = $('#page-menu');
 const PAGE_MENU_WIDTH = 208;
 
-pageMenu.onclick = () => {
+pageMenu.onclick = (event) => {
     const box = pageMenu.getBoundingClientRect();
     const hiddenCount = hiddenIds().length;
     openMenu({
         label: 'Menu', trigger: pageMenu, width: PAGE_MENU_WIDTH,
-        anchor: { x: box.right - PAGE_MENU_WIDTH, top: box.bottom + 4, bottom: box.top - 4 },
+        anchor: { x: box.right - PAGE_MENU_WIDTH, top: box.bottom + 4, bottom: box.top - 4, keyboard: event.detail === 0 },
         items: [
             { heading: 'Theme' },
             ...THEMES.map(([id, label]) => ({ label, checked: themeChoice === id, run: () => chooseTheme(id) })),

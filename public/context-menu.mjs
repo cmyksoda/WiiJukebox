@@ -9,6 +9,18 @@ const LONG_PRESS_SLOP = 10;
 let current = null; // { menu, trigger, stop }
 let swallowClick = false;
 
+// A menu that opens or moves under a resting pointer gets a synthetic pointermove at the same spot; only a real move counts.
+const pointer = { x: NaN, y: NaN, moved: false };
+document.addEventListener('pointermove', (event) => {
+    pointer.moved = event.clientX !== pointer.x || event.clientY !== pointer.y;
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+}, true);
+document.addEventListener('pointerdown', (event) => {
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+}, true);
+
 /** True when a menu was open. Focus goes back to what opened it when asked, for Escape and Tab. */
 export function closeMenu({ restoreFocus = false } = {}) {
     if (!current) return false;
@@ -24,13 +36,14 @@ export function closeMenu({ restoreFocus = false } = {}) {
 
 /**
  * `items` are { label, run, checked?, detail? }, { heading }, or 'separator'; a `checked` of true or false makes the row
- * a radio. `anchor` is { x, top, bottom }: the menu starts at `top` and grows down, or ends at `bottom` and
- * grows up when there is no room below.
+ * a radio. `anchor` is { x, top, bottom, keyboard? }: the menu starts at `top` and grows down, or ends at `bottom` and
+ * grows up when there is no room below. Opened by keyboard, the first row is highlighted; otherwise none is until the pointer or keys move.
  */
 export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
     closeMenu();
     const menu = document.createElement('div');
     menu.className = 'ctx';
+    menu.tabIndex = -1;
     menu.setAttribute('role', 'menu');
     menu.setAttribute('aria-label', label);
     const rows = [];
@@ -76,8 +89,20 @@ export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
     place(menu, anchor, width);
     for (const text of menu.querySelectorAll('.label')) if (text.scrollWidth > text.clientWidth) text.parentElement.title = text.textContent;
 
-    // One highlighted row at a time, whether the pointer or the keys moved it.
-    for (const row of rows) row.addEventListener('pointermove', () => row.focus({ preventScroll: true }));
+    // One highlighted row at a time. It follows the pointer and goes when the pointer leaves, but a row the keys chose stays.
+    let highlightedBy = null;
+    const highlight = (row, by) => {
+        for (const other of rows) other.classList.toggle('active', other === row);
+        highlightedBy = row ? by : null;
+        row?.focus({ preventScroll: true });
+    };
+    menu.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'touch' || !pointer.moved) return;
+        highlight(event.target.closest('button'), 'pointer');
+    });
+    menu.addEventListener('pointerleave', () => {
+        if (highlightedBy === 'pointer') highlight(null);
+    });
 
     const step = (from, by) => rows[(from + by + rows.length) % rows.length];
     const onKey = (event) => {
@@ -95,7 +120,7 @@ export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
             closeMenu({ restoreFocus: true });
         } else if (next) {
             event.preventDefault();
-            next().focus({ preventScroll: true });
+            highlight(next(), 'key');
         }
     };
     const onPointerDown = (event) => {
@@ -116,7 +141,8 @@ export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
             for (const [target, type, handler, options] of listeners) target.removeEventListener(type, handler, options);
         },
     };
-    rows[0]?.focus({ preventScroll: true });
+    if (anchor.keyboard) highlight(rows[0], 'key');
+    else menu.focus({ preventScroll: true });
 }
 
 // Whole-pixel position, kept clear of the screen edges.
@@ -187,7 +213,7 @@ export function bindMenuRequests(selector, open) {
         if (!el) return;
         event.preventDefault();
         const rect = el.getBoundingClientRect();
-        open(el, { x: rect.left + 16, top: rect.bottom - 6, bottom: rect.top + 6});
+        open(el, { x: rect.left + 16, top: rect.bottom - 6, bottom: rect.top + 6, keyboard: true });
     });
 
     document.addEventListener('click', (event) => {
