@@ -366,8 +366,10 @@ static void finish_discovery(void) {
     else if (job_network_result < 0) hold("The Wii couldn't join the network. Check its Internet settings, then press 1 to retry.");
     else if (direct_address[0]) {
         if (direct_saved)
-            snprintf(text, sizeof(text), "The saved address %s didn't answer. Check that the server is running and press 1, or change it from the HOME menu.", direct_address);
-        else snprintf(text, sizeof(text), "The server at %s didn't answer. Check that it's running, then press 1 to retry.", direct_address);
+            snprintf(text, sizeof(text), "The saved address %s didn't answer. Check that the server is running "
+                     "and press 1, or change it from the HOME menu.", direct_address);
+        else snprintf(text, sizeof(text), "The server at %s didn't answer. Check that it's running, "
+                      "then press 1 to retry.", direct_address);
         hold(text);
     } else if (job_result < 0)
         hold("Server discovery isn't available on this network. Enter the server's address, or press 1 to retry.");
