@@ -22,8 +22,8 @@ Messages appear as a pill above the dock and fade after about four seconds;
 ones that describe an ongoing condition (loading, reconnecting, a pending
 command) stay until it ends. When no server is found, the panel explains why
 and what to do instead. Empty folders say so in the list. Volume changes show
-a meter. The header reports the connection (with a colored dot), bitrate,
-buffered seconds and audio restarts. Pointing at the album art and pressing A
+a meter. The header reports the connection (with a colored dot), bitrate and
+buffered seconds. Pointing at the album art and pressing A
 (or holding B and pressing +) shows the cover large over a dimmed screen,
 using a 192-pixel image from the server; A or B closes it. 16:9 consoles get a wider layout rather than stretched shapes.
 

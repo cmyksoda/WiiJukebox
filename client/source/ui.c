@@ -306,10 +306,8 @@ static void header(const struct wj_session *s, long long now) {
             s->stream_started ? "Connected" : "Buffering";
         dot = !s->audio_running || !s->audio.connected ? WJ_RGBA(0xe2, 0x5c, 0x5c, 0xff) :
             s->stream_started ? WJ_RGBA(0x4c, 0xc2, 0x6c, 0xff) : WJ_RGBA(0xf0, 0xb0, 0x3a, 0xff);
-        int length = snprintf(status, sizeof(status), "%s  \xc2\xb7  %d kbps  \xc2\xb7  %d.%ds buffer",
+        snprintf(status, sizeof(status), "%s  \xc2\xb7  %d kbps  \xc2\xb7  %d.%ds buffer",
                               state, s->audio.bitrate, tenths / 10, tenths % 10);
-        if (s->underruns && length > 0 && length < (int)sizeof(status))
-            snprintf(status + length, sizeof(status) - length, "  \xc2\xb7  %d restarts", s->underruns);
     }
     float width = label(status, L.w - 24, 40, 13, 0, T->muted, L.w - 300, 2);
     float pulse = s->audio_running && !s->audio.connected ? 0.5f + 0.5f * sinf(now / 160.0f) : 1;
@@ -620,19 +618,34 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
     round_button(x + 16 + gap * 3.5f, by, 14, (c & WJ_CAN_STOP) != 0, pointer, WJ_TARGET_STOP, glyph_stop);
 }
 
+// Like the Wii Menu's bar: raised shoulders hold the B and 2 buttons, and the edge dips between
+// them, low enough that a toast sits evenly between it and the panels.
+#define DOCK_SHOULDER 386.0f
+#define DOCK_VALLEY 410.0f
+#define DOCK_FLAT 64.0f
+#define DOCK_RAMP 140.0f
+
+static float dock_edge_y(float x) {
+    float d = x < L.w / 2 ? x : L.w - x;
+    if (d <= DOCK_FLAT) return DOCK_SHOULDER;
+    if (d >= DOCK_FLAT + DOCK_RAMP) return DOCK_VALLEY;
+    float t = (d - DOCK_FLAT) / DOCK_RAMP;
+    return DOCK_SHOULDER + (DOCK_VALLEY - DOCK_SHOULDER) * (1 - cosf(t * 3.14159265f)) / 2;
+}
+
 static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
     float y = 404;
-    // Raised pods at each end, like the Wii Menu's Wii and mail buttons.
-    for (int side = 0; side < 2; side++) {
-        float cx = side ? L.w - 58 : 58;
-        wj_gfx_circle(cx, y + 34, 50, T->border);
-        wj_gfx_circle(cx, y + 35, 49, T->dock_top);
+    for (int x = 0; x < (int)L.w; x++) {
+        float e = dock_edge_y(x + 0.5f), top = floorf(e);
+        u32 fill = wj_gfx_mix(T->dock_top, T->dock_bottom, (top - DOCK_SHOULDER) / (WJ_GFX_HEIGHT - DOCK_SHOULDER));
+        wj_gfx_rect(x, top, 1, WJ_GFX_HEIGHT - top, fill, T->dock_bottom);
+        // A partly covered pixel above the line keeps the curve from stair-stepping on a TV.
+        u32 soft = wj_gfx_fade(T->blue, 1 - (e - top));
+        wj_gfx_rect(x, top - 1, 1, 1, soft, soft);
+        wj_gfx_rect(x, top, 1, 2, T->blue, T->blue);
+        wj_gfx_rect(x, top + 2, 1, 1, T->dock_edge, T->dock_edge);
     }
-    // The edge sits a little below the pods so a toast fits evenly between it and the panels.
-    float edge = y + 6;
-    wj_gfx_rect(0, edge, L.w, WJ_GFX_HEIGHT - edge, T->dock_top, T->dock_bottom);
-    wj_gfx_rect(106, edge - 1, L.w - 212, 1, T->border, T->border);
-    wj_gfx_rect(106, edge, L.w - 212, 2, T->dock_edge, T->dock_edge);
+    for (int side = 0; side < 2; side++) wj_gfx_ring(side ? L.w - 58 : 58, y + 18, 29, 2, T->blue);
     round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS || s->entry.open, pointer, WJ_TARGET_BACK, glyph_back);
     round_button(L.w - 58, y + 18, 26, !s->entry.open, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
     label("B", 58, y + 64, 12, 1, T->muted, 40, 1);
@@ -834,7 +847,9 @@ static void toast_and_volume(const struct wj_session *s, long long now) {
     } else toast_alpha *= 0.85f;
     if (toast_alpha > 0.02f && toast[0]) {
         float w = wj_font_measure(toast, (int)strlen(toast), 14, 0) + 32;
-        if (w > L.w - 260) w = L.w - 260;
+        // As wide as the dip allows before the edge rises into the toast's shadow (y 406).
+        float clear = DOCK_FLAT + DOCK_RAMP * acosf(1 - 2 * (406 - DOCK_SHOULDER) / (DOCK_VALLEY - DOCK_SHOULDER)) / 3.14159265f;
+        if (w > L.w - 2 * clear - 8) w = L.w - 2 * clear - 8;
         float x = L.w / 2 - w / 2, y = 380;
         wj_gfx_round(x, y + 2, w, 24, 12, wj_gfx_fade(T->shadow, toast_alpha), wj_gfx_fade(T->shadow, toast_alpha));
         wj_gfx_round(x, y, w, 24, 12, wj_gfx_fade(T->toast_top, toast_alpha), wj_gfx_fade(T->toast_bottom, toast_alpha));
