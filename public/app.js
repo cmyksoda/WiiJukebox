@@ -1662,11 +1662,16 @@ function applyTheme(choice) {
     themeChoice = choice;
     if (choice === 'system') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = choice;
-    // Phone browsers tint their own bars from these; a forced theme overrides the system pair.
-    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
-        meta.content = THEME_COLORS[choice === 'system' ? (meta.media.includes('dark') ? 'dark' : 'light') : choice];
-    }
+    paintThemeColor();
 }
+
+// Browsers tint their own bars from this, and the desktop app's title bar follows it as it changes.
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+function paintThemeColor() {
+    const dark = themeChoice === 'system' ? systemDark.matches : themeChoice === 'dark';
+    document.querySelector('meta[name="theme-color"]').content = THEME_COLORS[dark ? 'dark' : 'light'];
+}
+systemDark.addEventListener('change', paintThemeColor);
 
 function chooseTheme(choice) {
     applyTheme(choice);

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d141c" media="(prefers-color-scheme: dark)">
+<!-- The page's effective background: set here before first paint, then kept current by app.js. -->
+<meta name="theme-color" content="#f3f6f9">
 <!-- Before the stylesheet, so saved choices (theme, column width, minimized) never flash their defaults. -->
 <script>
 try {
@@ -16,6 +16,10 @@ try {
     var width = Number(localStorage.getItem('wiijukebox.np-width'));
     if (width >= 280 && width <= 520) root.style.setProperty('--np-w', Math.round(width / 2) * 2 + 'px');
     if (localStorage.getItem('wiijukebox.np-collapsed') === '1') root.classList.add('np-collapsed');
+} catch (e) {}
+try {
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#0d141c' : '#f3f6f9';
 } catch (e) {}
 </script>
 <title>WiiJukebox</title>

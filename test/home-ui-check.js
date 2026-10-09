@@ -592,6 +592,8 @@ const check = (label, ok) => {
         const backdrop = (view) => view.evaluate(() => getComputedStyle(document.body).backgroundColor);
         const LIGHT = 'rgb(243, 246, 249)';
         const DARK = 'rgb(13, 20, 28)';
+        const LIGHT_HEX = '#f3f6f9';
+        const DARK_HEX = '#0d141c';
         // The page menu's Theme rows, as "System:true,Light:false,Dark:false", read with the menu open and closed again.
         const choices = async (view) => {
             await openPageMenu(view);
@@ -599,6 +601,8 @@ const check = (label, ok) => {
             await view.keyboard.press('Escape');
             return text;
         };
+        const themeColors = (view) => view.$$eval('meta[name="theme-color"]', (tags) => tags.map((tag) => tag.content).join());
+        const colorBecomes = (view, hex) => view.waitForFunction((want) => document.querySelector('meta[name="theme-color"]').content === want, hex, { timeout: 2000 }).then(() => true, () => false);
         const pick = async (view, label) => {
             await openPageMenu(view);
             await view.click(`.ctx [role="menuitemradio"]:has-text("${label}")`);
@@ -607,6 +611,7 @@ const check = (label, ok) => {
             const view = await open(viewport, phone);
             check(`${name}: the menu offers System, Light and Dark, with System chosen`, await choices(view) === 'System:true,Light:false,Dark:false');
             check(`${name}: and no data-theme is set`, await view.evaluate(() => !('theme' in document.documentElement.dataset)));
+            check(`${name}: one theme-color tag carries the light background`, await themeColors(view) === LIGHT_HEX);
             await openPageMenu(view);
             check(`${name}: the menu is Theme, three choices, a rule and Sidebar settings, 208px wide below the button`, await view.$eval('.ctx', (menu) => {
                 const r = menu.getBoundingClientRect();
@@ -623,15 +628,14 @@ const check = (label, ok) => {
             check(`${name}: Escape closes it and focus returns to the button`, !(await view.isVisible('.ctx')) && await view.evaluate(() => document.activeElement.id) === 'page-menu'
                 && await view.getAttribute('#page-menu', 'aria-expanded') === 'false');
             await view.emulateMedia({ colorScheme: 'dark' });
-            check(`${name}: System follows a dark system`, await backdrop(view) === DARK);
+            check(`${name}: System follows a dark system, bar color included`, await backdrop(view) === DARK && await colorBecomes(view, DARK_HEX));
             await pick(view, 'Light');
-            check(`${name}: Light stays light on a dark system`, await backdrop(view) === LIGHT && await choices(view) === 'System:false,Light:true,Dark:false');
+            check(`${name}: Light stays light on a dark system`, await backdrop(view) === LIGHT && await themeColors(view) === LIGHT_HEX && await choices(view) === 'System:false,Light:true,Dark:false');
             await view.emulateMedia({ colorScheme: 'light' });
             await pick(view, 'Dark');
-            check(`${name}: Dark stays dark on a light system`, await backdrop(view) === DARK
+            check(`${name}: Dark stays dark on a light system`, await backdrop(view) === DARK && await themeColors(view) === DARK_HEX
                 && await view.evaluate(() => getComputedStyle(document.documentElement).colorScheme) === 'dark');
             check(`${name}: the choice is stored and shown on <html>`, await view.evaluate(() => localStorage.getItem('wiijukebox.theme') === 'dark' && document.documentElement.dataset.theme === 'dark'));
-            check(`${name}: the browser bar color follows it`, (await view.$$eval('meta[name="theme-color"]', (m) => m.map((x) => x.content))).every((c) => c === '#0d141c'));
             await view.reload();
             await view.waitForSelector('.channel');
             check(`${name}: it survives a reload`, await backdrop(view) === DARK && await choices(view) === 'System:false,Light:false,Dark:true');
@@ -653,6 +657,12 @@ const check = (label, ok) => {
                 check(`${name}: Enter chooses the row: Light`, await choices(view) === 'System:false,Light:true,Dark:false' && await backdrop(view) === LIGHT);
             }
             await pick(view, 'System');
+            check(`${name}: and a system that turns dark changes it with no reload`, await (async () => {
+                await view.emulateMedia({ colorScheme: 'dark' });
+                const dark = await colorBecomes(view, DARK_HEX);
+                await view.emulateMedia({ colorScheme: 'light' });
+                return dark && await colorBecomes(view, LIGHT_HEX);
+            })());
             check(`${name}: System clears the stored choice`, await view.evaluate(() => localStorage.getItem('wiijukebox.theme') === null && !('theme' in document.documentElement.dataset))
                 && await backdrop(view) === LIGHT);
             await view.context().close();
@@ -671,6 +681,18 @@ const check = (label, ok) => {
             await pick(view, 'Dark');
             check('blocked storage still lets the choice apply for this visit', await backdrop(view) === DARK);
             await context.close();
+        }
+        {
+            // The head script sets the color before the page's own script runs, so a bar never starts in the wrong one.
+            for (const [scheme, saved, want] of [['dark', null, DARK_HEX], ['light', 'dark', DARK_HEX], ['dark', 'light', LIGHT_HEX], ['light', null, LIGHT_HEX]]) {
+                const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: scheme });
+                const view = await context.newPage();
+                await view.route('**/app.js', (route) => route.abort());
+                await view.addInitScript((value) => { if (value) localStorage.setItem('wiijukebox.theme', value); }, saved);
+                await view.goto(app.base);
+                check(`before app.js runs, a ${scheme} system with ${saved ?? 'no'} choice gives ${want}`, await themeColors(view) === want);
+                await context.close();
+            }
         }
         {
             // The desktop app's user agent carries WiiJukebox/<version>; there the menu button is not drawn (the app has its own menu).
