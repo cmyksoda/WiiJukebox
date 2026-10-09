@@ -41,8 +41,10 @@ class ArtProxy {
         if (Array.isArray(value)) return value.map((entry) => this.restore(entry));
         if (!value || typeof value !== 'object') return value;
         return Object.fromEntries(Object.entries(value).flatMap(([key, entry]) => {
-            if (key !== 'artwork' || typeof entry !== 'string' || !entry.startsWith(PREFIX)) return [[key, this.restore(entry)]];
-            const url = this.urls.get(entry.slice(PREFIX.length));
+            if (key !== 'artwork') return [[key, this.restore(entry)]];
+            if (typeof entry === 'string' && /^data:image\//i.test(entry)) return [[key, entry]];
+            // Browsers only ever see proxy paths, so a raw link here would make this server fetch it blind.
+            const url = typeof entry === 'string' && entry.startsWith(PREFIX) ? this.urls.get(entry.slice(PREFIX.length)) : null;
             return url ? [[key, url]] : [];
         }));
     }

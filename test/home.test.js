@@ -267,7 +267,8 @@ test('the art proxy serves only links the server made, and only pictures', async
         const link = art.link('https://img.example/cover.png');
         assert.deepEqual(art.restore({ id: 1, artwork: link }), { id: 1, artwork: 'https://img.example/cover.png' });
         assert.deepEqual(art.restore({ id: 1, artwork: '/api/art/ffffffffffffffffffff' }), { id: 1 }, 'a stale key drops the art');
-        assert.deepEqual(art.restore({ id: 1, artwork: 'https://x.example/a.png' }), { id: 1, artwork: 'https://x.example/a.png' });
+        assert.deepEqual(art.restore({ id: 1, artwork: 'https://x.example/a.png' }), { id: 1 }, 'a raw link from a browser is never fetched');
+        assert.deepEqual(art.restore({ id: 1, artwork: 'data:image/png;base64,AAAA' }), { id: 1, artwork: 'data:image/png;base64,AAAA' });
 
         // Anywhere in a body, both ways, and again on what is already a proxy path.
         const body = { status: { nowPlaying: { artwork: 'https://img.example/cover.png', title: 'T' } }, items: [{ artwork: 'https://img.example/a.png' }] };
