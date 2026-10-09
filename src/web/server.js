@@ -7,7 +7,10 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const { control } = require('../core/transport');
+const { PlayHistory } = require('../core/history');
 const { WiiProtocol } = require('../client/protocol');
+const { ArtProxy } = require('./art');
+const { HomeService } = require('./home');
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -31,12 +34,17 @@ class WebServer {
      * @param {import('../core/pipeline').Pipeline} deps.pipeline
      * @param {import('../sources/index').SourceRegistry} deps.registry
      * @param {import('../config').Config} deps.config
+     * @param {PlayHistory} [deps.history]  what the home screen offers again; kept next to config.json by default
      */
-    constructor({ pipeline, registry, config, publicDir }) {
+    constructor({ pipeline, registry, config, publicDir, history }) {
         this.pipeline = pipeline;
         this.registry = registry;
         this.config = config;
         this.wii = new WiiProtocol({ pipeline, registry, config });
+        this.history = history || new PlayHistory({ file: path.join(config.dir, 'history.json') });
+        this.history.listen(pipeline);
+        this.art = new ArtProxy();
+        this.home = new HomeService({ registry, history: this.history, art: this.art });
         this.publicDir = publicDir || path.join(__dirname, '..', '..', 'public');
 
         this._sseClients = new Set();
@@ -215,6 +223,7 @@ class WebServer {
                     if (this.pipeline.activeSource?.id === id) await this.pipeline.detach();
                     await this.registry.configure(id, patch);
                 });
+                this.home.forget(id);
                 return this._json(res, 200, { ok: true });
             }
 
@@ -246,7 +255,9 @@ class WebServer {
                 }
                 try {
                     const body = await this._readBody(req);
-                    return this._json(res, 200, await source.action(rest[2], body));
+                    const result = await source.action(rest[2], body);
+                    this.home.forget(id);
+                    return this._json(res, 200, result);
                 } catch (err) {
                     return this._json(res, 400, { error: err.message });
                 }
@@ -280,7 +291,8 @@ class WebServer {
             }
 
             if (req.method === 'POST' && action === 'play') {
-                const item = await this._readBody(req);
+                // Items from the home screen carry art proxy paths in place of the real links.
+                const item = this.art.restore(await this._readBody(req));
                 await this.pipeline.command(async () => {
                     const source = await this.registry.connect(id);
                     await this.pipeline.attach(source, item);
@@ -289,6 +301,19 @@ class WebServer {
                 this.config.save();
                 return this._json(res, 200, { ok: true, status: this.pipeline.status });
             }
+        }
+
+        if (section === 'home' && req.method === 'GET') {
+            if (!rest.length) return this._json(res, 200, this.home.overview());
+            try {
+                return this._json(res, 200, await this.home.service(rest[0]));
+            } catch (err) {
+                return this._json(res, err.code || 500, { error: err.message });
+            }
+        }
+
+        if (section === 'art' && req.method === 'GET' && rest.length === 1) {
+            return this.art.serve(rest[0], res);
         }
 
         if (section === 'control' && req.method === 'POST') {

@@ -8,6 +8,7 @@
 const path = require('path');
 const { Discovery, serverIdentity } = require('./client/discovery');
 const { Pipeline } = require('./core/pipeline');
+const { PlayHistory } = require('./core/history');
 const { SourceRegistry } = require('./sources/index');
 const { WebServer } = require('./web/server');
 const { Config, detectHostIp } = require('./config');
@@ -47,10 +48,13 @@ async function main() {
     const registry = new SourceRegistry(config, {
         serverId: serverIdentity(config), pipeline, configDir: config.dir,
     });
+    const history = new PlayHistory({ file: path.join(config.dir, 'history.json'),
+        warn: (msg) => console.warn(`! ${msg}`) });
     const web = new WebServer({
         pipeline,
         registry,
         config,
+        history,
         publicDir: path.join(__dirname, '..', 'public'),
     });
 
@@ -89,6 +93,7 @@ async function main() {
         web.close();
         await pipeline.command(() => pipeline.shutdown());
         await registry.disconnectAll();
+        history.flush();
         process.exit(0);
     };
     process.on('SIGINT', () => shutdown('SIGINT'));
