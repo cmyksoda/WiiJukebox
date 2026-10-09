@@ -31,8 +31,8 @@ const check = (label, ok) => {
     const errors = [];
     const serviceOrigins = [navidrome.url, jellyfin.url, plex.url];
     const direct = [];
-    const open = async (viewport, phone) => {
-        const context = await browser.newContext({ viewport, isMobile: phone, hasTouch: phone, deviceScaleFactor: 1 });
+    const open = async (viewport, phone, using = browser) => {
+        const context = await using.newContext({ viewport, isMobile: phone, hasTouch: phone, deviceScaleFactor: 1 });
         const page = await context.newPage();
         page.on('request', (r) => { if (serviceOrigins.some((origin) => r.url().startsWith(origin))) direct.push(r.url()); });
         page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -889,6 +889,187 @@ const check = (label, ok) => {
             await view.click('#np-close');
             check('whose button closes it', await view.evaluate(() => !document.body.classList.contains('np-open')));
             await view.context().close();
+        }
+
+        // --- scrollbars: slim, themed, and out of sight until a scroller is hovered or moving ----------------------
+        {
+            // The usual headless browser does not paint scrollbars (it still lays them out), so this one does, and what is drawn
+            // at a pixel is read back through a canvas: the check sees the bar itself, not a computed style.
+            const painting = await chromium.launch({ executablePath: process.env.CHROMIUM, ignoreDefaultArgs: ['--hide-scrollbars'], args: ['--no-sandbox', '--mute-audio'] });
+            const reader = await painting.newPage();
+            const pixel = async (view, x, y) => {
+                const png = await view.screenshot({ clip: { x, y, width: 1, height: 1 } });
+                return reader.evaluate(async (data) => {
+                    const img = new Image();
+                    img.src = `data:image/png;base64,${data}`;
+                    await img.decode();
+                    const canvas = document.createElement('canvas');
+                    canvas.width = canvas.height = 1;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3).join();
+                }, png.toString('base64'));
+            };
+            const settleFade = (view) => view.waitForTimeout(450);
+            // A scroller's 10px track is its last 10 columns inside the border; its thumb is 6px (dx 3..8 from the right edge), 8px when pointed at
+            // (dx 2..9), and `top` is the middle row of the thumb wherever it has scrolled to.
+            const track = (view, selector) => view.$eval(selector, (el) => {
+                const r = el.getBoundingClientRect();
+                const style = getComputedStyle(el);
+                const length = (el.clientHeight * el.clientHeight) / el.scrollHeight;
+                const thumbTop = (el.scrollTop / el.scrollHeight) * el.clientHeight;
+                return { right: r.right - parseFloat(style.borderRightWidth), top: Math.round(r.top + parseFloat(style.borderTopWidth) + thumbTop + length / 2) };
+            });
+            const at = async (view, selector, dx) => {
+                const where = await track(view, selector);
+                return pixel(view, where.right - dx, where.top);
+            };
+            // The page's pinstripes dither by a level or two from pixel to pixel, so "the same color" has a little give.
+            const near = (a, b) => a.split(',').every((channel, i) => Math.abs(Number(channel) - Number(b.split(',')[i])) <= 3);
+            // No thumb is drawn when the thumb's column looks like the page beside it.
+            const hidden = async (view, selector) => near(await at(view, selector, 5), await at(view, selector, 11));
+            const DIM = { light: '100,115,131', dark: '142,161,179' };
+            const TEXT = { light: '38,51,64', dark: '227,235,242' };
+            const placed = (view) => view.evaluate(() => JSON.stringify(['#content', '#toolbar', '#home-link', '#playpause', '#nowplaying'].map((sel) => {
+                const r = document.querySelector(sel).getBoundingClientRect();
+                return [r.x, r.y, r.width, r.height];
+            })));
+
+            for (const scheme of ['light', 'dark']) {
+                const view = await open({ width: 1280, height: 800 }, false, painting);
+                await view.emulateMedia({ colorScheme: scheme });
+                await view.waitForTimeout(300);
+                const facts = await view.evaluate(() => {
+                    const inside = (el) => el.offsetWidth - el.clientWidth - parseFloat(getComputedStyle(el).borderLeftWidth) - parseFloat(getComputedStyle(el).borderRightWidth);
+                    return {
+                        supported: CSS.supports('selector(::-webkit-scrollbar)'),
+                        // Chromium drops ::-webkit-scrollbar for an element that sets these, so none of the page's may.
+                        standardLeft: ['#main', '#sidebar', '#nowplaying', '.shelf', '.svc-list'].filter((sel) => document.querySelector(sel)
+                            && ['scrollbarWidth', 'scrollbarColor'].some((prop) => getComputedStyle(document.querySelector(sel))[prop] !== 'auto')),
+                        main: inside(document.querySelector('#main')),
+                        sidebar: inside(document.querySelector('#sidebar')),
+                        column: inside(document.querySelector('#nowplaying')),
+                    };
+                });
+                check(`${scheme}: the page's own scrollbars are drawn by ::-webkit-scrollbar, and no element sets scrollbar-width or scrollbar-color`, facts.supported && facts.standardLeft.length === 0, JSON.stringify(facts));
+                check(`${scheme}: the library and the sidebar keep a 10px track, and the column one on each side, whether or not there is anything to scroll`,
+                    facts.main === 10 && facts.sidebar === 10 && facts.column === 20, JSON.stringify(facts));
+
+                await view.mouse.move(120, 760);
+                await settleFade(view);
+                check(`${scheme}: at rest the thumb is not drawn`, await hidden(view, '#main'));
+                await view.mouse.move(600, 400);
+                await settleFade(view);
+                check(`${scheme}: with the pointer over the library it fades in, in the theme's gray, 6px wide`, near(await at(view, '#main', 5), DIM[scheme])
+                    && near(await at(view, '#main', 3), DIM[scheme]) && near(await at(view, '#main', 8), DIM[scheme])
+                    && !near(await at(view, '#main', 2), DIM[scheme]) && !near(await at(view, '#main', 9), DIM[scheme]));
+                const where = await track(view, '#main');
+                await view.mouse.move(where.right - 5, where.top);
+                await settleFade(view);
+                check(`${scheme}: pointed at, the thumb darkens and grows to 8px`, near(await at(view, '#main', 5), TEXT[scheme]) && near(await at(view, '#main', 2), TEXT[scheme])
+                    && near(await at(view, '#main', 9), TEXT[scheme]) && !near(await at(view, '#main', 10), TEXT[scheme]));
+                await view.mouse.move(120, 760);
+                await settleFade(view);
+                check(`${scheme}: and it fades out again when the pointer leaves`, await hidden(view, '#main'));
+
+                // The fade is a fade: sampled right after the pointer arrives, the thumb is part way between the page and its gray.
+                await view.mouse.move(600, 400);
+                const early = await at(view, '#main', 5);
+                await settleFade(view);
+                check(`${scheme}: it takes a moment, not a switch`, !near(early, DIM[scheme]) && !near(early, await at(view, '#main', 11)), early);
+
+                const before = await placed(view);
+                await view.mouse.move(120, 760);
+                await settleFade(view);
+                await view.evaluate(() => document.querySelector('#main').scrollBy(0, 120));
+                await view.waitForTimeout(150);
+                const marked = await view.evaluate(() => document.querySelector('#main').classList.contains('is-scrolling'));
+                await view.waitForTimeout(300);
+                check(`${scheme}: scrolling marks the scroller and shows its thumb, with the pointer elsewhere`, marked && await view.evaluate(() => document.querySelector('#main').classList.contains('is-scrolling'))
+                    && near(await at(view, '#main', 5), DIM[scheme]));
+                await view.evaluate(() => document.querySelector('#main').scrollBy(0, 40));
+                await view.waitForTimeout(600);
+                check(`${scheme}: each scroll event restarts the 800 ms wait`, await view.evaluate(() => document.querySelector('#main').classList.contains('is-scrolling')));
+                await view.waitForTimeout(700);
+                check(`${scheme}: 800 ms after the last one the mark goes and the thumb fades out`, await view.evaluate(() => !document.querySelector('#main').classList.contains('is-scrolling'))
+                    && await hidden(view, '#main'));
+                await view.evaluate(() => { document.querySelector('#main').scrollTop = 0; });
+                await view.waitForTimeout(1300);
+                check(`${scheme}: none of it moved a thing`, await placed(view) === before);
+
+                // The sidebar is a scroller too, and keyboard scrolling marks it the same way.
+                await view.mouse.move(600, 400);
+                await view.evaluate(() => document.querySelector('#sidebar').scrollBy(0, 50));
+                await view.waitForTimeout(100);
+                check(`${scheme}: the sidebar's own thumb is shown while it scrolls, though the pointer is elsewhere`, near(await at(view, '#sidebar', 5), DIM[scheme]));
+                await view.context().close();
+            }
+
+            {
+                // A row of covers that scrolls sideways, its bar along the bottom edge.
+                const view = await open({ width: 1000, height: 800 }, false, painting);
+                const row = await view.evaluate(() => {
+                    const shelf = [...document.querySelectorAll('.shelf')].find((el) => el.scrollWidth > el.clientWidth);
+                    shelf?.setAttribute('data-probe', 'row');
+                    const r = shelf?.getBoundingClientRect();
+                    return shelf && { x: r.x + 100, bottom: r.bottom, track: shelf.offsetHeight - shelf.clientHeight };
+                });
+                check('a row that overflows has the same 10px track along its foot', Boolean(row) && row.track === 10, JSON.stringify(row));
+                const sample = (dy) => pixel(view, row.x, row.bottom - dy);
+                await view.mouse.move(60, 780);
+                await settleFade(view);
+                check('its thumb is not drawn at rest', near(await sample(5), await sample(11)));
+                await view.mouse.move(row.x + 40, row.bottom - 60);
+                await settleFade(view);
+                check('and fades in, in the same gray, with the pointer over the row', near(await sample(5), DIM.light) && near(await sample(3), DIM.light) && near(await sample(8), DIM.light));
+                await view.context().close();
+            }
+
+            {
+                // The now-playing column keeps its controls centered on whole pixels with its bar there or not: a short window makes it scroll.
+                const tall = await open({ width: 1280, height: 800 }, false);
+                await playOne(tall);
+                const place = (view) => view.evaluate(() => ['#playpause', '#seekbar', '#np-art-frame'].map((sel) => document.querySelector(sel).getBoundingClientRect().x + ',' + document.querySelector(sel).getBoundingClientRect().width).join('|'));
+                const scrolls = (view) => view.evaluate(() => document.querySelector('#nowplaying').scrollHeight > document.querySelector('#nowplaying').clientHeight);
+                const tallAt = await place(tall);
+                const tallScrolls = await scrolls(tall);
+                const tallCrisp = Object.values(await columnIsCrisp(tall)).every(Boolean);
+                await tall.context().close();
+                const short = await open({ width: 1280, height: 520 }, false);
+                await playOne(short);
+                const shortAt = await place(short);
+                check('a window too short for the column makes it scroll, and a tall one does not', await scrolls(short) && !tallScrolls);
+                check('and the controls stay centered on whole pixels, in the same place, with its bar there or not', tallCrisp && Object.values(await columnIsCrisp(short)).every(Boolean)
+                    && shortAt === tallAt, `${tallAt} vs ${shortAt}`);
+                await short.context().close();
+
+                // A dialog's list scrolls on a short window and has the same bar.
+                const view = await open({ width: 1280, height: 520 }, false, painting);
+                await openSettings(view);
+                const list = await view.evaluate(() => {
+                    const el = document.querySelector('.svc-list');
+                    return { scrolls: el.scrollHeight > el.clientHeight, track: el.offsetWidth - el.clientWidth };
+                });
+                check('the sheet\'s channel list gets the same 10px track when it has to scroll', list.scrolls && list.track === 10, JSON.stringify(list));
+                const listAt = await track(view, '.svc-list');
+                await view.mouse.move(listAt.right - 100, listAt.top + 60);
+                await settleFade(view);
+                check('and its thumb fades in with the pointer over it', near(await at(view, '.svc-list', 5), DIM.light));
+                await view.keyboard.press('Escape');
+                await view.context().close();
+
+                // Phones and tablets keep their own overlay bars, and nothing here is reserved.
+                const phone = await open({ width: 390, height: 844 }, true);
+                const touch = await phone.evaluate(() => ({
+                    fine: matchMedia('(hover: hover) and (pointer: fine)').matches,
+                    gutter: ['#main', '#sidebar', '#nowplaying'].map((sel) => getComputedStyle(document.querySelector(sel)).scrollbarGutter).join(),
+                    sheetPadding: getComputedStyle(document.querySelector('#nowplaying')).paddingLeft,
+                    track: document.querySelector('#main').offsetWidth - document.querySelector('#main').clientWidth,
+                }));
+                check('on a touch screen none of this applies: no gutters, no reserved track, the sheet\'s own padding', !touch.fine && touch.gutter === 'auto,auto,auto' && touch.track === 0 && touch.sheetPadding === '20px', JSON.stringify(touch));
+                await phone.context().close();
+            }
+            await painting.close();
         }
 
         {

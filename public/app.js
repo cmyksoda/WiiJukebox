@@ -7,6 +7,7 @@
 import butterchurn from './vendor/butterchurn.min.js';
 import { isContainer, playRequest } from './play-request.mjs';
 import { bindMenuRequests, closeMenu, openMenu } from './context-menu.mjs';
+import './scrollbars.mjs';
 
 const $ = (sel) => document.querySelector(sel);
 

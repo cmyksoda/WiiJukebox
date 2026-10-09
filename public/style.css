@@ -601,8 +601,6 @@ html.in-app #page-menu { display: none; }
     overscroll-behavior-x: contain;
     scroll-snap-type: x proximity;
     scroll-padding-inline: var(--pad);
-    scrollbar-width: thin;
-    scrollbar-color: var(--edge) transparent;
 }
 .shelf > li { flex: 0 0 148px; min-width: 0; scroll-snap-align: start; }
 span.play-all { pointer-events: none; }
@@ -1184,6 +1182,51 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 @media (max-height: 640px) and (max-width: 900px) {
     #np-art-frame { max-width: 30dvh; }
     #nowplaying { gap: 8px; }
+}
+
+/* --- scrollbars --------------------------------------------------------------------------------------- */
+
+/* Slim, themed, and out of sight until the pointer is over a scroller or it is scrolling (scrollbars.mjs marks it
+   is-scrolling). Touch screens keep their own overlay bars. The track stays in the layout, so nothing moves as the thumb fades. */
+/* Chromium restyles a scrollbar when its scroller changes, not for :hover on the thumb's own pseudo-element, and runs no
+   transitions on the thumb. So the fade is a registered number that transitions on the scroller and tints the thumb. */
+@property --thumb { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+@media (hover: hover) and (pointer: fine) and (forced-colors: none) {
+    @supports selector(::-webkit-scrollbar) {
+        /* Chromium ignores these as soon as scrollbar-width or scrollbar-color is set, so those stay in the Firefox branch below. */
+        ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+        ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+        ::-webkit-scrollbar-button { display: none; }
+        * { --thumb: 0; transition: --thumb .25s ease; }
+        :hover, .is-scrolling { --thumb: 1; }
+        /* A 6px thumb in the 10px track, 8px when it is the thumb being pointed at. */
+        ::-webkit-scrollbar-thumb {
+            min-width: 36px;
+            min-height: 36px;
+            border: 2px solid transparent;
+            border-radius: 999px;
+            background-color: color-mix(in srgb, var(--dim) calc(var(--thumb) * 100%), transparent);
+            background-clip: padding-box;
+        }
+        ::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { border-width: 1px; background-color: var(--text); }
+
+        /* The track's 10px is reserved even with nothing to scroll, and comes out of the padding, so the layout is the same
+           whether or not the bar shows. The now-playing column keeps one on each side so its controls stay centered on whole pixels. */
+        #main { scrollbar-gutter: stable; }
+        #sidebar { scrollbar-gutter: stable; padding-right: 4px; }
+        #nowplaying { scrollbar-gutter: stable both-edges; }
+        @media (min-width: 901px) {
+            #main { padding-right: 18px; }
+            #nowplaying { padding-left: 13px; padding-right: 14px; }
+        }
+        @media (min-width: 901px) and (max-width: 1180px) { #nowplaying { padding-left: 5px; padding-right: 6px; } }
+        @media (max-width: 900px) { #nowplaying { padding-left: 10px; padding-right: 10px; } }
+    }
+    @supports not selector(::-webkit-scrollbar) {
+        * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+        :hover, .is-scrolling { scrollbar-color: var(--dim) transparent; }
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
