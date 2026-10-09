@@ -37,6 +37,7 @@ class SourceRegistry {
                 id: Cls.id,
                 label: Cls.label,
                 family: Cls.family,
+                suggests: Cls.suggests,
                 state: instance ? instance.state : 'idle',
                 configured: this._isConfigured(Cls.id),
                 capabilities: instance ? instance.capabilities : {},

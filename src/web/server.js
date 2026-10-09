@@ -44,7 +44,7 @@ class WebServer {
         this.history = history || new PlayHistory({ file: path.join(config.dir, 'history.json') });
         this.history.listen(pipeline);
         this.art = new ArtProxy();
-        this.home = new HomeService({ registry, history: this.history, art: this.art });
+        this.home = new HomeService({ registry, config, history: this.history, art: this.art });
         this.publicDir = publicDir || path.join(__dirname, '..', '..', 'public');
 
         this._sseClients = new Set();
@@ -301,6 +301,19 @@ class WebServer {
                 this.config.data.lastPlayed = { source: id, item };
                 this.config.save();
                 return this._json(res, 200, { ok: true, status: this.pipeline.status });
+            }
+        }
+
+        if (section === 'home' && rest[0] === 'primary' && rest.length === 1) {
+            if (req.method === 'GET') return this._json(res, 200, this.home.primary());
+            if (req.method === 'POST') {
+                const body = await this._readBody(req);
+                if (!('id' in body)) return this._json(res, 400, { error: 'name a service, or null to leave it automatic' });
+                try {
+                    return this._json(res, 200, this.home.setPrimary(body.id));
+                } catch (err) {
+                    return this._json(res, err.code || 500, { error: err.message });
+                }
             }
         }
 

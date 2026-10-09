@@ -5,9 +5,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { PlayHistory } = require('../src/core/history');
 const { fakeSubsonic, fakeJellyfin, fakePlex, fakePodcasts, listen } = require('./helpers/fake-services');
+const { Config } = require('../src/config');
 const { harness } = require('./helpers/app-harness');
 
 const only = (rows, id) => rows.find((row) => row.id === id);
+const choose = async (app, id) => assert.equal((await app.post('/api/home/primary', { id })).status, 200);
 
 test('the overview lists configured services with their rows and hides what is not set up', async () => {
     const navidrome = await fakeSubsonic();
@@ -42,10 +44,12 @@ test('service rows reach the browser with art by proxy and without any service l
         const first = only(subsonic.rows, 'newest').items[0];
         assert.deepEqual([first.id, first.type, first.title, first.subtitle], ['album/n1', 'album', 'Paper Lanterns', 'Mika Ito']);
 
+        await choose(app, 'jellyfin');
         const latest = (await app.get('/api/home/jellyfin')).rows[0];
         assert.equal(latest.title, 'Latest');
         assert.equal(latest.items[0].id, 'album/j1');
 
+        await choose(app, 'plex');
         const plexRows = (await app.get('/api/home/plex')).rows;
         assert.deepEqual(plexRows.map((row) => row.title), ['Recently added', 'On Deck']);
         assert.equal(only(plexRows, 'recent').items[0].id, 'album/101');
@@ -117,17 +121,21 @@ test('a service that fails shows its own error while the rest of the home screen
         assert.equal(sick.error, undefined, 'it answered the ping, so the service is connected');
         assert.ok(sick.rows.every((row) => /HTTP 500/.test(row.error) && !row.items), 'each row carries its own note');
 
+        await choose(app, 'jellyfin');
         const down = await app.get('/api/home/jellyfin');
         assert.ok(down.error && !down.rows, 'a service that will not connect has one error');
 
+        await choose(app, 'plex');
         const [ok, shows] = await Promise.all([app.get('/api/home/plex'), app.get('/api/home/podcasts')]);
         assert.equal(only(ok.rows, 'recent').items.length, 3);
         assert.equal(shows.rows[0].items.length, 2);
 
+        await choose(app, 'subsonic');
+
         await app.registry.configure('subsonic', { ...wrong.config, password: 'nope' });
         const badLogin = await app.get('/api/home/subsonic');
         assert.match(badLogin.error, /wrong username or password/);
-        assert.equal((await app.get('/api/home')).services.length >= 4, true, 'the overview never depends on a service');
+        assert.equal((await app.get('/api/home')).services.length >= 3, true, 'the overview never depends on a service');
     } finally {
         await app.close();
         await Promise.all([unwell.close(), wrong.close(), plex.close(), podcasts.close()]);
@@ -275,5 +283,66 @@ test('the art proxy serves only links the server made, and only pictures', async
     } finally {
         await app.close();
         await hosts.close();
+    }
+});
+
+test('the primary is the first library service set up until one is chosen, and the only one with rows', async () => {
+    const navidrome = await fakeSubsonic();
+    const jellyfin = await fakeJellyfin();
+    const plex = await fakePlex();
+    const app = await harness({ subsonic: navidrome.config, jellyfin: jellyfin.config, plex: plex.config });
+    const primary = () => app.get('/api/home/primary');
+    const shown = async () => (await app.get('/api/home')).services.map((service) => service.id);
+    try {
+        assert.deepEqual(await primary(), { id: 'subsonic', auto: true, eligible: [
+            { id: 'subsonic', label: 'Navidrome / Subsonic' }, { id: 'jellyfin', label: 'Jellyfin' }, { id: 'plex', label: 'Plex' }] });
+        assert.deepEqual((await app.get('/api/home')).primary, await primary(), 'the overview carries it too');
+        assert.deepEqual((await app.get('/api/sources')).sources.filter((source) => source.suggests).map((source) => source.id),
+            ['subsonic', 'jellyfin', 'plex'], 'radio, podcasts, yt-dlp, YouTube Music and the receivers have no suggestions');
+
+        let ids = await shown();
+        assert.deepEqual(ids.filter((id) => ['subsonic', 'jellyfin', 'plex'].includes(id)), ['subsonic']);
+        assert.ok(ids.includes('podcasts') && ids.includes('radio'), 'the other kinds keep their rows');
+        assert.equal((await fetch(`${app.base}/api/home/jellyfin`)).status, 404, 'a library that is not the primary has no rows');
+        assert.equal((await fetch(`${app.base}/api/home/plex`)).status, 404);
+
+        assert.deepEqual(await app.post('/api/home/primary', { id: 'plex' }).then((res) => res.json()),
+            { id: 'plex', auto: false, eligible: (await primary()).eligible });
+        ids = await shown();
+        assert.deepEqual(ids.filter((id) => ['subsonic', 'jellyfin', 'plex'].includes(id)), ['plex']);
+        assert.equal((await fetch(`${app.base}/api/home/subsonic`)).status, 404);
+        assert.equal((await fetch(`${app.base}/api/home/plex`)).status, 200);
+        assert.equal(app.config.data.home.primary, 'plex');
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        assert.equal(new Config(app.dir).load().home.primary, 'plex', 'it is in the config file');
+
+        // Gone from the setup, the choice gives way to the automatic one and comes back with the service.
+        app.config.updateSource('plex', { token: '' });
+        assert.deepEqual([(await primary()).id, (await primary()).auto], ['subsonic', true]);
+        app.config.updateSource('plex', plex.config);
+        assert.deepEqual([(await primary()).id, (await primary()).auto], ['plex', false]);
+
+        const refuse = async (body, pattern) => {
+            const res = await app.post('/api/home/primary', body);
+            assert.equal(res.status, 400, JSON.stringify(body));
+            assert.match((await res.json()).error, pattern);
+        };
+        for (const id of ['radio', 'podcasts', 'ytdlp', 'ytmusic', 'spotify', 'nowhere', 7]) await refuse({ id }, /no suggestions/);
+        await refuse({}, /name a service/);
+        app.config.updateSource('jellyfin', { url: '' });
+        await refuse({ id: 'jellyfin' }, /not set up/);
+        assert.equal((await primary()).id, 'plex', 'a refused request changes nothing');
+
+        assert.deepEqual((await app.post('/api/home/primary', { id: null }).then((res) => res.json())).id, 'subsonic');
+        assert.equal(app.config.data.home.primary, null);
+        assert.equal((await primary()).auto, true);
+
+        // With no library at all there is nobody to be primary.
+        app.config.updateSource('subsonic', { url: '' });
+        app.config.updateSource('plex', { token: '' });
+        assert.deepEqual(await primary(), { id: null, auto: true, eligible: [] });
+    } finally {
+        await app.close();
+        await Promise.all([navidrome.close(), jellyfin.close(), plex.close()]);
     }
 });

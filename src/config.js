@@ -64,6 +64,10 @@ const DEFAULTS = {
         ytmusic: { binary: '', format: '', extraArgs: [], links: [] },
     },
 
+    // `primary` is the library service whose suggestions fill the web home screen; null
+    // leaves it to the first one that is set up.
+    home: { primary: null },
+
     // Shuffle and repeat ('off', 'all' or 'one'), kept across restarts.
     playModes: { shuffle: false, repeat: 'off' },
 

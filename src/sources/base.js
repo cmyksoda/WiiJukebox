@@ -68,6 +68,12 @@ class Source extends EventEmitter {
     static replayable = true;
 
     /**
+     * True for library services whose server suggests music (recently added, on deck), which
+     * is what lets one of them be the primary service behind the home screen's suggestions.
+     */
+    static suggests = false;
+
+    /**
      * Rows for the web home screen: `{ id, title, remote }`. `remote` rows come
      * from a service, so they are cached and need the source connected first.
      */

@@ -111,7 +111,11 @@ test('no browser-facing response carries a service link or credential, and every
         assert.equal(subscribed.status, 200);
         assert.equal(app.config.sourceConfig('podcasts').subscriptions.at(-1).artwork, `${podcasts.url}/show/Maker%20Hour.png`,
             'a saved show keeps the real cover link, not the proxy path');
-        for (const id of ['subsonic', 'jellyfin', 'plex', 'podcasts']) await get(`/api/home/${id}`);
+        for (const id of ['subsonic', 'jellyfin', 'plex']) {
+            assert.equal((await call('/api/home/primary', { method: 'POST', body: { id } })).status, 200);
+            await get(`/api/home/${id}`);
+        }
+        await get('/api/home/podcasts');
 
         // Playing: what comes back from the page is a proxy path, and playing still works.
         const [album] = albums.items;

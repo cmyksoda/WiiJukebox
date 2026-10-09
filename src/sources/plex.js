@@ -5,6 +5,7 @@ class PlexSource extends QueueSource {
     static id = 'plex';
     static label = 'Plex';
     static family = 'pull';
+    static suggests = true;
     static homeRows = [
         { id: 'recent', title: 'Recently added', remote: true },
         { id: 'ondeck', title: 'On Deck', remote: true },

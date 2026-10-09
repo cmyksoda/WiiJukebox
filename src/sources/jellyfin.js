@@ -19,6 +19,7 @@ class JellyfinSource extends QueueSource {
     static id = 'jellyfin';
     static label = 'Jellyfin';
     static family = 'pull';
+    static suggests = true;
     static homeRows = [{ id: 'latest', title: 'Latest', remote: true }];
 
     constructor(config = {}, deps = {}) {

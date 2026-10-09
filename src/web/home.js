@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The web home screen's data: recent plays from the history, and one set of rows per
 // configured service. Each service answers on its own, so a slow or broken one cannot
-// hold up or break the rest.
+// hold up or break the rest. Of the library services only the primary one has rows, so the
+// page stays short.
 
 const { REGISTRY } = require('../sources');
 
@@ -24,8 +25,9 @@ function timeout(promise, ms) {
 }
 
 class HomeService {
-    constructor({ registry, history, art, cacheMs = CACHE_MS, rowTimeoutMs = ROW_TIMEOUT_MS, now = Date.now }) {
+    constructor({ registry, config, history, art, cacheMs = CACHE_MS, rowTimeoutMs = ROW_TIMEOUT_MS, now = Date.now }) {
         this.registry = registry;
+        this.config = config;
         this.history = history;
         this.art = art;
         this.cacheMs = cacheMs;
@@ -34,11 +36,12 @@ class HomeService {
         this._cache = new Map();
     }
 
-    /** Local data only, so it answers at once: recent plays and which rows each service has. */
+    /** Local data only, so it answers at once: recent plays, which rows each service has and who is primary. */
     overview() {
         const configured = this._configured();
+        const primary = this.primary();
         const services = [...configured.values()]
-            .filter((source) => classFor(source.id).homeRows.length)
+            .filter((source) => this._hasRows(source.id, primary))
             .sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id))
             .map((source) => ({
                 id: source.id, label: source.label,
@@ -50,14 +53,38 @@ class HomeService {
                 title: entry.title, subtitle: entry.subtitle, artwork: this.art.link(entry.art), at: entry.at,
                 item: this._publish({ ...entry.item, artwork: entry.art || entry.item.artwork }),
             }));
-        return { recent, services };
+        return { recent, services, primary };
+    }
+
+    /**
+     * The library service whose suggestions fill the page: the saved choice while it is still set up,
+     * else the first one that is. `auto` says nobody has chosen (or the choice has gone).
+     */
+    primary() {
+        const configured = this._configured();
+        const eligible = REGISTRY.filter((cls) => cls.suggests && configured.has(cls.id))
+            .map((cls) => ({ id: cls.id, label: cls.label }));
+        const chosen = eligible.find((entry) => entry.id === this.config.data.home?.primary);
+        return { id: (chosen || eligible[0])?.id ?? null, auto: !chosen, eligible };
+    }
+
+    /** `id` null goes back to the automatic choice. */
+    setPrimary(id) {
+        if (id !== null) {
+            const cls = typeof id === 'string' ? classFor(id) : null;
+            if (!cls?.suggests) throw Object.assign(new Error('that service has no suggestions to put on the home screen'), { code: 400 });
+            if (!this._configured().has(id)) throw Object.assign(new Error(`${cls.label} is not set up yet`), { code: 400 });
+        }
+        this.config.data.home = { ...this.config.data.home, primary: id };
+        this.config.save();
+        return this.primary();
     }
 
     /** One service's rows. A row that fails carries its own error; a service that will not connect has one. */
     async service(id) {
         const source = this._configured().get(id);
-        const rows = source && classFor(id).homeRows;
-        if (!rows?.length) throw Object.assign(new Error(`no home rows for ${id}`), { code: 404 });
+        if (!source || !this._hasRows(id, this.primary())) throw Object.assign(new Error(`no home rows for ${id}`), { code: 404 });
+        const rows = classFor(id).homeRows;
         try {
             const instance = rows.some((row) => row.remote) ? await this.registry.connect(id) : this.registry.get(id);
             const settled = await Promise.all(rows.map(async (row) => {
@@ -77,6 +104,12 @@ class HomeService {
     /** Settings or subscriptions changed, so what was cached for this service is stale. */
     forget(id) {
         for (const key of this._cache.keys()) if (key.startsWith(`${id}:`)) this._cache.delete(key);
+    }
+
+    // A library service shows only when it is the primary; the other kinds always have their own rows.
+    _hasRows(id, primary) {
+        const cls = classFor(id);
+        return cls.homeRows.length > 0 && (!cls.suggests || id === primary.id);
     }
 
     _configured() {

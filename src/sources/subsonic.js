@@ -21,6 +21,7 @@ class SubsonicSource extends QueueSource {
     static id = 'subsonic';
     static label = 'Navidrome / Subsonic';
     static family = 'pull';
+    static suggests = true;
     static homeRows = [
         { id: 'newest', title: 'Recently added', remote: true },
         { id: 'frequent', title: 'Most played', remote: true },
