@@ -65,11 +65,13 @@ WebKit packages.
   type the address shown (for example `192.168.0.3:4005`). The page also reports whether
   the server and discovery are working. After that the window shows the web UI.
 - **Background.** A tray icon (menu bar icon on a Mac) keeps the server and the music
-  going. The first time the window is closed the app asks whether to keep playing in
-  the background or quit, and remembers the answer ("Keep playing when the window is
-  closed" in the menu changes it). Quit from the tray or application menu stops the
-  server and its FFmpeg. If the app is killed without quitting, the server notices
-  and stops by itself.
+  going. The first time the window is closed (the bar's ×, Alt+F4, the taskbar)
+  the app asks in a small card of its own: a bold title, one sentence, a "Remember my choice"
+  line (ticked; unticked, the choice applies once and the card comes back next time) and three
+  equal buttons, Cancel, Quit and Keep playing. Escape cancels, Enter keeps playing, and the
+  answer is remembered ("Keep playing when the window is closed" in the menu changes it). Quit
+  from the tray or application menu stops the server and its FFmpeg. If the app is killed
+  without quitting, the server notices and stops by itself.
 - **Audio engine and server settings.** Unticking "Use the included audio engine" makes
   the server use the FFmpeg already on the computer (see [FFmpeg and
   yt-dlp](#ffmpeg-and-yt-dlp)). Unticking "Use default server settings" shows two
@@ -264,6 +266,10 @@ Then it runs:
   the window is never shown), the bar being the only page with the window bridge, fullscreen of
   the page and of the visualizer's stage hiding the bar and filling the window, F11, the
   fullscreen button, Escape and closing the visualizer;
+- the close card: it opens from the bar's ×, from the window being asked to close by the system and
+  from a minimized window (which is restored first); its three equal buttons, the safe default,
+  Escape, Enter, the remember line, the card's own window closing, and Quit leaving the app and the
+  answer behind; only the card can answer it;
 - Use system title bar: the menu item rebuilds the window without the bar and back, the title
   keeps following playback, and a saved choice starts the app without the bar.
 

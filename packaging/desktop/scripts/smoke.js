@@ -227,7 +227,11 @@ async function devtoolsClient({ port = DEBUG_PORT, type = 'page', urlPart = 'app
     return {
         send,
         // `userGesture` lets the page do what only a click or key press may, such as going fullscreen.
-        evaluate: async (expression, { userGesture = false } = {}) => (await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture })).result.value,
+        evaluate: async (expression, { userGesture = false } = {}) => {
+            const answer = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture });
+            if (answer.exceptionDetails) throw new Error(answer.exceptionDetails.exception?.description || answer.exceptionDetails.text);
+            return answer.result.value;
+        },
         close: () => socket.close(),
     };
 }
@@ -1069,6 +1073,160 @@ async function checkSystemTitleBar() {
     }
 }
 
+// The close card: the first time the window is closed the app asks, from the bar's ×, Alt+F4 and the taskbar alike
+// (all of which reach the same window "close"), in a small card with three equal buttons.
+async function checkCloseDialog() {
+    console.log('\n== close card: asking what closing does ==');
+    const settingsFile = (app) => path.join(app.userData, 'settings.json');
+    const saved = (app) => JSON.parse(fs.readFileSync(settingsFile(app), 'utf8')).onClose;
+    const mainWindow = "electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow())";
+    const record = () => inMain(`
+        const window = ${mainWindow};
+        globalThis.calls = [];
+        window.hide = () => calls.push('hide');
+        window.minimize = () => calls.push('minimize');
+        return true;`);
+    const calls = async () => JSON.parse(await inMain('return JSON.stringify(globalThis.calls);'));
+    const cards = async () => JSON.parse(await inMain(`return JSON.stringify(electron.BaseWindow.getAllWindows().filter((w) => w.getParentWindow()).map((w) => ({
+        modal: w.isModal(), parent: w.getParentWindow() === ${mainWindow}, size: w.getContentSize() })));`));
+    const cardGone = () => until('the card to close', async () => (await cards()).length === 0, 8000).then(() => true, () => false);
+    const cardUp = async () => {
+        await until('the card', async () => (await cards()).length === 1, 15000);
+        const opened = await devtoolsClient({ urlPart: 'close.html' });
+        // The page focuses its safe default as its last step, so that is when it is ready.
+        await until('the card to load', () => opened.evaluate("document.activeElement?.id === 'background'").catch(() => false), 10000);
+        return opened;
+    };
+    const press = (card, key) => card.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true })); true`);
+
+    const app = new App('closecard', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'ask' },
+    });
+    app.start();
+    let bar;
+    let page;
+    let card;
+    try {
+        const state = await app.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
+        await until('the web UI to load into the window', async () => viewOf(await windowViews(), 'page'), 30000);
+        bar = await pageClient('titlebar.html');
+        page = await devtoolsClient({ urlPart: state.serverUrl });
+        await record();
+
+        await bar.evaluate("document.querySelector('#close').click(); true");
+        card = await cardUp();
+        const look = JSON.parse(await card.evaluate(`JSON.stringify({
+            title: document.querySelector('h1').textContent,
+            detail: document.querySelector('#detail').textContent,
+            remember: document.querySelector('#remember').checked,
+            buttons: [...document.querySelectorAll('button')].map((b) => { const r = b.getBoundingClientRect(); return { text: b.textContent, x: r.x, y: r.y, width: r.width, height: r.height }; }),
+            card: document.querySelector('main').getBoundingClientRect().toJSON(),
+            focus: document.activeElement.id,
+            font: getComputedStyle(document.querySelector('#detail')).fontSize,
+        })`));
+        check('the bar\'s × asks, in a card of its own that is modal over the window', (await cards()).every((c) => c.modal && c.parent), JSON.stringify(await cards()));
+        check('with a bold title and one short sentence naming where it waits',
+            look.title === 'Keep WiiJukebox running?' && /^Your Wii can keep listening from the (system tray|notification area|menu bar)\.$/.test(look.detail), look.detail);
+        check('and three equal buttons in one row: Cancel, Quit, Keep playing',
+            look.buttons.map((b) => b.text).join() === 'Cancel,Quit,Keep playing' && look.buttons.every((b) => b.width === look.buttons[0].width && b.y === look.buttons[0].y && b.height === 34), JSON.stringify(look.buttons));
+        check('the card is compact (376px wide, even height) and its buttons sit on whole pixels',
+            look.card.width === 376 && look.card.height % 2 === 0 && look.card.height < 220 && look.buttons.every((b) => [b.x, b.y, b.width, b.height].every(Number.isInteger)), JSON.stringify(look.card));
+        check('the choice is remembered unless unticked, and the safe default has focus', look.remember === true && look.focus === 'background');
+        check('the card is the size of its content', (await cards())[0].size.join() === `376,${look.card.height}`, JSON.stringify((await cards())[0].size));
+
+        // Only the card may answer, and only with a real choice.
+        await inMain(`electron.ipcMain.emit('close-dialog:answer', { sender: electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow()).contentView.children[0].webContents }, { choice: 'quit', remember: true }); return true;`);
+        await sleep(300);
+        check('the web UI cannot answer for it', (await cards()).length === 1 && saved(app) === 'ask');
+        await inMain(`electron.ipcMain.emit('close-dialog:answer', { sender: electron.BaseWindow.getAllWindows().find((w) => w.getParentWindow()).webContents }, { choice: 'explode', remember: true }); return true;`);
+        await sleep(300);
+        check('and an answer that is not one of the three is ignored', (await cards()).length === 1);
+
+        await press(card, 'ArrowLeft');
+        check('arrow keys move between the buttons', await card.evaluate('document.activeElement.id') === 'quit');
+        await press(card, 'ArrowRight');
+        await press(card, 'Escape');
+        check('Escape cancels: the card goes, nothing is remembered, and the window stays', await cardGone() && saved(app) === 'ask' && (await calls()).length === 0);
+        card.close();
+
+        // Alt+F4 and the taskbar both ask the window to close; asking while the card is up does not stack a second one.
+        await inMain(`${mainWindow}.close(); return true;`);
+        card = await cardUp();
+        await inMain(`${mainWindow}.close(); return true;`);
+        await sleep(300);
+        check('closing the window from the system asks too, and never twice at once', (await cards()).length === 1);
+        await card.evaluate("document.querySelector('#quit').focus(); true");
+        await card.evaluate("document.querySelector('#remember').focus(); true");
+        await press(card, 'Enter');
+        check('Enter anywhere but on another button picks Keep playing, remembers it and hides the window',
+            await cardGone() && await until('the saved choice', () => saved(app) === 'background', 5000).then(() => true, () => false) && (await calls()).at(-1) === 'hide', JSON.stringify(await calls()));
+        card.close();
+        await inMain(`${mainWindow}.close(); return true;`);
+        await sleep(600);
+        check('after that, closing just hides it, with no card', (await cards()).length === 0 && (await calls()).filter((c) => c === 'hide').length === 2);
+
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('close card flow', false, err.message);
+        app.dump();
+    } finally {
+        card?.close();
+        bar?.close();
+        page?.close();
+        app.kill();
+    }
+
+    // Unticked, a choice applies once; the card's own window closing is a Cancel; Quit remembers and quits.
+    const second = new App('closecard2', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
+        settings: { setupDone: true, onClose: 'ask' },
+    });
+    second.start();
+    let again;
+    try {
+        await second.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
+        await until('the window', async () => viewOf(await windowViews(), 'page'), 30000);
+        await record();
+        await inMain(`${mainWindow}.close(); return true;`);
+        again = await cardUp();
+        await again.evaluate("document.querySelector('#remember').click(); document.querySelector('#background').click(); true");
+        check('unticked, Keep playing hides the window this once', await cardGone() && (await calls()).at(-1) === 'hide');
+        check('and is not remembered, so it asks again', saved(second) === 'ask');
+        again.close();
+
+        // A window closed from the taskbar is still minimized; it is brought back so the card is not asked of nothing.
+        await inMain(`const window = ${mainWindow};
+            window.isMinimized = () => true;
+            window.restore = () => { calls.push('restore'); window.isMinimized = () => false; };
+            window.close();
+            return true;`);
+        again = await cardUp();
+        check('a minimized window is restored before the card shows', (await calls()).includes('restore'), JSON.stringify(await calls()));
+        await inMain(`electron.BaseWindow.getAllWindows().find((w) => w.getParentWindow()).close(); return true;`);
+        check('closing the card itself is a Cancel', await cardGone() && (await calls()).filter((c) => c === 'hide').length === 1);
+        again.close();
+
+        await inMain(`${mainWindow}.close(); return true;`);
+        again = await cardUp();
+        await again.evaluate("document.querySelector('#cancel').click(); true");
+        check('the Cancel button leaves everything as it was', await cardGone() && saved(second) === 'ask' && (await calls()).filter((c) => c === 'hide').length === 1);
+        again.close();
+
+        await inMain(`${mainWindow}.close(); return true;`);
+        again = await cardUp();
+        await again.evaluate("document.querySelector('#quit').click(); true");
+        const exit = await Promise.race([second.exited, sleep(30000).then(() => null)]);
+        check('Quit remembers the choice and quits the app', exit !== null && saved(second) === 'quit', JSON.stringify(exit));
+    } catch (err) {
+        check('close card (second) flow', false, err.message);
+        second.dump();
+    } finally {
+        again?.close();
+        second.kill();
+    }
+}
+
 async function main() {
     console.log(`smoke test of ${executable}${ARCH ? ` as ${ARCH}` : ''} on ${process.platform}-${process.arch}`);
     for (const port of [PORT, DEBUG_PORT, INSPECT_PORT]) {
@@ -1088,6 +1246,7 @@ async function main() {
     }
     await checkTitleBar();
     await checkSystemTitleBar();
+    await checkCloseDialog();
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
     process.exit(failures ? 1 : 0);
 }

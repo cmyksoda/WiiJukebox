@@ -67,6 +67,9 @@ let withoutFfmpeg = false;
 let currentPage = 'starting';
 let lastLoad = null;
 let hiddenToTray = false;
+// The "Keep WiiJukebox running?" card while it is up, and what to do with its answer.
+let closeDialog = null;
+let answerClose = null;
 // While the bar's menu shows, the bar's view covers the whole window; these keep it and what each entry does.
 let menuOpen = false;
 let menuActions = null;
@@ -340,20 +343,74 @@ function onWindowClose(event) {
     else askWhatClosingDoes();
 }
 
-async function askWhatClosingDoes() {
-    const { response } = await dialog.showMessageBox(win, {
-        type: 'question',
-        buttons: ['Keep playing in the background', 'Quit WiiJukebox', 'Cancel'],
-        defaultId: 0,
-        cancelId: 2,
-        message: 'Keep WiiJukebox running?',
-        detail: `Your Wii can keep listening while the window is closed. WiiJukebox waits in the ${trayName}; ` +
-            'choose Quit from its menu to stop it. You can change this later from that menu.',
+const CLOSE_DIALOG_WIDTH = 376;
+const CLOSE_CHOICES = ['cancel', 'quit', 'background'];
+
+// A small card of our own instead of a native message box, whose three buttons Electron stacks into a wide window.
+// It is its own window, so it shows the same however the main window was asked to close (the bar's ×, Alt+F4, the taskbar).
+function showCloseDialog() {
+    return new Promise((resolve) => {
+        // A window closed from the taskbar is still minimized, and a card over nothing would not be seen.
+        if (win.isMinimized()) win.restore();
+        const dialog = new BrowserWindow({
+            parent: win,
+            modal: true,
+            show: false,
+            frame: false,
+            resizable: false,
+            minimizable: false,
+            maximizable: false,
+            fullscreenable: false,
+            skipTaskbar: true,
+            useContentSize: true,
+            width: CLOSE_DIALOG_WIDTH,
+            height: 200,
+            backgroundColor: bg(),
+            title: 'Keep WiiJukebox running?',
+            webPreferences: { preload: path.join(__dirname, 'close-preload.js'), contextIsolation: true, sandbox: true },
+        });
+        dialog.removeMenu();
+        closeDialog = dialog;
+        let answer = { choice: 'cancel', remember: false };
+        answerClose = (given) => {
+            answer = given;
+            dialog.close();
+        };
+        dialog.on('closed', () => {
+            closeDialog = null;
+            answerClose = null;
+            resolve(answer);
+        });
+        const search = new URLSearchParams({ tray: trayName });
+        if (forcedTheme(themeChoice)) search.set('theme', forcedTheme(themeChoice));
+        dialog.webContents.loadFile(path.join(__dirname, 'ui', 'close.html'), { search: search.toString() });
     });
-    if (response === 2) return;
-    settings.set('onClose', response === 0 ? 'background' : 'quit');
-    buildMenus();
-    if (response === 0) hideToTray();
+}
+
+// The card tells main how tall it is; the window is then sized to it, centered over the main window, and shown.
+function presentCloseDialog(height) {
+    const dialog = closeDialog;
+    if (!dialog || dialog.isVisible() || !Number.isFinite(height)) return;
+    const content = Math.min(400, Math.max(120, Math.ceil(height / 2) * 2));
+    dialog.setContentSize(CLOSE_DIALOG_WIDTH, content);
+    const parent = win?.getBounds();
+    const [width, tall] = dialog.getSize();
+    if (parent) dialog.setPosition(Math.round(parent.x + (parent.width - width) / 2), Math.round(parent.y + (parent.height - tall) / 2));
+    if (!neverShow) dialog.show();
+}
+
+async function askWhatClosingDoes() {
+    if (closeDialog) {
+        closeDialog.focus();
+        return;
+    }
+    const { choice, remember } = await showCloseDialog();
+    if (quitting || choice === 'cancel') return;
+    if (remember) {
+        settings.set('onClose', choice);
+        buildMenus();
+    }
+    if (choice === 'background') hideToTray();
     else app.quit();
 }
 
@@ -761,6 +818,15 @@ fromBarOnly('titlebar:menu-activate', (id) => {
     const action = typeof id === 'string' ? menuActions?.get(id) : null;
     closeBarMenu();
     action?.();
+});
+
+// Only the close card may answer it, and only with one of its three choices.
+const fromCloseDialog = (event) => Boolean(closeDialog) && event.sender === closeDialog.webContents;
+ipcMain.on('close-dialog:ready', (event, height) => {
+    if (fromCloseDialog(event)) presentCloseDialog(height);
+});
+ipcMain.on('close-dialog:answer', (event, answer) => {
+    if (fromCloseDialog(event) && CLOSE_CHOICES.includes(answer?.choice)) answerClose({ choice: answer.choice, remember: answer.remember === true });
 });
 
 handle('desktop:info', () => describeServer());

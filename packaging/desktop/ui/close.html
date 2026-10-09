@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; script-src 'self'">
+<title>Keep WiiJukebox running?</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="close.css">
+</head>
+<body>
+<main role="alertdialog" aria-labelledby="title" aria-describedby="detail">
+    <h1 id="title">Keep WiiJukebox running?</h1>
+    <p id="detail">Your Wii can keep listening from the <span id="tray">system tray</span>.</p>
+    <label class="remember"><input id="remember" type="checkbox" checked><span>Remember my choice <span class="hint">(change it in the menu)</span></span></label>
+    <div class="buttons">
+        <button id="cancel" type="button">Cancel</button>
+        <button id="quit" type="button">Quit</button>
+        <button id="background" type="button" class="primary">Keep playing</button>
+    </div>
+</main>
+<script src="close.js"></script>
+</body>
+</html>

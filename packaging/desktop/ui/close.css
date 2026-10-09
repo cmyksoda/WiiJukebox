@@ -1,0 +1,32 @@
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400 800;
+    src: url("fonts/nunito-latin.woff2") format("woff2");
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; user-select: none; }
+body { color: var(--text); font: 600 13px/20px "Nunito", "Avenir Next Rounded", "Segoe UI", system-ui, sans-serif; }
+/* Whole-pixel sizes throughout: a 376px window, three 104px buttons with 8px between them, even heights. */
+main {
+    width: 376px; padding: 24px 24px 20px; border: 1px solid var(--edge); background: var(--surface); text-align: center;
+    -webkit-app-region: drag;
+}
+h1 { margin: 0; font-size: 16px; font-weight: 800; line-height: 22px; letter-spacing: -.005em; }
+p { margin: 6px 0 0; color: var(--dim); }
+.remember { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; height: 22px; color: var(--text); -webkit-app-region: no-drag; }
+.remember input {
+    appearance: none; position: relative; flex: none; width: 18px; height: 18px; margin: 0; border: 1px solid var(--edge); border-radius: 5px; background: var(--tile);
+}
+.remember input:checked { border-color: var(--accent-strong); background: var(--accent-strong); }
+.remember input:checked::after { content: ""; position: absolute; inset: 3px; background: var(--on-accent); clip-path: polygon(8% 54%, 21% 42%, 40% 61%, 79% 19%, 92% 32%, 40% 87%); }
+.hint { color: var(--dim); font-weight: 500; }
+.buttons { display: grid; grid-template-columns: repeat(3, 104px); gap: 8px; margin-top: 16px; -webkit-app-region: no-drag; }
+button {
+    height: 34px; padding: 0; border: 1px solid var(--edge); border-radius: 999px; background: var(--surface); color: var(--text); cursor: default;
+    font: 700 13px/1 "Nunito", "Avenir Next Rounded", "Segoe UI", system-ui, sans-serif;
+}
+button:hover { background: var(--accent-soft); border-color: var(--accent); }
+button.primary { border-color: var(--accent-strong); background: var(--accent-strong); color: var(--on-accent); }
+button.primary:hover { filter: brightness(1.1); }
+:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }

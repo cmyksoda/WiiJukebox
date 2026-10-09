@@ -37,6 +37,7 @@
       "main.js",
       "preload.js",
       "titlebar-preload.js",
+      "close-preload.js",
       "ui/**",
       "assets/**",
       "lib/**",
