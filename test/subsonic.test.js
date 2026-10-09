@@ -3,6 +3,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const http = require('node:http');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { Config } = require('../src/config');
 const { SubsonicSource } = require('../src/sources/subsonic');
 
 test('Navidrome auth preserves password whitespace, pages libraries and queues complete playlists', async () => {
@@ -65,7 +69,7 @@ test('Navidrome auth preserves password whitespace, pages libraries and queues c
     } finally { await source.disconnect(); server.close(); }
 });
 
-test('Navidrome requests, covers included, use the server-side address', async () => {
+test('an old second Navidrome address becomes the one address, used for requests and covers', async () => {
     const password = 'fixture';
     const server = http.createServer((req, res) => {
         const q = new URL(req.url, 'http://fixture').searchParams;
@@ -78,8 +82,15 @@ test('Navidrome requests, covers included, use the server-side address', async (
     });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const local = `http://127.0.0.1:${server.address().port}`;
-    // The public URL is unreachable here, so every request that works went to serverUrl.
-    const source = new SubsonicSource({ url: 'https://music.example.invalid', serverUrl: local, username: 'u', password });
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiijukebox-test-'));
+    fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ sources: { subsonic: {
+        url: 'https://music.example.invalid', serverUrl: local, username: 'u', password } } }));
+    const migrated = new Config(dir).load().sources.subsonic;
+    fs.rmSync(dir, { recursive: true, force: true });
+    assert.equal(migrated.url, local);
+    assert.ok(!('serverUrl' in migrated));
+    // The public URL is unreachable here, so every request that works used the carried-over address.
+    const source = new SubsonicSource(migrated);
     try {
         await source.connect();
         const page = await source.browse({ path: 'album/a1', offset: 0, limit: 12 });

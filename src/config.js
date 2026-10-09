@@ -49,7 +49,7 @@ const DEFAULTS = {
         // `country` is the two-letter Apple store used for search and the chart.
         podcasts: { subscriptions: [], country: 'us' },
         desktop: {},
-        subsonic: { url: '', serverUrl: '', username: '', password: '' },
+        subsonic: { url: '', username: '', password: '' },
         jellyfin: { url: '', username: '', password: '', token: null, userId: null, deviceId: null },
         plex: { url: '', token: '' },
         // Needs no setup when yt-dlp is on PATH. `binary` points at it
@@ -103,6 +103,10 @@ class Config {
         try {
             const raw = fs.readFileSync(this.file, 'utf8');
             this.data = merge(structuredClone(DEFAULTS), JSON.parse(raw));
+            // Navidrome once had a second, server-only address; browsers no longer use the first.
+            const navidrome = this.data.sources.subsonic;
+            if (navidrome.serverUrl) navidrome.url = navidrome.serverUrl;
+            delete navidrome.serverUrl;
         } catch (err) {
             if (err.code !== 'ENOENT') {
                 // A corrupt config should not stop the stream coming up; fall

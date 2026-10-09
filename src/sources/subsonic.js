@@ -80,14 +80,8 @@ class SubsonicSource extends QueueSource {
         return `${base}/rest/${endpoint}?${params}`;
     }
 
-    // Everything this server fetches, covers included, can use a faster address such as
-    // Navidrome on the same machine; browsers only ever see the art proxy.
-    _serverUrl(endpoint, extra = {}) {
-        return this._url(endpoint, extra, this.config.serverUrl || this.config.url);
-    }
-
     async _call(endpoint, extra) {
-        const res = await fetch(this._serverUrl(endpoint, extra), {
+        const res = await fetch(this._url(endpoint, extra), {
             signal: AbortSignal.timeout(15000),
         });
         if (!res.ok) throw new Error(`${endpoint}: HTTP ${res.status}`);
@@ -286,7 +280,7 @@ class SubsonicSource extends QueueSource {
     }
 
     _artUrl(coverArt, size = 300) {
-        return this._serverUrl('getCoverArt.view', { id: coverArt, size });
+        return this._url('getCoverArt.view', { id: coverArt, size });
     }
 
     // --- playback -----------------------------------------------------------
@@ -340,7 +334,7 @@ class SubsonicSource extends QueueSource {
         // quality for no benefit, since the pipeline re-encodes to MP3 anyway.
         return {
             type: 'uri',
-            uri: this._serverUrl('stream.view', {
+            uri: this._url('stream.view', {
                 id: track.id,
                 format: 'raw',
                 estimateContentLength: 'true',

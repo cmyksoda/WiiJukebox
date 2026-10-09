@@ -973,8 +973,6 @@ const SETTINGS = {
     subsonic: [
         f('url', 'Server URL', 'url', { placeholder: 'https://music.example.com' }),
         f('username', 'Username'), f('password', 'Password', 'password', { secret: true }),
-        f('serverUrl', 'Address for this server', 'url', { advanced: true, placeholder: 'http://127.0.0.1:4533',
-            hint: 'Optional. A faster address WiiJukebox uses for music, browsing and album art, such as Navidrome on the same machine.' }),
     ],
     jellyfin: [
         f('url', 'Server URL', 'url', { placeholder: 'http://192.168.1.10:8096' }),
