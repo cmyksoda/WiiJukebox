@@ -50,6 +50,9 @@ static unsigned char art[ART_BYTES] ATTRIBUTE_ALIGN(32);
 static unsigned char art_large[LARGE_ART_BYTES] ATTRIBUTE_ALIGN(32);
 static enum wj_action queued;
 static int queued_argument;
+// A press that waits keeps the row it was pressed on; the pointer may have moved on since.
+static int queued_selected;
+static unsigned list_version, queued_version;
 static const char *const not_responding = "Server not responding; retrying...";
 
 static mutex_t mutex;
@@ -323,6 +326,7 @@ static void finish_discovery(void) {
     int found = job_result > 0 ? job_result : 0;
     memset(&S.menu, 0, sizeof(S.menu));
     S.count = S.total = found;
+    list_version++;
     S.selected = 0;
     for (int i = 0; i < found; i++) {
         copy(S.menu.items[i].title, sizeof(S.menu.items[i].title), servers[i].name);
@@ -477,6 +481,7 @@ static void finish_job(void) {
     }
     S.count = S.menu.count;
     S.total = S.menu.total;
+    list_version++;
     S.offset = location.offset;
     log_event("menu accepted screen=%d rows=%d items=%d total=%d", S.view, doc.count, S.count, S.total);
     S.selected = location.selected < S.count ? location.selected : 0;
@@ -623,6 +628,8 @@ void wj_session_act(enum wj_action action, int argument) {
     if (!S.busy) { perform(action, argument); return; }
     queued = action;
     queued_argument = argument;
+    queued_selected = S.selected;
+    queued_version = list_version;
     if (S.view != WJ_VIEW_SERVERS) say("Input queued; waiting for network request...");
 }
 
@@ -703,6 +710,13 @@ void wj_session_update(void) {
     if (queued) {
         enum wj_action action = queued;
         queued = WJ_ACT_NONE;
+        if (action == WJ_ACT_OPEN || action == WJ_ACT_PLAY_LIST) {
+            if (queued_version != list_version || queued_selected >= S.count) {
+                say("The list changed while waiting; press A again.");
+                return;
+            }
+            S.selected = queued_selected;
+        }
         perform(action, queued_argument);
         return;
     }
