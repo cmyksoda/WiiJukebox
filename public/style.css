@@ -196,6 +196,10 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
         linear-gradient(currentColor 0 0) 0 12px / 100% 2px no-repeat;
 }
 
+/* Three 4px dots 4px apart, so it sits on whole pixels in the 44px button. */
+.g-more { width: 20px; height: 4px; }
+.g-more::before { content: ""; position: absolute; left: 0; top: 0; width: 4px; height: 4px; border-radius: 50%; background: currentColor; box-shadow: 8px 0 currentColor, 16px 0 currentColor; }
+
 /* Play and pause share a button; show whichever is the action. */
 .round .g-play { display: none; }
 .round.show-play .g-pause { display: none; }
@@ -353,7 +357,7 @@ body.viz #viz-fullscreen { display: inline-grid; }
 #sidebar {
     background: var(--surface);
     border-right: 1px solid var(--edge);
-    padding: 18px 14px 0;
+    padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -407,64 +411,6 @@ body.viz #viz-fullscreen { display: inline-grid; }
 #setup h3 { margin: 0 0 4px; font-size: 14px; }
 #setup .hint { word-break: break-word; }
 
-/* Stays at the bottom edge when the channel list is taller than the screen. Its size is whole pixels
-   (the sidebar is a fixed width on wide screens), so labels stay crisp on 1x screens. */
-#sidebar-foot {
-    position: sticky;
-    bottom: 0;
-    margin: -8px -14px 0;
-    padding: 12px 22px calc(10px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--edge-soft);
-    background: var(--surface);
-}
-#theme .eyebrow { margin-bottom: 8px; line-height: 18px; }
-.segmented {
-    display: grid;
-    grid-template-columns: repeat(3, var(--segment, 64px));
-    width: max-content;
-    padding: 2px;
-    border: 1px solid var(--edge);
-    border-radius: 999px;
-    background: var(--tile);
-}
-.segmented button {
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--dim);
-    font-size: 13px;
-    font-weight: 700;
-}
-.segmented button:hover { color: var(--text); }
-.segmented button[aria-checked="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent-text); }
-.segmented button:focus-visible { box-shadow: var(--focus); }
-.segmented button[aria-checked="true"]:focus-visible { box-shadow: inset 0 0 0 1px var(--accent), var(--focus); }
-
-/* Quiet, like the Theme label above it; a count shows when something is hidden. */
-#sidebar-settings {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: calc(100% + 16px);
-    height: 36px;
-    margin: 8px -8px 0;
-    padding: 0 8px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--dim);
-    font-size: 13px;
-    font-weight: 700;
-    text-align: left;
-}
-#sidebar-settings:hover { background: var(--tile); color: var(--text); }
-#sidebar-settings .g { font-size: 8px; margin-left: 2px; }
-.foot-end { display: flex; align-items: center; gap: 8px; }
-#hidden-count { padding: 0 9px; border-radius: 999px; background: var(--tile); font-size: 12px; line-height: 22px; }
-#sidebar-settings:hover #hidden-count { background: var(--surface); }
 .sources-empty { margin: 4px 12px; }
 
 #main {
@@ -487,6 +433,8 @@ body.viz #viz-fullscreen { display: inline-grid; }
     box-shadow: inset 0 1px 3px rgba(40, 70, 100, .1);
 }
 #search::placeholder { color: var(--dim); }
+#page-menu[data-menu] { background: var(--accent-soft); border-color: var(--accent); }
+html.in-app #page-menu { display: none; }
 
 #pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto 14px; }
 #pagination .page-button { min-height: 40px; width: 44px; }
@@ -975,7 +923,10 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     box-shadow: 0 8px 24px rgba(20, 40, 60, .25), var(--highlight);
 }
 .ctx button {
-    display: block;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     width: 100%;
     height: 36px;
     padding: 0 12px;
@@ -986,12 +937,26 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     font-size: 14px;
     font-weight: 700;
     text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
 }
+.ctx .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ctx .detail { flex: none; color: var(--dim); font-size: 12px; font-weight: 700; }
 .ctx button:hover, .ctx button:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.ctx button:hover .detail, .ctx button:focus-visible .detail { color: inherit; }
 .ctx .sep { height: 1px; margin: 4px 8px; background: var(--edge-soft); }
+.ctx .head { padding: 8px 12px 2px; font-size: 12px; font-weight: 700; line-height: 18px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+/* Rows of a menu with a choice in it make room for the check. */
+.ctx.has-checks button { padding-left: 34px; }
+.ctx button[aria-checked="true"]::before {
+    content: "";
+    position: absolute;
+    left: 11px;
+    top: 12px;
+    width: 12px;
+    height: 12px;
+    background: currentColor;
+    clip-path: polygon(8% 54%, 21% 42%, 40% 61%, 79% 19%, 92% 32%, 40% 87%);
+}
 /* Marks what the open menu is for, which a finger would otherwise cover. */
 .source-btn[data-menu] { background: var(--tile); }
 .channel[data-menu] { border-color: var(--accent); background: var(--tile-hover); }
@@ -1045,6 +1010,9 @@ details.advanced .form { margin-top: 10px; max-width: none; }
         border-bottom: 1px solid var(--edge-soft);
     }
     #crumb { font-size: 21px; }
+    /* The menu button stays on the title's row at the right; Settings and the full-width search follow it. */
+    #settings-btn { order: 1; }
+    #search { order: 2; }
 
     #player {
         position: fixed;
@@ -1195,7 +1163,6 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 
 @media (min-width: 901px) and (max-width: 1180px) {
     :root { --sidebar-w: 220px; --np-w: 300px; }
-    .segmented { --segment: 56px; }
     #nowplaying { padding: 18px 16px 18px 15px; }
 }
 

@@ -10,6 +10,7 @@
 <script>
 try {
     var root = document.documentElement;
+    if (/\bWiiJukebox\//.test(navigator.userAgent)) root.classList.add('in-app');
     var theme = localStorage.getItem('wiijukebox.theme');
     if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
     var width = Number(localStorage.getItem('wiijukebox.np-width'));
@@ -52,21 +53,6 @@ try {
       <p class="hint">Open WiiJukebox on your Wii and it connects to this server by itself.</p>
       <p class="hint" id="wii-address"></p>
     </div>
-
-    <div id="sidebar-foot">
-      <div id="theme">
-        <div class="eyebrow" id="theme-label">Theme</div>
-        <div class="segmented" role="radiogroup" aria-labelledby="theme-label">
-          <button type="button" role="radio" data-theme-choice="system">System</button>
-          <button type="button" role="radio" data-theme-choice="light">Light</button>
-          <button type="button" role="radio" data-theme-choice="dark">Dark</button>
-        </div>
-      </div>
-      <button type="button" id="sidebar-settings" aria-haspopup="dialog">
-        <span>Sidebar settings</span>
-        <span class="foot-end"><span id="hidden-count" hidden></span><i class="g g-right" aria-hidden="true"></i></span>
-      </button>
-    </div>
   </aside>
 
   <main id="main">
@@ -76,6 +62,7 @@ try {
       <h2 id="crumb">Channels</h2>
       <button id="settings-btn" class="pill small" hidden>Settings</button>
       <input id="search" type="search" placeholder="Search" aria-label="Search" hidden>
+      <button id="page-menu" class="pill icon" aria-label="Menu" title="Menu" aria-haspopup="menu" aria-expanded="false"><i class="g g-more" aria-hidden="true"></i></button>
     </div>
 
     <nav id="pagination" aria-label="Library pages" hidden>
@@ -158,6 +145,14 @@ try {
 </footer>
 
 <div id="toast" hidden role="status"></div>
+
+<!-- The desktop app's menu has no bridge into the page, so it presses these; the page's own menu runs the same actions. -->
+<div id="app-commands" hidden>
+  <button type="button" data-theme-choice="system" tabindex="-1">System</button>
+  <button type="button" data-theme-choice="light" tabindex="-1">Light</button>
+  <button type="button" data-theme-choice="dark" tabindex="-1">Dark</button>
+  <button type="button" id="sidebar-settings" tabindex="-1">Sidebar settings</button>
+</div>
 
 <!-- Audio element used only for local monitoring; it is also what feeds the
      visualizer, since Butterchurn needs a Web Audio node to analyse. -->

@@ -17,15 +17,17 @@ export function closeMenu({ restoreFocus = false } = {}) {
     stop();
     menu.remove();
     delete trigger?.dataset.menu;
+    if (trigger?.hasAttribute('aria-haspopup')) trigger.setAttribute('aria-expanded', 'false');
     if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
     return true;
 }
 
 /**
- * `items` are { label, run } or 'separator'. `anchor` is { x, top, bottom }: the menu starts at `top` and
- * grows down, or ends at `bottom` and grows up when there is no room below.
+ * `items` are { label, run, checked?, detail? }, { heading }, or 'separator'; a `checked` of true or false makes the row
+ * a radio. `anchor` is { x, top, bottom }: the menu starts at `top` and grows down, or ends at `bottom` and
+ * grows up when there is no room below.
  */
-export function openMenu({ label, items, trigger, anchor }) {
+export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
     closeMenu();
     const menu = document.createElement('div');
     menu.className = 'ctx';
@@ -33,31 +35,49 @@ export function openMenu({ label, items, trigger, anchor }) {
     menu.setAttribute('aria-label', label);
     const rows = [];
     for (const item of items) {
-        if (item === 'separator') {
+        if (item === 'separator' || item.heading) {
             const line = document.createElement('div');
-            line.className = 'sep';
-            line.setAttribute('role', 'separator');
+            line.className = item.heading ? 'head' : 'sep';
+            if (item.heading) line.textContent = item.heading;
+            else line.setAttribute('role', 'separator');
             menu.append(line);
             continue;
         }
         const row = document.createElement('button');
         row.type = 'button';
         row.tabIndex = -1;
-        row.setAttribute('role', 'menuitem');
-        row.textContent = item.label;
+        row.setAttribute('role', item.checked === undefined ? 'menuitem' : 'menuitemradio');
+        if (item.checked !== undefined) {
+            row.setAttribute('aria-checked', String(item.checked));
+            menu.classList.add('has-checks');
+        }
+        const text = document.createElement('span');
+        text.className = 'label';
+        text.textContent = item.label;
+        row.append(text);
+        if (item.detail) {
+            const detail = document.createElement('span');
+            detail.className = 'detail';
+            detail.textContent = item.detail;
+            row.append(detail);
+        }
         row.addEventListener('click', () => {
-            closeMenu();
+            closeMenu({ restoreFocus: true });
             item.run();
         });
-        // One highlighted row at a time, whether the pointer or the keys moved it.
-        row.addEventListener('pointermove', () => row.focus({ preventScroll: true }));
         rows.push(row);
         menu.append(row);
     }
     document.body.append(menu);
-    if (trigger) trigger.dataset.menu = 'open';
-    place(menu, anchor);
-    for (const row of rows) if (row.scrollWidth > row.clientWidth) row.title = row.textContent;
+    if (trigger) {
+        trigger.dataset.menu = 'open';
+        if (trigger.hasAttribute('aria-haspopup')) trigger.setAttribute('aria-expanded', 'true');
+    }
+    place(menu, anchor, width);
+    for (const text of menu.querySelectorAll('.label')) if (text.scrollWidth > text.clientWidth) text.parentElement.title = text.textContent;
+
+    // One highlighted row at a time, whether the pointer or the keys moved it.
+    for (const row of rows) row.addEventListener('pointermove', () => row.focus({ preventScroll: true }));
 
     const step = (from, by) => rows[(from + by + rows.length) % rows.length];
     const onKey = (event) => {
@@ -100,8 +120,8 @@ export function openMenu({ label, items, trigger, anchor }) {
 }
 
 // Whole-pixel position, kept clear of the screen edges.
-function place(menu, { x, top, bottom }) {
-    const width = Math.min(WIDTH, innerWidth - 2 * MARGIN);
+function place(menu, { x, top, bottom }, wanted) {
+    const width = Math.min(wanted, innerWidth - 2 * MARGIN);
     menu.style.width = `${width}px`;
     const height = menu.offsetHeight;
     const left = Math.max(MARGIN, Math.min(Math.round(x), innerWidth - MARGIN - width));
@@ -167,7 +187,7 @@ export function bindMenuRequests(selector, open) {
         if (!el) return;
         event.preventDefault();
         const rect = el.getBoundingClientRect();
-        open(el, { x: rect.left + 16, top: rect.bottom - 6, bottom: rect.top + 6 });
+        open(el, { x: rect.left + 16, top: rect.bottom - 6, bottom: rect.top + 6});
     });
 
     document.addEventListener('click', (event) => {

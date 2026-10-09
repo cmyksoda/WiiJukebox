@@ -194,9 +194,6 @@ function renderSources() {
         return btn;
     }), shown.length ? null : h('p', { class: 'hint sources-empty', text: 'Every channel is hidden.' })]));
 
-    const hiddenCount = hiddenIds().length;
-    $('#hidden-count').textContent = `${hiddenCount} hidden`;
-    $('#hidden-count').hidden = hiddenCount === 0;
     sidebarSettings.paint?.();
     paintChannels();
 }
@@ -1647,13 +1644,14 @@ function setNowPlayingOpen(open) {
     else if ($('#nowplaying').contains(document.activeElement)) $('#mini-open').focus();
 }
 
-// --- theme ---------------------------------------------------------------
+// --- theme and the page menu -------------------------------------------------
 //
 // Light, Dark or System. The choice lives in localStorage and shows as data-theme on <html> (no attribute
 // means System); the inline script in index.html applies it before first paint.
 
+const THEMES = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']];
 const THEME_COLORS = { light: '#f3f6f9', dark: '#0d141c' };
-const themeButtons = [...document.querySelectorAll('[data-theme-choice]')];
+let themeChoice = 'system';
 
 function savedTheme() {
     const saved = prefs.get('theme');
@@ -1661,13 +1659,9 @@ function savedTheme() {
 }
 
 function applyTheme(choice) {
+    themeChoice = choice;
     if (choice === 'system') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = choice;
-    for (const button of themeButtons) {
-        const on = button.dataset.themeChoice === choice;
-        button.setAttribute('aria-checked', String(on));
-        button.tabIndex = on ? 0 : -1;
-    }
     // Phone browsers tint their own bars from these; a forced theme overrides the system pair.
     for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
         meta.content = THEME_COLORS[choice === 'system' ? (meta.media.includes('dark') ? 'dark' : 'light') : choice];
@@ -1679,18 +1673,29 @@ function chooseTheme(choice) {
     prefs.set('theme', choice === 'system' ? null : choice);
 }
 
-for (const button of themeButtons) {
+for (const button of document.querySelectorAll('[data-theme-choice]')) {
     button.onclick = () => chooseTheme(button.dataset.themeChoice);
-    button.onkeydown = (event) => {
-        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-        if (!step) return;
-        event.preventDefault();
-        const next = themeButtons[(themeButtons.indexOf(button) + step + themeButtons.length) % themeButtons.length];
-        next.focus();
-        chooseTheme(next.dataset.themeChoice);
-    };
 }
 applyTheme(savedTheme());
+
+// The toolbar's menu button: Theme and Sidebar settings. The desktop app has its own menu and hides this one.
+const pageMenu = $('#page-menu');
+const PAGE_MENU_WIDTH = 208;
+
+pageMenu.onclick = () => {
+    const box = pageMenu.getBoundingClientRect();
+    const hiddenCount = hiddenIds().length;
+    openMenu({
+        label: 'Menu', trigger: pageMenu, width: PAGE_MENU_WIDTH,
+        anchor: { x: box.right - PAGE_MENU_WIDTH, top: box.bottom + 4, bottom: box.top - 4 },
+        items: [
+            { heading: 'Theme' },
+            ...THEMES.map(([id, label]) => ({ label, checked: themeChoice === id, run: () => chooseTheme(id) })),
+            'separator',
+            { label: 'Sidebar settings…', detail: hiddenCount ? `${hiddenCount} hidden` : '', run: openSidebarSettings },
+        ],
+    });
+};
 
 // --- now-playing column --------------------------------------------------
 //

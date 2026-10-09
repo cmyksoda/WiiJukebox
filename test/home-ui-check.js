@@ -210,11 +210,26 @@ const check = (label, ok) => {
         const focusedRow = (view) => view.evaluate(() => document.activeElement?.closest('.ctx') ? document.activeElement.textContent : null);
         const whole = (rect) => [rect.x, rect.y, rect.width, rect.height].every(Number.isInteger);
         const menuIsCrisp = (view) => view.$eval('.ctx', (menu) => {
-            const rects = [menu, ...menu.querySelectorAll('button, .sep')].map((node) => node.getBoundingClientRect());
+            const rects = [menu, ...menu.querySelectorAll('button, .sep, .head')].map((node) => node.getBoundingClientRect());
             return rects.every((r) => [r.x, r.y, r.width, r.height].every(Number.isInteger))
                 && rects[0].left >= 0 && rects[0].top >= 0 && rects[0].right <= innerWidth && rects[0].bottom <= innerHeight;
         });
-        const chip = (view) => view.$eval('#hidden-count', (el) => (el.hidden ? '' : el.textContent));
+        // The page menu at the toolbar's right: Theme, then Sidebar settings with a count while channels are hidden.
+        const openPageMenu = async (view) => {
+            await view.click('#page-menu');
+            await view.waitForSelector('.ctx');
+        };
+        const openSettings = async (view) => {
+            await openPageMenu(view);
+            await view.click('.ctx >> text=Sidebar settings…');
+            await view.waitForSelector('dialog.sheet[open]');
+        };
+        const chip = async (view) => {
+            await openPageMenu(view);
+            const text = await view.$eval('.ctx', (menu) => menu.querySelector('.detail')?.textContent ?? '');
+            await view.keyboard.press('Escape');
+            return text;
+        };
         const toastText = (view) => view.textContent('#toast');
         const everyChannel = ['radio', 'podcasts', 'subsonic', 'jellyfin', 'plex', 'ytdlp', 'spotify', 'airplay', 'ytmusic', 'desktop'];
         const settled = (view) => view.waitForTimeout(450);
@@ -223,12 +238,21 @@ const check = (label, ok) => {
         await page.waitForSelector('.channel');
         check('the sidebar and the tiles both carry their channels', JSON.stringify(await listed(page, '#sources')) === JSON.stringify(everyChannel)
             && JSON.stringify(await listed(page, '#home-channels')) === JSON.stringify(everyChannel));
-        check('Sidebar settings sits in the sidebar foot, on whole pixels, with no count while nothing is hidden', await page.$eval('#sidebar-settings', (el) => {
+        check('the sidebar has no Theme or Sidebar settings foot, and ends with Your Wii', await page.evaluate(() => !document.querySelector('#sidebar-foot')
+            && !document.querySelector('#sidebar .segmented') && !document.querySelector('#sidebar [data-theme-choice], #sidebar #sidebar-settings')
+            && document.querySelector('#sidebar').lastElementChild.id === 'setup'));
+        check('a menu button sits at the top right of the toolbar, a 44px circle on whole pixels', await page.$eval('#page-menu', (el) => {
             const r = el.getBoundingClientRect();
-            const side = document.querySelector('#sidebar').getBoundingClientRect();
-            return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.left >= side.left && r.right <= side.right && r.bottom <= side.bottom
-                && !!el.closest('#sidebar-foot') && document.querySelector('#hidden-count').hidden;
+            const bar = document.querySelector('#toolbar').getBoundingClientRect();
+            return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.width === 44 && r.height === 44 && r.right === bar.right && r.top >= bar.top && r.bottom <= bar.bottom
+                && el.getAttribute('aria-label') === 'Menu' && el.getAttribute('aria-haspopup') === 'menu';
         }));
+        check('its three dots are 4px squares on whole pixels, centered in it', await page.$eval('#page-menu .g', (el) => {
+            const r = el.getBoundingClientRect();
+            const b = document.querySelector('#page-menu').getBoundingClientRect();
+            return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.width === 20 && r.height === 4 && r.left - b.left === b.right - r.right && r.top - b.top === b.bottom - r.bottom;
+        }));
+        check('no count shows by Sidebar settings while nothing is hidden', await chip(page) === '');
 
         // The menu: right-click, Escape, and a click outside.
         await page.click('#sources [data-source="plex"]', { button: 'right' });
@@ -304,7 +328,7 @@ const check = (label, ok) => {
             && !(await listed(page, '#home-channels')).includes('plex') && (await hiddenOnServer()).join() === 'plex');
         check('and says where to get it back', await toastText(page) === 'Hid Plex. Bring it back in Sidebar settings.');
         check('focus moves to the next channel, not to the top of the page', await page.evaluate(() => document.activeElement.dataset.source) === 'ytdlp');
-        check('the foot counts what is hidden', await chip(page) === '1 hidden');
+        check('the menu counts what is hidden', await chip(page) === '1 hidden');
 
         // Persistence: this page after a reload, and a second browser that has never seen the page.
         await page.reload();
@@ -387,8 +411,7 @@ const check = (label, ok) => {
         await settled(page);
 
         // Sidebar settings.
-        await page.click('#sidebar-settings');
-        await page.waitForSelector('dialog.sheet[open]');
+        await openSettings(page);
         const sheet = await page.$eval('dialog.sheet', (dialog) => ({
             title: document.getElementById(dialog.getAttribute('aria-labelledby')).textContent,
             described: !!document.getElementById(dialog.getAttribute('aria-describedby')).textContent,
@@ -411,25 +434,25 @@ const check = (label, ok) => {
         check('on whole pixels, 22px boxes, fitting a 900px-tall window without scrolling', geometry.whole && geometry.fits && geometry.box && !geometry.scrolls, JSON.stringify(geometry));
         await page.keyboard.press('Space');
         await page.waitForFunction(() => !document.querySelector('#sources [data-source="radio"]'));
-        check('Space unticks it and the sidebar behind changes at once', (await hiddenOnServer()).join() === 'radio' && await chip(page) === '1 hidden'
+        check('Space unticks it and the sidebar behind changes at once', (await hiddenOnServer()).join() === 'radio'
             && !(await page.$eval('dialog.sheet input', (box) => box.checked)));
         check('Show all is available now', !(await page.isDisabled('dialog.sheet >> text=Show all')));
         await page.click('dialog.sheet label:has-text("Spotify Connect")');
         await page.click('dialog.sheet label:has-text("AirPlay")');
-        check('clicking rows hides more, in the order the sidebar lists them', (await hiddenOnServer()).join() === 'radio,spotify,airplay' && await chip(page) === '3 hidden');
+        check('clicking rows hides more, in the order the sidebar lists them', (await hiddenOnServer()).join() === 'radio,spotify,airplay');
         check('home behind it lost the tiles too', !(await listed(page, '#home-channels')).some((id) => ['radio', 'spotify', 'airplay'].includes(id)));
         await page.click('dialog.sheet label:has-text("Spotify Connect")');
         check('and ticking one shows it again', (await hiddenOnServer()).join() === 'radio,airplay');
         await page.click('dialog.sheet >> text=Show all');
         check('Show all ticks everything and the server forgets the list', (await hiddenOnServer()).length === 0
-            && await page.$$eval('dialog.sheet input', (boxes) => boxes.every((box) => box.checked)) && await chip(page) === ''
+            && await page.$$eval('dialog.sheet input', (boxes) => boxes.every((box) => box.checked))
             && await page.isDisabled('dialog.sheet >> text=Show all') && await page.evaluate(() => document.activeElement.textContent) === 'Done');
         await page.keyboard.press('Escape');
-        check('Escape closes it and focus returns to the button', !(await page.isVisible('dialog.sheet')) && await page.evaluate(() => document.activeElement.id) === 'sidebar-settings');
-        await page.click('#sidebar-settings');
+        check('Escape closes it and focus returns to the menu button', !(await page.isVisible('dialog.sheet')) && await page.evaluate(() => document.activeElement.id) === 'page-menu');
+        await openSettings(page);
         await page.mouse.click(4, 4);
         check('a click on the backdrop closes it', !(await page.isVisible('dialog.sheet')));
-        await page.click('#sidebar-settings');
+        await openSettings(page);
         await page.click('dialog.sheet >> text=Done');
         check('so does Done', !(await page.isVisible('dialog.sheet')));
 
@@ -437,7 +460,7 @@ const check = (label, ok) => {
         const loggedBefore = errors.length;
         await page.route('**/api/ui/hidden-sources', (route) => (route.request().method() === 'POST'
             ? route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'the disk is full' }) }) : route.continue()));
-        await page.click('#sidebar-settings');
+        await openSettings(page);
         await page.click('dialog.sheet label:has-text("Podcasts")');
         await page.waitForFunction(() => document.querySelector('#toast').textContent === 'the disk is full');
         await page.waitForFunction(() => [...document.querySelectorAll('dialog.sheet input')][1].checked);
@@ -452,39 +475,42 @@ const check = (label, ok) => {
         await page.waitForSelector('#home-channels .home-note');
         check('with everything hidden, the sidebar and home say so', (await page.textContent('#sources')).includes('Every channel is hidden.')
             && (await page.textContent('#home-channels')).includes('Bring some back in Sidebar settings') && await chip(page) === '10 hidden');
-        await page.click('#sidebar-settings');
+        await openSettings(page);
         await page.click('dialog.sheet >> text=Show all');
         await page.keyboard.press('Escape');
         await page.waitForSelector('.channel');
         check('and Show all gets everything back', (await hiddenOnServer()).length === 0 && (await listed(page, '#sources')).length === everyChannel.length);
 
-        // On a phone: the drawer carries Sidebar settings, and a long press opens the menu.
+        // On a phone: the toolbar's menu button opens Sidebar settings, the drawer has no foot, and a long press opens the menu.
         for (const [name, viewport] of [['390x844', { width: 390, height: 844 }], ['361x640', { width: 361, height: 640 }]]) {
             const view = await open(viewport, true);
-            await view.click('#sources-toggle');
-            await view.waitForTimeout(400);
-            check(`${name}: the drawer shows Sidebar settings at its foot, on whole pixels`, await view.$eval('#sidebar-settings', (el) => {
+            check(`${name}: the menu button is at the top right of the toolbar's first row, beside the title, on whole pixels`, await view.$eval('#page-menu', (el) => {
                 const r = el.getBoundingClientRect();
-                const side = document.querySelector('#sidebar').getBoundingClientRect();
-                return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.height >= 36 && r.left >= side.left && r.right <= side.right && r.bottom <= side.bottom;
+                const bar = document.querySelector('#toolbar').getBoundingClientRect();
+                const title = document.querySelector('#crumb').getBoundingClientRect();
+                const toggle = document.querySelector('#sources-toggle').getBoundingClientRect();
+                return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.width === 44 && r.height === 44 && r.right === bar.right - 16
+                    && r.top === toggle.top && r.left >= title.right && getComputedStyle(el).display !== 'none';
             }));
-            await view.click('#sidebar-settings');
-            await view.waitForSelector('dialog.sheet[open]');
+            await openSettings(view);
             const card = await view.$eval('dialog.sheet', (dialog) => {
                 const r = dialog.getBoundingClientRect();
                 const list = dialog.querySelector('.svc-list');
                 return { whole: [r.x, r.y, r.width, r.height].every(Number.isInteger), fits: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
                     scrolls: list.scrollHeight > list.clientHeight, bottomRows: [...dialog.querySelectorAll('.svc input')].every((el) => el.getBoundingClientRect().width === 22) };
             });
-            check(`${name}: the dialog is a card above the drawer, on whole pixels and inside the screen`, card.whole && card.fits && card.bottomRows, JSON.stringify(card));
+            check(`${name}: the dialog is a card on whole pixels and inside the screen`, card.whole && card.fits && card.bottomRows, JSON.stringify(card));
             if (viewport.height < 700) {
                 check(`${name}: and its list scrolls on a short screen`, card.scrolls);
             }
             await view.click('dialog.sheet label:has-text("Plex")');
-            check(`${name}: unticking behind it hides it in the drawer`, !(await listed(view, '#sources')).includes('plex') && (await hiddenOnServer()).join() === 'plex');
+            check(`${name}: unticking a channel hides it`, (await hiddenOnServer()).join() === 'plex');
             await view.click('dialog.sheet >> text=Show all');
             await view.click('dialog.sheet >> text=Done');
-            check(`${name}: the drawer is still open behind it`, await view.evaluate(() => document.body.classList.contains('sources-open')));
+            await view.click('#sources-toggle');
+            await view.waitForTimeout(400);
+            check(`${name}: the drawer has no Theme or Sidebar settings foot, and ends with Your Wii`, await view.evaluate(() => !document.querySelector('#sidebar-foot')
+                && document.querySelector('#sidebar').lastElementChild.id === 'setup'));
 
             const cdp = await view.context().newCDPSession(view);
             const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
@@ -544,49 +570,66 @@ const check = (label, ok) => {
         const backdrop = (view) => view.evaluate(() => getComputedStyle(document.body).backgroundColor);
         const LIGHT = 'rgb(243, 246, 249)';
         const DARK = 'rgb(13, 20, 28)';
-        const choices = (view) => view.$$eval('[data-theme-choice]', (nodes) => nodes.map((n) => `${n.dataset.themeChoice}:${n.getAttribute('aria-checked')}`).join());
+        // The page menu's Theme rows, as "System:true,Light:false,Dark:false", read with the menu open and closed again.
+        const choices = async (view) => {
+            await openPageMenu(view);
+            const text = await view.$$eval('.ctx [role="menuitemradio"]', (rows) => rows.map((n) => `${n.textContent}:${n.getAttribute('aria-checked')}`).join());
+            await view.keyboard.press('Escape');
+            return text;
+        };
+        const pick = async (view, label) => {
+            await openPageMenu(view);
+            await view.click(`.ctx [role="menuitemradio"]:has-text("${label}")`);
+        };
         for (const [name, viewport, phone] of [['desktop', { width: 1280, height: 800 }, false], ['phone', { width: 390, height: 844 }, true]]) {
             const view = await open(viewport, phone);
-            if (phone) {
-                await view.click('#sources-toggle');
-                await view.waitForTimeout(400);
-            }
-            check(`${name}: the sidebar offers System, Light and Dark, with System chosen`, await choices(view) === 'system:true,light:false,dark:false');
+            check(`${name}: the menu offers System, Light and Dark, with System chosen`, await choices(view) === 'System:true,Light:false,Dark:false');
             check(`${name}: and no data-theme is set`, await view.evaluate(() => !('theme' in document.documentElement.dataset)));
-            check(`${name}: the control is on whole pixels and inside the sidebar`, await view.$eval('.segmented', (el) => {
-                const r = el.getBoundingClientRect();
-                const side = document.querySelector('#sidebar').getBoundingClientRect();
-                return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.height % 2 === 0 && r.width % 2 === 0
-                    && r.left >= side.left && r.right <= side.right && r.bottom <= side.bottom;
+            await openPageMenu(view);
+            check(`${name}: the menu is Theme, three choices, a rule and Sidebar settings, 208px wide below the button`, await view.$eval('.ctx', (menu) => {
+                const r = menu.getBoundingClientRect();
+                const b = document.querySelector('#page-menu').getBoundingClientRect();
+                return [...menu.children].map((n) => n.className || n.getAttribute('role')).join() === 'head,menuitemradio,menuitemradio,menuitemradio,sep,menuitem'
+                    && menu.querySelector('.head').textContent === 'Theme' && r.width === 208 && r.right <= b.right && r.top >= b.bottom && r.height === 2 + 8 + 28 + 36 * 4 + 9
+                    && menu.getAttribute('aria-label') === 'Menu' && document.querySelector('#page-menu').getAttribute('aria-expanded') === 'true';
+            }) && await menuIsCrisp(view));
+            check(`${name}: and the check mark is drawn left of the chosen label`, await view.$eval('.ctx [aria-checked="true"]', (row) => {
+                const mark = getComputedStyle(row, '::before');
+                return mark.content !== 'none' && mark.width === '12px' && mark.height === '12px' && row.textContent === 'System';
             }));
+            await view.keyboard.press('Escape');
+            check(`${name}: Escape closes it and focus returns to the button`, !(await view.isVisible('.ctx')) && await view.evaluate(() => document.activeElement.id) === 'page-menu'
+                && await view.getAttribute('#page-menu', 'aria-expanded') === 'false');
             await view.emulateMedia({ colorScheme: 'dark' });
             check(`${name}: System follows a dark system`, await backdrop(view) === DARK);
-            await view.click('[data-theme-choice="light"]');
-            check(`${name}: Light stays light on a dark system`, await backdrop(view) === LIGHT && await choices(view) === 'system:false,light:true,dark:false');
+            await pick(view, 'Light');
+            check(`${name}: Light stays light on a dark system`, await backdrop(view) === LIGHT && await choices(view) === 'System:false,Light:true,Dark:false');
             await view.emulateMedia({ colorScheme: 'light' });
-            await view.click('[data-theme-choice="dark"]');
+            await pick(view, 'Dark');
             check(`${name}: Dark stays dark on a light system`, await backdrop(view) === DARK
                 && await view.evaluate(() => getComputedStyle(document.documentElement).colorScheme) === 'dark');
             check(`${name}: the choice is stored and shown on <html>`, await view.evaluate(() => localStorage.getItem('wiijukebox.theme') === 'dark' && document.documentElement.dataset.theme === 'dark'));
             check(`${name}: the browser bar color follows it`, (await view.$$eval('meta[name="theme-color"]', (m) => m.map((x) => x.content))).every((c) => c === '#0d141c'));
             await view.reload();
             await view.waitForSelector('.channel');
-            check(`${name}: it survives a reload`, await backdrop(view) === DARK && await choices(view) === 'system:false,light:false,dark:true');
+            check(`${name}: it survives a reload`, await backdrop(view) === DARK && await choices(view) === 'System:false,Light:false,Dark:true');
             check(`${name}: and is applied by a script that runs before the stylesheet`, await view.evaluate(() => {
                 const nodes = [...document.head.children];
                 return nodes.findIndex((n) => n.tagName === 'SCRIPT') < nodes.findIndex((n) => n.rel === 'stylesheet');
             }));
-            if (phone) {
-                await view.click('#sources-toggle');
-                await view.waitForTimeout(400);
-            } else {
-                await view.focus('[data-theme-choice="dark"]');
-                await view.keyboard.press('ArrowRight');
-                check(`${name}: arrow keys move through the choices and wrap`, await choices(view) === 'system:true,light:false,dark:false');
-                await view.keyboard.press('ArrowLeft');
-                check(`${name}: and arrow left goes back`, await choices(view) === 'system:false,light:false,dark:true');
+            if (!phone) {
+                await view.focus('#page-menu');
+                await view.keyboard.press('Enter');
+                check(`${name}: Enter on the button opens the menu with the first choice focused`, await view.evaluate(() => document.activeElement.textContent) === 'System');
+                for (let i = 0; i < 3; i++) await view.keyboard.press('ArrowDown');
+                check(`${name}: arrows skip the heading and the rule`, await view.evaluate(() => document.activeElement.textContent) === 'Sidebar settings…');
+                await view.keyboard.press('ArrowDown');
+                check(`${name}: and wrap`, await view.evaluate(() => document.activeElement.textContent) === 'System');
+                for (let i = 0; i < 3; i++) await view.keyboard.press('ArrowUp');
+                await view.keyboard.press('Enter');
+                check(`${name}: Enter chooses the row: Light`, await choices(view) === 'System:false,Light:true,Dark:false' && await backdrop(view) === LIGHT);
             }
-            await view.click('[data-theme-choice="system"]');
+            await pick(view, 'System');
             check(`${name}: System clears the stored choice`, await view.evaluate(() => localStorage.getItem('wiijukebox.theme') === null && !('theme' in document.documentElement.dataset))
                 && await backdrop(view) === LIGHT);
             await view.context().close();
@@ -602,8 +645,24 @@ const check = (label, ok) => {
             });
             await view.goto(app.base);
             await view.waitForSelector('.channel');
-            await view.click('[data-theme-choice="dark"]');
+            await pick(view, 'Dark');
             check('blocked storage still lets the choice apply for this visit', await backdrop(view) === DARK);
+            await context.close();
+        }
+        {
+            // The desktop app's user agent carries WiiJukebox/<version>; there the menu button is not drawn (the app has its own menu).
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 WiiJukebox/0.1.0 Chrome/140.0.0.0 Electron/41.7.2 Safari/537.36' });
+            const view = await context.newPage();
+            await view.goto(app.base);
+            await view.waitForSelector('.channel');
+            check('inside the desktop app the menu button is not drawn', await view.evaluate(() => document.documentElement.classList.contains('in-app')
+                && getComputedStyle(document.querySelector('#page-menu')).display === 'none'));
+            check('and the app can still press the page\'s own Theme and Sidebar settings controls', await view.evaluate(() => {
+                document.querySelector('[data-theme-choice="dark"]').click();
+                const dark = document.documentElement.dataset.theme === 'dark';
+                document.querySelector('#sidebar-settings').click();
+                return dark && !!document.querySelector('dialog.sheet[open]');
+            }));
             await context.close();
         }
 
