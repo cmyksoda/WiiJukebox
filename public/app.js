@@ -122,7 +122,11 @@ function stopPanelTimer() {
     state.panelTimer = null;
 }
 
+// Every view opens through setToolbar, so a view that waited on the network can tell it was left.
+let navigations = 0;
+
 function setToolbar({ title, back = false, search = false, settings = null, pages = false, placeholder = 'Search' }) {
+    navigations++;
     stopPanelTimer();
     $('#crumb').textContent = title;
     $('#back').hidden = !back;
@@ -1002,6 +1006,13 @@ const SETTINGS = {
 
 async function renderSettings(src, { problem } = {}) {
     const fields = SETTINGS[src.id];
+    const ticket = navigations;
+    let current = { values: {}, secrets: {} };
+    if (fields) {
+        try { current = await api(`/sources/${src.id}/settings`); } catch { /* a fresh source has nothing saved */ }
+    }
+    // Title and form change together, so a slow reply never shows the new title over the old page.
+    if (navigations !== ticket) return;
     setToolbar({ title: `${src.label} setup`, back: false });
     const content = $('#content');
     content.className = '';
@@ -1010,9 +1021,6 @@ async function renderSettings(src, { problem } = {}) {
         content.replaceChildren(h('p', { class: 'empty', text: `${src.label} has no settings yet.` }));
         return;
     }
-
-    let current = { values: {}, secrets: {} };
-    try { current = await api(`/sources/${src.id}/settings`); } catch { /* a fresh source has nothing saved */ }
 
     const inputs = new Map();
     const fieldFor = (field) => {
