@@ -65,9 +65,9 @@ function kids(children) {
         .map((child) => (child instanceof Node ? child : document.createTextNode(String(child))));
 }
 
-/** Only http(s), inline images and this server's art proxy reach an <img>. */
+/** Only this server's art proxy and inline images reach an <img>; service links stay on the server. */
 function safeImage(url) {
-    return typeof url === 'string' && /^(https?:\/\/|data:image\/|\/api\/art\/)/i.test(url) ? url : null;
+    return typeof url === 'string' && /^(\/api\/art\/|data:image\/)/i.test(url) ? url : null;
 }
 
 let toastTimer;
