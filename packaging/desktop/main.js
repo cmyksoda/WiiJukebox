@@ -26,8 +26,15 @@ const TRAY_NAMES = { darwin: 'menu bar', win32: 'notification area', linux: 'sys
 if (process.env.WIIJUKEBOX_USER_DATA) app.setPath('userData', process.env.WIIJUKEBOX_USER_DATA);
 // The server keeps its settings under XDG_CONFIG_HOME; Windows has no such default.
 if (process.platform === 'win32' && !process.env.XDG_CONFIG_HOME) process.env.XDG_CONFIG_HOME = app.getPath('appData');
-// An AppImage cannot ship the setuid sandbox helper; the windows only show our own server's pages.
-if (process.platform === 'linux' && (process.env.APPIMAGE || process.argv.includes('--no-sandbox'))) {
+// An AppImage cannot ship the setuid sandbox helper, and turning the sandbox off from here is too late:
+// Chromium's helpers have already started sandboxed and lose /dev/shm. So restart once with it on argv.
+const relaunching = process.platform === 'linux' && Boolean(process.env.APPIMAGE) && !process.argv.includes('--no-sandbox');
+if (relaunching) {
+    // app.relaunch does nothing this early, so start the AppImage again ourselves.
+    require('node:child_process').spawn(process.env.APPIMAGE, [...process.argv.slice(1), '--no-sandbox'],
+        { detached: true, stdio: 'inherit' }).unref();
+    app.exit(0);
+} else if (process.platform === 'linux' && process.argv.includes('--no-sandbox')) {
     app.commandLine.appendSwitch('no-sandbox');
 }
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID);
@@ -868,9 +875,10 @@ handle('desktop:allow-firewall', async () => {
     }
 });
 
-if (!app.requestSingleInstanceLock()) {
+// While relaunching, the lock and everything else belong to the new instance.
+if (!relaunching && !app.requestSingleInstanceLock()) {
     app.quit();
-} else {
+} else if (!relaunching) {
     // A second launch brings the window back; "--quit" lets scripts and installers stop the app.
     app.on('second-instance', (event, argv) => {
         if (argv.includes('--quit')) app.quit();
