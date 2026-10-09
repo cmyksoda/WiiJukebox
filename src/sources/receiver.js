@@ -51,6 +51,7 @@ class FrameAligner extends Transform {
 
 class ReceiverSource extends Source {
     static family = 'push';
+    static replayable = false;
 
     /** Default executable name; overridden by config.binary. */
     static binaryName = '';

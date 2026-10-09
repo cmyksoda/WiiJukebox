@@ -8,6 +8,7 @@ class DesktopSource extends Source {
     static id = 'desktop';
     static label = 'Desktop audio (Linux)';
     static family = 'pull';
+    static replayable = false;
 
     get capabilities() { return { play: true, stop: true, browse: true }; }
 

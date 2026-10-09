@@ -291,6 +291,7 @@ class Pipeline extends EventEmitter {
             this.emit('status', this.status);
             throw err;
         }
+        this.emit('attached', { source, item });
     }
 
     /** Route whatever the source returned into the pacer. */
