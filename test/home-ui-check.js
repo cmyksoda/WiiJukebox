@@ -122,10 +122,58 @@ const check = (label, ok) => {
         await page.waitForSelector('.home-section:has(h3:text("Most played")) .card');
         check('Try again loads it', true);
 
+        // --- the primary service --------------------------------------------------------
+        const question = 'Set as primary? This will affect suggestions on the home screen.';
+        const dialogText = () => page.textContent('dialog.confirm p');
+        const primaryId = async () => (await (await fetch(`${app.base}/api/home/primary`)).json()).id;
+
+        await page.click('.source-btn:has-text("Navidrome")');
+        await page.waitForSelector('.category');
+        check('the primary shows a badge and no button', (await page.textContent('.primary-row')).trim() === 'Primary'
+            && !(await page.isVisible('.primary-row button')));
+
+        await page.click('.source-btn:has-text("Jellyfin")');
+        await page.waitForSelector('.primary-row button');
+        check('another library offers Set as primary', (await page.textContent('.primary-row button')) === 'Set as primary');
+        await page.click('.primary-row button');
+        await page.waitForSelector('dialog.confirm[open]');
+        check('the dialog asks with Jaxi\'s words', await dialogText() === question);
+        check('with Cancel and Set as primary', (await page.$$eval('dialog.confirm button', (b) => b.map((x) => x.textContent))).join() === 'Cancel,Set as primary');
+        check('focus starts on Cancel', await page.evaluate(() => document.activeElement.textContent) === 'Cancel');
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Tab');
+        check('Tab stays inside the dialog', await page.evaluate(() => !!document.activeElement.closest('dialog.confirm')));
+        check('the page behind is inert while it is open', await page.evaluate(() => !document.elementFromPoint(5, 5)?.closest('#main')));
+        await page.keyboard.press('Escape');
+        check('Escape closes it and changes nothing', !(await page.isVisible('dialog.confirm')) && await primaryId() === 'subsonic');
+        check('focus returns to the control', await page.evaluate(() => document.activeElement.textContent) === 'Set as primary');
+        await page.click('.primary-row button');
+        await page.click('dialog.confirm >> text=Cancel');
+        check('Cancel closes it and changes nothing', !(await page.isVisible('dialog.confirm')) && await primaryId() === 'subsonic');
+        await page.click('.primary-row button');
+        await page.mouse.click(4, 4);
+        check('a click outside closes it too', !(await page.isVisible('dialog.confirm')) && await primaryId() === 'subsonic');
+
+        await page.click('.primary-row button');
+        await page.click('dialog.confirm >> button:text-is("Set as primary")');
+        await page.waitForSelector('#primary-badge');
+        check('confirming makes it the primary', await primaryId() === 'jellyfin' && (await page.textContent('.primary-row')).trim() === 'Primary');
+        check('and the badge takes focus', await page.evaluate(() => document.activeElement.id) === 'primary-badge');
+
+        await page.click('.source-btn:has-text("Navidrome")');
+        await page.waitForSelector('.primary-row button');
+        check('Navidrome now offers the button', true);
+        await page.click('.source-btn.home');
+        await page.waitForSelector('.home-section:has(h3:text("Latest")) .card');
+        await page.waitForSelector('.home-section:has(h3:text("New episodes")) .card');
+        const after = await page.$$eval('.home-section h3', (nodes) => nodes.map((n) => n.textContent));
+        check('home now suggests from Jellyfin only', after.includes('Latest') && !after.includes('Recently added')
+            && !after.includes('Most played') && after.includes('New episodes'));
+        check('its chip says Jellyfin', (await page.$$eval('.home-section:has(h3:text("Latest")) .home-from', (n) => n.map((x) => x.textContent.trim()))).join() === 'Jellyfin');
 
         // --- clearing Jump back in ----------------------------------------------------------
-        const dialogText = () => page.textContent('dialog.confirm p');
-        await page.click('.home-section:has(h3:text("Recently added")) .card >> nth=0');
+        await page.click('.home-section:has(h3:text("Latest")) .card >> nth=0');
         await page.waitForSelector('.row');
         await page.click('#back');
         await page.waitForSelector('#home-recent .shelf');
@@ -148,16 +196,19 @@ const check = (label, ok) => {
         check('and the server has nothing to offer again', (await (await fetch(`${app.base}/api/home`)).json()).recent.length === 0);
         check('focus stays at the top of the page', await page.evaluate(() => document.activeElement.tagName) === 'H3');
 
-
         check('covers came through the proxy, never from a service', direct.length === 0
             && await page.$$eval('img', (imgs) => imgs.every((img) => new URL(img.src).pathname.startsWith('/api/art/'))));
 
         // The dialog's edges and text stay on whole pixels at 1x, at odd and even widths and on a phone.
         for (const [name, viewport, phone] of [['1281x801', { width: 1281, height: 801 }, false], ['1280x800', { width: 1280, height: 800 }, false],
             ['390x844', { width: 390, height: 844 }, true], ['375x667', { width: 375, height: 667 }, true], ['361x640', { width: 361, height: 640 }, true]]) {
-            app.web.history.record('subsonic', { id: 'album/n1', type: 'album', title: 'Paper Lanterns', subtitle: 'Mika Ito' });
             const view = await open(viewport, phone);
-            await view.click('#home-recent button:text("Clear")');
+            if (phone) {
+                await view.click('#sources-toggle');
+                await view.click('.source-btn:has-text("Navidrome")');
+            } else await view.click('.source-btn:has-text("Navidrome")');
+            await view.waitForSelector('.primary-row button');
+            await view.click('.primary-row button');
             await view.waitForSelector('dialog.confirm[open]');
             const box = await view.$eval('dialog.confirm', (el) => {
                 const r = el.getBoundingClientRect();

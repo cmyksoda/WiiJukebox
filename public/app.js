@@ -486,17 +486,47 @@ async function browse(path, label, offset = 0, container = null) {
     content.replaceChildren(h('p', { class: 'empty', text: 'Loading…' }));
 
     try {
-        const result = await api(
-            `/sources/${id}/browse?path=${encodeURIComponent(path)}&offset=${offset}&limit=100`,
-        );
+        const wantsPrimary = !path && src?.suggests;
+        const [result, primary] = await Promise.all([
+            api(`/sources/${id}/browse?path=${encodeURIComponent(path)}&offset=${offset}&limit=100`),
+            wantsPrimary ? api('/home/primary').catch(() => null) : null,
+        ]);
         if (state.activeSource !== id) return;
         const items = result.items.length > 100 ? result.items.slice(offset, offset + 100) : result.items;
         setPager(result.total, offset, items.length, (to) => browse(path, label, to, container));
         renderItems(items, path, label, offset, container);
+        if (primary) content.prepend(primaryRow(src, primary));
     } catch (err) {
         content.replaceChildren();
         toast(err.message, true);
     }
+}
+
+// A library channel says whether its suggestions fill the home screen, and offers to make them.
+function primaryRow(src, primary) {
+    const row = h('div', { class: 'primary-row' });
+    const paint = (current) => {
+        if (current.id === src.id) {
+            row.replaceChildren(h('span', { class: 'chip live', id: 'primary-badge', tabindex: '-1',
+                title: 'The home screen suggests music from this service', text: 'Primary' }));
+            return;
+        }
+        row.replaceChildren(h('button', { class: 'pill small quiet', text: 'Set as primary', onclick: async () => {
+            const yes = await confirmDialog({
+                question: 'Set as primary?', detail: 'This will affect suggestions on the home screen.', confirm: 'Set as primary',
+            });
+            if (!yes) return;
+            try {
+                paint(await api('/home/primary', { method: 'POST', body: { id: src.id } }));
+            } catch (err) {
+                return toast(err.message, true);
+            }
+            $('#primary-badge')?.focus();
+            toast(`${SHORT[src.id] || src.label} is now the primary`);
+        } }));
+    };
+    paint(primary);
+    return row;
 }
 
 function setPager(total, offset, count, goTo) {

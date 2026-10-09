@@ -547,6 +547,8 @@ body.viz #viz-fullscreen { display: inline-grid; }
 }
 .home-arrows .pill.icon { width: 40px; min-height: 36px; }
 .home-head .pill.quiet { min-height: 32px; padding: 0 12px; font-size: 14px; }
+.primary-row { display: flex; align-items: center; min-height: 36px; margin: 0 0 14px; }
+.primary-row .chip { min-height: 28px; }
 .home-note { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 0; font-size: 14px; color: var(--dim); }
 
 /* A row that scrolls on its own; on phones it runs to the screen edge so the next cover peeks in. */

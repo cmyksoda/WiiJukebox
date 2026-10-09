@@ -43,6 +43,15 @@ const check = (label, ok) => {
     await page.click('#sources-toggle');
     await page.click('.source-btn:has-text("Navidrome")');
     await page.waitForSelector('.category');
+    check('the channel says whether it is the primary', await page.isVisible('.primary-row'));
+    if (await page.isVisible('.primary-row button')) {
+        await page.click('.primary-row button');
+        await page.waitForSelector('dialog.confirm[open]');
+        check('Set as primary asks first', (await page.textContent('dialog.confirm p'))
+            === 'Set as primary? This will affect suggestions on the home screen.');
+        await page.keyboard.press('Escape');
+        check('and Escape leaves everything as it was', !(await page.isVisible('dialog.confirm')));
+    }
     await page.click('.category:has-text("Albums")');
     await page.waitForSelector('.card');
     check('albums page shows a back button', await page.isVisible('#back'));
