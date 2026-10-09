@@ -2,7 +2,7 @@
 // Desktop shell: runs the WiiJukebox server, shows its web UI in a window and keeps the
 // music playing from the tray or menu bar after the window is closed.
 
-const { app, BaseWindow, BrowserWindow, WebContentsView, Menu, Tray, nativeImage, nativeTheme, shell, dialog, clipboard, ipcMain } = require('electron');
+const { app, BaseWindow, BrowserWindow, WebContentsView, Menu, MenuItem, Tray, nativeImage, nativeTheme, shell, dialog, clipboard, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { detect, searchPath, findTool, ffmpegProblem, ffmpegVersionNumber } = require('./lib/tools');
@@ -17,6 +17,7 @@ const { openLog } = require('./lib/logfile');
 const { APP_NAME, TitleFeed } = require('./lib/window-title');
 const { READ_THEME, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require('./lib/page-theme');
 const { BAR_HEIGHT, layoutViews } = require('./lib/window-layout');
+const { buildMenuModel } = require('./lib/menu-model');
 
 const APP_ID = 'org.wiijukebox.desktop';
 const TRAY_NAMES = { darwin: 'menu bar', win32: 'notification area', linux: 'system tray' };
@@ -66,6 +67,10 @@ let withoutFfmpeg = false;
 let currentPage = 'starting';
 let lastLoad = null;
 let hiddenToTray = false;
+// While the bar's menu shows, the bar's view covers the whole window; these keep it and what each entry does.
+let menuOpen = false;
+let menuActions = null;
+let relayout = () => {};
 let titleFeed = null;
 let themeFeed = null;
 // The web UI's own choice (System, Light or Dark), read back from the page; it also decides the window's backdrop.
@@ -188,6 +193,8 @@ function mainWindowOptions() {
 }
 
 function createWindow(geometry) {
+    menuOpen = false;
+    menuActions = null;
     const window = new BaseWindow({ ...mainWindowOptions(), ...geometry?.bounds });
     const view = new WebContentsView({
         webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
@@ -199,7 +206,8 @@ function createWindow(geometry) {
         : null;
     for (const child of [view, barView]) {
         if (!child) continue;
-        child.setBackgroundColor(bg());
+        // The bar is clear: it draws its own strip, and the page shows through below it while its menu is open.
+        child.setBackgroundColor(child === barView ? '#00000000' : bg());
         window.contentView.addChildView(child);
     }
     barView?.webContents.loadFile(path.join(__dirname, 'ui', 'titlebar.html'));
@@ -210,13 +218,14 @@ function createWindow(geometry) {
     const layout = () => {
         if (window.isDestroyed()) return;
         const { width, height } = window.contentView.getBounds();
-        const plan = layoutViews({ width, height, showBar: Boolean(barView) && !htmlFullScreen && !window.isFullScreen() });
+        const plan = layoutViews({ width, height, showBar: Boolean(barView) && !htmlFullScreen && !window.isFullScreen(), menuOpen });
         barView?.setVisible(Boolean(plan.bar));
         if (plan.bar) barView.setBounds(plan.bar);
         view.setBounds(plan.page);
     };
     const fullScreenChanged = (entered) => () => {
         htmlFullScreen = entered;
+        closeBarMenu();
         layout();
     };
     view.webContents.on('enter-html-full-screen', fullScreenChanged(true));
@@ -224,6 +233,7 @@ function createWindow(geometry) {
     window.contentView.on('bounds-changed', layout);
     for (const event of ['enter-full-screen', 'leave-full-screen']) window.on(event, layout);
     layout();
+    relayout = layout;
 
     // Links to other sites (such as a service's sign-in page) open in the real browser.
     view.webContents.setWindowOpenHandler(({ url }) => {
@@ -237,13 +247,18 @@ function createWindow(geometry) {
         }
     });
     for (const event of ['maximize', 'unmaximize', 'focus', 'blur']) window.on(event, sendBarState);
+    for (const event of ['minimize', 'hide', 'enter-full-screen']) window.on(event, closeBarMenu);
     window.on('close', onWindowClose);
     window.on('closed', () => {
         // A view's page outlives its window until it is closed too.
         for (const child of [view, barView]) {
             if (child && !child.webContents.isDestroyed()) child.webContents.close();
         }
-        if (win === window) win = content = bar = null;
+        if (win === window) {
+            win = content = bar = null;
+            menuOpen = false;
+            menuActions = null;
+        }
     });
     win = window;
     content = view;
@@ -288,7 +303,6 @@ function onThemeChange(choice) {
     themeChoice = choice;
     win?.setBackgroundColor(bg());
     content?.setBackgroundColor(bg());
-    bar?.setBackgroundColor(bg());
     buildMenus();
     sendBarState();
     writeState();
@@ -634,16 +648,51 @@ const viewItems = () => [
     { role: 'reload' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'togglefullscreen' },
 ];
 
-// The custom bar has no menu bar to hide behind Alt, so its menu button opens the same entries as a list.
-function popupMenu({ x, y }) {
-    const menu = Menu.buildFromTemplate([
-        ...commonItems(),
-        { type: 'separator' },
-        { label: 'View', submenu: viewItems() },
-        { type: 'separator' },
-        { role: 'quit' },
-    ]);
-    menu.popup({ window: win, x: Math.round(x), y: Math.round(y), callback: () => content?.webContents.focus() });
+// What the bar's own menu shows: the entries above, as a list, with the View submenu and Quit at the end.
+const barMenuTemplate = () => [
+    ...commonItems(),
+    { type: 'separator' },
+    { label: 'View', submenu: viewItems() },
+    { type: 'separator' },
+    { role: 'quit' },
+];
+
+// Roles have no function of their own in a menu we draw, so these are what they do, as Electron's do.
+const zoomBy = (step) => () => content?.webContents.setZoomLevel(content.webContents.getZoomLevel() + step);
+const roleActions = {
+    reload: () => content?.webContents.reload(),
+    resetZoom: () => content?.webContents.setZoomLevel(0),
+    zoomIn: zoomBy(0.5),
+    zoomOut: zoomBy(-0.5),
+    togglefullscreen: () => win?.setFullScreen(!win.isFullScreen()),
+    quit: () => app.quit(),
+};
+
+// A window without a system frame has no menu bar to show with Alt, so the bar draws its menu itself. Electron
+// cannot size a native popup, which came out far larger than the bar's text.
+function openBarMenu() {
+    if (!bar || menuOpen) return;
+    const { items, actions } = buildMenuModel(barMenuTemplate(), {
+        resolveRole: (role) => {
+            const { label, accelerator } = new MenuItem({ role });
+            return { label, accelerator };
+        },
+        roleActions,
+    });
+    menuActions = actions;
+    menuOpen = true;
+    relayout();
+    bar.webContents.focus();
+    bar.webContents.send('titlebar:menu', { items });
+}
+
+function closeBarMenu() {
+    if (!menuOpen) return;
+    menuOpen = false;
+    menuActions = null;
+    relayout();
+    if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('titlebar:menu-closed');
+    content?.webContents.focus();
 }
 
 function buildMenus() {
@@ -705,8 +754,13 @@ fromBarOnly('titlebar:toggle-maximize', () => {
     content.webContents.focus();
 });
 fromBarOnly('titlebar:close', () => win.close());
-fromBarOnly('titlebar:menu', (at) => {
-    if (Number.isFinite(at?.x) && Number.isFinite(at?.y)) popupMenu(at);
+fromBarOnly('titlebar:menu-open', () => openBarMenu());
+fromBarOnly('titlebar:menu-close', () => closeBarMenu());
+// The bar names an entry by the id main gave it, and only an entry main listed as usable has anything to run.
+fromBarOnly('titlebar:menu-activate', (id) => {
+    const action = typeof id === 'string' ? menuActions?.get(id) : null;
+    closeBarMenu();
+    action?.();
 });
 
 handle('desktop:info', () => describeServer());

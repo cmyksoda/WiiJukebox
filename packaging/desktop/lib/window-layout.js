@@ -3,11 +3,14 @@
 
 const BAR_HEIGHT = 34;
 
-/** The bar is dropped (null) when it is not wanted, and the page then fills the window. */
-function layoutViews({ width, height, showBar, barHeight = BAR_HEIGHT }) {
+/**
+ * The bar is dropped (null) when it is not wanted, and the page then fills the window. While the bar's menu shows,
+ * the bar's view grows over the whole window (the page keeps its place under it) so the menu has room to open.
+ */
+function layoutViews({ width, height, showBar, menuOpen = false, barHeight = BAR_HEIGHT }) {
     const top = showBar ? Math.min(barHeight, height) : 0;
     return {
-        bar: showBar ? { x: 0, y: 0, width, height: top } : null,
+        bar: showBar ? { x: 0, y: 0, width, height: menuOpen ? height : top } : null,
         page: { x: 0, y: top, width, height: Math.max(0, height - top) },
     };
 }

@@ -33,7 +33,3 @@ api.ready().then(apply);
 document.querySelector('#minimize').onclick = () => api.minimize();
 maximize.onclick = () => api.toggleMaximize();
 document.querySelector('#close').onclick = () => api.close();
-document.querySelector('#menu').onclick = () => {
-    const box = document.querySelector('#menu').getBoundingClientRect();
-    api.menu(Math.round(box.left), Math.round(box.bottom));
-};

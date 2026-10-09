@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld('titlebar', {
     minimize: () => ipcRenderer.send('titlebar:minimize'),
     toggleMaximize: () => ipcRenderer.send('titlebar:toggle-maximize'),
     close: () => ipcRenderer.send('titlebar:close'),
-    menu: (x, y) => ipcRenderer.send('titlebar:menu', { x, y }),
+    openMenu: () => ipcRenderer.send('titlebar:menu-open'),
+    activateMenu: (id) => ipcRenderer.send('titlebar:menu-activate', id),
+    closeMenu: () => ipcRenderer.send('titlebar:menu-close'),
+    onMenu: (callback) => ipcRenderer.on('titlebar:menu', (event, model) => callback(model)),
+    onMenuClosed: (callback) => ipcRenderer.on('titlebar:menu-closed', () => callback()),
     onState: (callback) => ipcRenderer.on('titlebar:state', (event, state) => callback(state)),
 });

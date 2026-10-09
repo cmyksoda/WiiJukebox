@@ -716,6 +716,139 @@ const viewOf = (layout, kind) => layout.views.find((view) => (kind === 'bar' ? v
 
 const press = (client, key, vk) => Promise.all(['rawKeyDown', 'keyUp'].map((type) => client.send('Input.dispatchKeyEvent', { type, key, code: key, windowsVirtualKeyCode: vk })));
 
+// The bar's own ≡ menu: it grows the bar's view over the window, is drawn in the bar, answers keys and clicks, and runs
+// entries by id only, from the bar and nowhere else.
+async function checkBarMenu(app, bar, page) {
+    const BAR = 34;
+    const visible = () => bar.evaluate("!document.querySelector('#menu-scrim').hidden");
+    const closed = (what) => until(what, async () => !(await visible()) && (await windowViews()).views.find((v) => v.url.endsWith('titlebar.html')).bounds.height === BAR, 5000).then(() => true, () => false);
+    const opened = () => until('the menu', visible, 5000).then(() => true, () => false);
+    const key = (name) => bar.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(name)}, bubbles: true })); true`);
+    const focused = () => bar.evaluate("document.activeElement.querySelector?.('.label')?.textContent ?? document.activeElement.id");
+    const mouse = (type, x, y) => bar.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+    const settingsFile = path.join(app.userData, 'settings.json');
+    const savedMode = () => JSON.parse(fs.readFileSync(settingsFile, 'utf8')).onClose;
+
+    await bar.evaluate("document.querySelector('#menu').click(); true");
+    check('the menu button opens the menu', await opened());
+    let layout = await windowViews();
+    const barView = viewOf(layout, 'bar');
+    check('the bar\'s view grows over the whole window for it, with the page left where it was',
+        barView.visible && JSON.stringify(barView.bounds) === JSON.stringify({ x: 0, y: 0, width: layout.root.width, height: layout.root.height })
+        && viewOf(layout, 'page').bounds.y === BAR && layout.views.at(-1) === barView, JSON.stringify(barView.bounds));
+    const menu = JSON.parse(await bar.evaluate(`JSON.stringify({
+        labels: [...document.querySelectorAll('#menu-root > .item .label')].map((n) => n.textContent),
+        separators: document.querySelectorAll('#menu-root > .separator').length,
+        heights: [...document.querySelectorAll('#menu-root .item')].map((n) => n.getBoundingClientRect().height),
+        sizes: [...document.querySelectorAll('#menu-root .item')].map((n) => getComputedStyle(n).fontSize),
+        box: document.querySelector('#menu-root').getBoundingClientRect(),
+        checks: Object.fromEntries([...document.querySelectorAll('#menu-root > .item[aria-checked]')].map((n) => [n.querySelector('.label').textContent, n.getAttribute('aria-checked')])),
+        quit: [...document.querySelectorAll('#menu-root > .item')].find((n) => n.querySelector('.label').textContent === 'Quit')?.querySelector('.hint').textContent,
+        drag: getComputedStyle(document.querySelector('#bar')).webkitAppRegion,
+        expanded: document.querySelector('#menu').getAttribute('aria-expanded'),
+        firstFocused: document.activeElement.querySelector?.('.label')?.textContent,
+    })`));
+    check('it lists the same entries as the tray menu, then View and Quit', ['Connect your Wii…', 'Copy Wii address', 'Copy stream address', 'Open in browser', 'Restart server', 'Server name and port…',
+        'Install or update yt-dlp…', 'Start at login', 'Keep playing when the window is closed', 'Use system title bar', 'Theme', 'Show settings folder', 'Show server log', 'View', 'Quit']
+        .every((label) => menu.labels.includes(label)) && menu.labels.at(-1) === 'Quit' && menu.labels.at(-2) === 'View', menu.labels.join(' | '));
+    check('with separators between the groups', menu.separators >= 4);
+    check('its rows are 28px high with 13px text, and the menu sits on whole pixels',
+        menu.heights.every((h) => h === 28) && menu.sizes.every((size) => size === '13px') && Object.values(menu.box).every(Number.isInteger), JSON.stringify([menu.heights[0], menu.sizes[0], menu.box]));
+    check('the check marks show what is on', menu.checks['Keep playing when the window is closed'] === 'true' && menu.checks['Use system title bar'] === 'false', JSON.stringify(menu.checks));
+    check('Quit shows its keyboard shortcut on Linux and Windows', process.platform === 'darwin' || menu.quit === (process.platform === 'win32' ? '' : 'Ctrl+Q'), menu.quit);
+    check('the bar stops dragging the window while the menu is up, so a click beside it reaches the menu', menu.drag === 'no-drag' && menu.expanded === 'true');
+    check('opened by the keyboard-style click, the first entry has focus', menu.firstFocused === 'Connect your Wii…', menu.firstFocused);
+
+    await key('ArrowDown');
+    check('Down moves to the next entry', await focused() === 'Copy Wii address');
+    await key('ArrowUp');
+    await key('ArrowUp');
+    check('Up from the first wraps to the last', await focused() === 'Quit');
+    await key('Home');
+    check('Home goes to the first', await focused() === 'Connect your Wii…');
+    await key('End');
+    await key('ArrowUp');
+    check('End goes to the last and Up from it to View', await focused() === 'View');
+    await key('ArrowRight');
+    const viewSub = JSON.parse(await bar.evaluate(`JSON.stringify({ shown: !document.querySelector('#menu-sub').hidden, labels: [...document.querySelectorAll('#menu-sub .label')].map((n) => n.textContent),
+        hints: [...document.querySelectorAll('#menu-sub .hint')].map((n) => n.textContent), focus: document.activeElement.querySelector('.label').textContent,
+        inside: (() => { const r = document.querySelector('#menu-sub').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; })() })`));
+    check('Right opens the View submenu with its five entries and shortcuts, inside the window',
+        viewSub.shown && viewSub.labels.join() === 'Reload,Actual Size,Zoom In,Zoom Out,Toggle Full Screen' && viewSub.hints.every(Boolean) && viewSub.inside, JSON.stringify(viewSub));
+    check('and focus moves into it', viewSub.focus === 'Reload');
+    await key('ArrowLeft');
+    check('Left closes the submenu and returns to View', await focused() === 'View' && await bar.evaluate("document.querySelector('#menu-sub').hidden"));
+    for (let i = 0; i < 4; i++) await key('ArrowUp');
+    check('Up skips the separators', await focused() === 'Use system title bar');
+    await key('ArrowDown');
+    await key('Enter');
+    const themeSub = JSON.parse(await bar.evaluate(`JSON.stringify({ labels: [...document.querySelectorAll('#menu-sub .label')].map((n) => n.textContent),
+        checks: [...document.querySelectorAll('#menu-sub .item')].map((n) => n.getAttribute('aria-checked')) })`));
+    check('Enter on Theme opens System, Light and Dark with a check on System', themeSub.labels.join() === 'System,Light,Dark' && themeSub.checks.join() === 'true,false,false', JSON.stringify(themeSub));
+    await key('Escape');
+    check('Escape closes the submenu first', await visible() && await bar.evaluate("document.querySelector('#menu-sub').hidden"));
+    await key('Escape');
+    check('and then the menu, giving the bar its size back', await closed('the menu to close'));
+
+    // A press beside the menu closes it, and nothing it covered was pressed.
+    await bar.evaluate("document.querySelector('#menu').click(); true");
+    await opened();
+    await mouse('mousePressed', 300, 400);
+    await mouse('mouseReleased', 300, 400);
+    check('a click outside the menu closes it', await closed('the menu to close'));
+    await bar.evaluate("document.querySelector('#menu').click(); true");
+    await opened();
+    await bar.evaluate("document.querySelector('#menu').click(); true");
+    check('the menu button closes it again', await closed('the menu to close'));
+
+    // Only the bar may use the menu, and it can only name entries main listed.
+    await bar.evaluate("document.querySelector('#menu').click(); true");
+    await opened();
+    const outcome = JSON.parse(await inMain(`
+        const window = electron.BaseWindow.getAllWindows()[0];
+        const [pageView, barView] = window.contentView.children;
+        const ipc = electron.ipcMain;
+        const bounds = () => barView.getBounds().height;
+        const before = bounds();
+        ipc.emit('titlebar:menu-close', { sender: pageView.webContents });
+        ipc.emit('titlebar:menu-activate', { sender: pageView.webContents }, 'theme-dark');
+        const afterPage = bounds();
+        ipc.emit('titlebar:menu-activate', { sender: barView.webContents }, 'nothing-like-that');
+        ipc.emit('titlebar:menu-activate', { sender: barView.webContents }, { toString: () => '0' });
+        return JSON.stringify({ before, afterPage, afterJunk: bounds() });`));
+    check('the page cannot close the menu or run an entry, and an unknown id does nothing', outcome.before > BAR && outcome.afterPage === outcome.before, JSON.stringify(outcome));
+    check('though a junk id from the bar still closes it, as a click would', await closed('the menu to close'));
+    check('and nothing was changed by it', savedMode() === 'background' && await page.evaluate("document.documentElement.dataset.theme === undefined"));
+
+    // Choosing entries: a checkbox, and a theme in the submenu.
+    const choose = async (path) => {
+        await bar.evaluate("document.querySelector('#menu').click(); true");
+        await opened();
+        for (const label of path) {
+            await bar.evaluate(`(() => { const row = [...document.querySelectorAll('.item')].find((n) => n.querySelector('.label').textContent === ${JSON.stringify(label)}); row.focus(); row.click(); })(); true`);
+            await sleep(150);
+        }
+    };
+    await choose(['Keep playing when the window is closed']);
+    check('choosing a checkbox runs it and closes the menu', await closed('the menu to close') && await until('the setting', () => savedMode() === 'quit', 5000).then(() => true, () => false));
+    await choose(['Keep playing when the window is closed']);
+    check('and again puts it back', await until('the setting', () => savedMode() === 'background', 5000).then(() => true, () => false));
+    await choose(['Theme', 'Dark']);
+    check('Theme, Dark darkens the web UI, and it is stored there like a click on its own control',
+        await until('the dark page', () => page.evaluate("document.documentElement.dataset.theme === 'dark' && localStorage.getItem('wiijukebox.theme') === 'dark'"), 8000).then(() => true, () => false));
+    check('the bar follows it', await until('the dark bar', () => bar.evaluate("document.documentElement.dataset.theme === 'dark'"), 8000).then(() => true, () => false));
+    check('and the menu now ticks Dark', JSON.parse(await inMain("const m = electron.Menu.getApplicationMenu(); return JSON.stringify(['system', 'light', 'dark'].map((id) => m.getMenuItemById('theme-' + id).checked));")).join() === 'false,false,true');
+    check('the app\'s state file says so', app.state().theme === 'dark');
+    // The page's own control moves everything the other way, with nothing told to the app.
+    await page.evaluate("document.querySelector('[data-theme-choice=\"light\"]').click(); true");
+    check('a choice made in the web UI reaches the bar within a few seconds',
+        await until('the light bar', () => bar.evaluate("document.documentElement.dataset.theme === 'light'"), 8000).then(() => true, () => false));
+    check('and ticks Light in the menu', await until('the tick', async () => JSON.parse(await inMain("return JSON.stringify(electron.Menu.getApplicationMenu().getMenuItemById('theme-light').checked)")), 8000).then(() => true, () => false));
+    await choose(['Theme', 'System']);
+    check('System hands the colors back to the system on both', await until('system', async () =>
+        await page.evaluate("document.documentElement.dataset.theme === undefined && localStorage.getItem('wiijukebox.theme') === null") && await bar.evaluate("document.documentElement.dataset.theme === undefined"), 8000).then(() => true, () => false));
+}
+
 async function checkTitleBar() {
     console.log('\n== title bar: its view, the playback title, the window buttons and fullscreen ==');
     const app = new App('titlebar', {
@@ -754,6 +887,8 @@ async function checkTitleBar() {
         })`));
         check('the bar has a menu, minimize, maximize and close button, and drags the window around them',
             parts.buttons.join() === 'menu,minimize,maximize,close' && parts.region === 'drag' && parts.controlsRegion === 'no-drag', parts.buttons.join());
+        const mark = JSON.parse(await bar.evaluate("JSON.stringify(document.querySelector('.mark').getBoundingClientRect())"));
+        check('the jukebox mark is 15x22 on whole pixels, 3px under the top of the bar', mark.width === 15 && mark.height === 22 && mark.x === 12 && mark.y === 3, JSON.stringify(mark));
         check('the bar shows just the app name until something plays', parts.now === '' && parts.brand === 'WiiJukebox' && !parts.separatorShown, JSON.stringify([parts.now, parts.brand]));
         check('the bar page gets its own bridge and none of the setup channels', parts.hasBar && !parts.hasSetupBridge);
         check('the web UI gets no bridge to the window at all', await page.evaluate("typeof window.titlebar === 'undefined' && typeof window.desktop === 'undefined'") === true);
@@ -792,7 +927,6 @@ async function checkTitleBar() {
             window.unmaximize = () => { calls.push('unmaximize'); maximized = false; window.emit('unmaximize'); };
             window.minimize = () => calls.push('minimize');
             window.hide = () => calls.push('hide');
-            electron.Menu.prototype.popup = (options) => calls.push('menu ' + options.x + ',' + options.y);
             return true;`);
         const clicked = async (id) => {
             await bar.evaluate(`document.querySelector('#${id}').click(); true`);
@@ -806,7 +940,7 @@ async function checkTitleBar() {
         check('Restore puts it back, and the bar shows Maximize again',
             (await clicked('maximize')).at(-1) === 'unmaximize'
             && await until('the Maximize button', () => bar.evaluate("document.querySelector('#maximize').getAttribute('aria-label') === 'Maximize'"), 5000).then(() => true, () => false));
-        check('the menu button opens the menu under itself', (await clicked('menu')).at(-1).startsWith('menu '));
+        await checkBarMenu(app, bar, page);
         check('Close asks what closing does: here it keeps playing in the background', (await clicked('close')).at(-1) === 'hide');
         check('the music kept going while the window was closed', (await get(`${state.serverUrl}api/status`)).status === 200);
 

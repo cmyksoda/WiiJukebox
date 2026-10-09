@@ -101,8 +101,16 @@ WebKit packages.
   - **Use system title bar** (menu and tray) turns the custom bar off. The window is rebuilt around
     the same page at once, so there is no restart, but the web UI reloads and the browser
     "Monitor" playback stops. It is grayed out until the first-run setup is done.
-  - **The menu button** opens the menu entries below as a list, since a window without a system
-    frame has no menu bar to show with Alt. The tray menu has them too.
+  - **The menu button** opens the menu entries below as a compact list the bar draws itself (28 px
+    rows of 13 px text in the web UI's colors, light or dark), since a window without a system frame
+    has no menu bar to show with Alt and a native popup cannot be made smaller. It takes the arrow
+    keys, Enter and Escape, and a click anywhere else closes it. The Alt menu and the tray menu stay
+    native, drawn by the system, with the same entries.
+  - **Theme** (in the menu, the Alt menu and the tray menu) is System, Light or Dark for the web UI.
+    The web UI keeps the choice itself, in its own storage, and the app only presses its System, Light
+    or Dark buttons and reads the result back, so a choice made in the web UI's sidebar reaches the
+    bar and the menus too. The setup pages follow the system, so Theme is grayed out until the player
+    shows.
   - **Fullscreen.** When a page goes fullscreen (F11 in the web UI, or the visualizer's own
     button) the bar steps aside and the page fills the whole display, on whichever monitor the
     window is on.
@@ -247,6 +255,9 @@ Then it runs:
 - the included FFmpeg unticked: no FFmpeg on the computer, an FFmpeg without MP3 (a
   stand-in shell script, so not on Windows), and the computer's own FFmpeg followed by the
   switch back to the included one;
+- the menu button: the bar's view stretching over the window, the entries and their check marks,
+  the keys, a click outside, that only the bar can use it, and Theme (the menu to the web UI to the
+  bar and back);
 - the title bar: the bar view above the page, the window title while a stand-in Subsonic server
   (`scripts/fake-subsonic.js`) plays a five-track album (count, paused, next, stopped), the bar
   buttons reaching the window (with the window's maximize, minimize and hide recorded, since
