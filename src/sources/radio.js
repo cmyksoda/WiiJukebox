@@ -24,6 +24,7 @@ class RadioSource extends Source {
     static id = 'radio';
     static label = 'Internet Radio';
     static family = 'pull';
+    static homeRows = [{ id: 'saved', title: 'Saved stations' }];
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
@@ -54,6 +55,11 @@ class RadioSource extends Source {
             })),
             total: stations.length,
         };
+    }
+
+    async homeRow(_row, { limit }) {
+        const { items } = await this.browse();
+        return items.slice(0, limit).map((station) => ({ ...station, subtitle: hostOf(station.url) || station.subtitle }));
     }
 
     async open(item) {
@@ -283,6 +289,10 @@ class RadioSource extends Source {
 
         connect(sourceUri, 0);
     }
+}
+
+function hostOf(url) {
+    try { return new URL(url).hostname; } catch { return ''; }
 }
 
 /**

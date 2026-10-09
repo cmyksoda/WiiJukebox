@@ -21,6 +21,11 @@ class SubsonicSource extends QueueSource {
     static id = 'subsonic';
     static label = 'Navidrome / Subsonic';
     static family = 'pull';
+    static homeRows = [
+        { id: 'newest', title: 'Recently added', remote: true },
+        { id: 'frequent', title: 'Most played', remote: true },
+        { id: 'recent', title: 'Recently played', remote: true },
+    ];
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
@@ -228,6 +233,12 @@ class SubsonicSource extends QueueSource {
         }
 
         throw new Error(`unknown browse path: ${path}`);
+    }
+
+    async homeRow(row, { limit }) {
+        if (!this.constructor.homeRows.some((entry) => entry.id === row)) throw new Error(`unknown home row: ${row}`);
+        const res = await this._call('getAlbumList2.view', { type: row, size: limit });
+        return (res.albumList2?.album || []).map((album) => this._albumItem(album));
     }
 
     async search(query, { limit = 50 } = {}) {

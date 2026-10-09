@@ -63,14 +63,24 @@ class YtdlpSource extends QueueSource {
     static id = 'ytdlp';
     static label = 'YouTube / SoundCloud';
     static family = 'pull';
+    static homeRows = [
+        { id: 'recent', title: 'Recent links' },
+        { id: 'saved', title: 'Saved links' },
+    ];
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
         this._current = null;
+        // Name of the playlist or album link being played, for the play history.
+        this._listTitle = null;
         this._version = null;
         // Every live child process, so close() can kill an extraction that is
         // still running when the user changes their mind.
         this._procs = new Set();
+    }
+
+    get listTitle() {
+        return this._listTitle;
     }
 
     get _binary() {
@@ -272,6 +282,7 @@ class YtdlpSource extends QueueSource {
         this._killAll();
         this._queue.clear();
         this._current = null;
+        this._listTitle = null;
         this._setState('idle');
     }
 
@@ -279,6 +290,7 @@ class YtdlpSource extends QueueSource {
         this._killAll();
         this._queue.clear();
         this._current = null;
+        this._listTitle = null;
         this._setState('ready');
     }
 
@@ -312,6 +324,17 @@ class YtdlpSource extends QueueSource {
         const entries = (info.entries || []).filter(Boolean);
         const items = this._decoratePlaylist(info, entries.map((entry) => this._itemFor(entry, entryUrl(entry))));
         return { items: items.slice(offset, offset + limit), total: entries.length };
+    }
+
+    /** Recent plays from the history, and the links saved for the Wii. */
+    async homeRow(row, { limit, history }) {
+        if (row === 'recent') {
+            return history.list({ source: this.id, limit }).map((entry) => ({
+                ...entry.item, title: entry.title, subtitle: entry.subtitle, artwork: entry.art,
+            }));
+        }
+        const { items } = await this.browse({ limit });
+        return items.map((item) => ({ ...item, subtitle: linkHost(item.subtitle) }));
     }
 
     /** Hook for subclasses to enrich a playlist's tracks (shared cover, album name). */
@@ -426,6 +449,7 @@ class YtdlpSource extends QueueSource {
                 );
             }
 
+            this._listTitle = info.title || null;
             // A track picked inside a list (e.g. from the Wii) starts there.
             this._queue.load(this._decoratePlaylist(info, entries
                 .slice(0, MAX_QUEUE)
@@ -436,6 +460,7 @@ class YtdlpSource extends QueueSource {
         // A single item: the probe resolved the media URL already, so there is
         // no second round trip to make.
         const track = this._itemFor(info, target);
+        this._listTitle = null;
         this._queue.load([track]);
         return this._handleFor(info, track);
     }
@@ -608,6 +633,11 @@ function itemUrl(item) {
               : '';
     const text = String(raw).trim();
     return text.startsWith(LIST_PREFIX) ? text.slice(LIST_PREFIX.length) : text;
+}
+
+/** The site of a saved link, which reads better on a card than the whole address. */
+function linkHost(text) {
+    try { return new URL(text).hostname; } catch { return text; }
 }
 
 function isHttpUrl(text) {

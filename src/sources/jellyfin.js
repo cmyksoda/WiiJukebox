@@ -19,6 +19,7 @@ class JellyfinSource extends QueueSource {
     static id = 'jellyfin';
     static label = 'Jellyfin';
     static family = 'pull';
+    static homeRows = [{ id: 'latest', title: 'Latest', remote: true }];
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
@@ -234,6 +235,20 @@ class JellyfinSource extends QueueSource {
         }
 
         throw new Error(`unknown browse path: ${path}`);
+    }
+
+    async homeRow(_row, { limit }) {
+        const res = await this._call('/Items', {
+            query: {
+                userId: this._userId,
+                IncludeItemTypes: 'MusicAlbum',
+                Recursive: 'true',
+                Limit: limit,
+                SortBy: 'DateCreated',
+                SortOrder: 'Descending',
+            },
+        });
+        return (res.Items || []).map((album) => this._albumItem(album));
     }
 
     async search(query, { limit = 50 } = {}) {

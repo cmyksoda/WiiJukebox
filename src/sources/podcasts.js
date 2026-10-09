@@ -17,6 +17,8 @@ const MAX_FEED_BYTES = 8 * 1024 * 1024;
 const FEED_TTL_MS = 10 * 60 * 1000;
 const CHART_TTL_MS = 60 * 60 * 1000;
 const FEED_CACHE_LIMIT = 32;
+// The home row reads this many subscriptions' feeds, which the feed cache then holds.
+const HOME_FEEDS = 12;
 const RESULT_LIMIT = 25;
 const HEAD_LIMIT = 256 * 1024;
 const SHOW_PREFIX = 'show/';
@@ -215,6 +217,8 @@ const fmtDate = (ms) => {
     return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
 };
 
+const when = (episode) => (episode.published ? Date.parse(episode.published) : 0);
+
 const reason = (err) => (err.name === 'TimeoutError' ? 'timed out' : err.cause?.code || err.message);
 
 function checkPage(offset, limit) {
@@ -227,6 +231,7 @@ class PodcastsSource extends Source {
     static id = 'podcasts';
     static label = 'Podcasts';
     static family = 'pull';
+    static homeRows = [{ id: 'latest', title: 'New episodes', remote: true }];
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
@@ -354,6 +359,20 @@ class PodcastsSource extends Source {
         if (path === 'top') return page(await this._topShows());
         if (path.startsWith(SHOW_PREFIX)) return this._episodes(path.slice(SHOW_PREFIX.length), offset, limit);
         throw new Error(`unknown browse path: ${path}`);
+    }
+
+    /** The newest episodes across subscriptions; a feed that will not load is skipped, not fatal. */
+    async homeRow(_row, { limit }) {
+        const shows = this._subscriptions.slice(0, HOME_FEEDS);
+        const settled = await Promise.allSettled(shows.map(async (saved) => {
+            const feed = await this._feed(httpLink(saved.feedUrl));
+            const show = { title: feed.title || saved.title, artwork: saved.artwork || feed.artwork || null };
+            return feed.episodes.slice(0, limit).map((episode) => this._episodeItem(episode, show));
+        }));
+        const failed = settled.find((result) => result.status === 'rejected');
+        if (failed && settled.every((result) => result.status === 'rejected')) throw failed.reason;
+        return settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+            .sort((a, b) => when(b) - when(a)).slice(0, limit);
     }
 
     async _episodes(feedUrl, offset, limit) {

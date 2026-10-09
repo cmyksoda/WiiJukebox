@@ -64,6 +64,15 @@ class Source extends EventEmitter {
     /** 'pull' or 'push'; see the note at the top of this file. */
     static family = 'pull';
 
+    /** False when there is nothing to start again later, so play history skips it. */
+    static replayable = true;
+
+    /**
+     * Rows for the web home screen: `{ id, title, remote }`. `remote` rows come
+     * from a service, so they are cached and need the source connected first.
+     */
+    static homeRows = [];
+
     /**
      * @param {object} [config]  persisted per-source settings (host, token, ...)
      * @param {object} [deps]    shared services (logger, http client, paths)
@@ -144,6 +153,16 @@ class Source extends EventEmitter {
     /** @returns {Promise<{items: Array, total: number}>} */
     async search(_query, _opts) {
         return { items: [], total: 0 };
+    }
+
+    /**
+     * The items for one of homeRows, in the shape browse() returns them.
+     * @param {string} _row
+     * @param {{limit: number, history: import('../core/history').PlayHistory}} _ctx
+     * @returns {Promise<Array>}
+     */
+    async homeRow(_row, _ctx) {
+        return [];
     }
 
     // --- Optional: transport control -----------------------------------------

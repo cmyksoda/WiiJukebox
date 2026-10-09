@@ -5,6 +5,10 @@ class PlexSource extends QueueSource {
     static id = 'plex';
     static label = 'Plex';
     static family = 'pull';
+    static homeRows = [
+        { id: 'recent', title: 'Recently added', remote: true },
+        { id: 'ondeck', title: 'On Deck', remote: true },
+    ];
 
     get capabilities() {
         return { play: true, pause: true, stop: true, browse: true, search: true, ...this.queueCapabilities };
@@ -83,6 +87,32 @@ class PlexSource extends QueueSource {
         const total = res.totalSize ?? items.length;
         if (!paged) items = items.slice(offset, offset + limit);
         return { items: items.map((i) => this._item(i)), total };
+    }
+
+    // Plex only serves images to a token; the link stays on the server and reaches browsers through the art proxy.
+    _thumb(item) {
+        const path = item.thumb || item.parentThumb || item.grandparentThumb;
+        if (!path) return null;
+        try {
+            const url = this._url(path);
+            url.searchParams.set('X-Plex-Token', this.config.token);
+            return url.toString();
+        } catch { return null; }
+    }
+
+    async homeRow(row, { limit }) {
+        let metadata;
+        if (row === 'ondeck') {
+            metadata = (await this._call('/library/onDeck', {}, { limit })).Metadata || [];
+        } else if (row === 'recent') {
+            const sections = ((await this._call('/library/sections')).Directory || [])
+                .filter((section) => section.type === 'artist' && /^\d+$/.test(section.key)).slice(0, 4);
+            const pages = await Promise.all(sections.map((section) =>
+                this._call(`/library/sections/${section.key}/recentlyAdded`, { type: 9 }, { limit })));
+            metadata = pages.flatMap((page) => page.Metadata || []).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+        } else throw new Error(`unknown home row: ${row}`);
+        return metadata.filter((entry) => ['album', 'track', 'playlist'].includes(entry.type)).slice(0, limit)
+            .map((entry) => ({ ...this._item(entry), artwork: this._thumb(entry) }));
     }
 
     async search(query, { limit = 50 } = {}) {
