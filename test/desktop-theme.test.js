@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const vm = require('node:vm');
-const { READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require(path.join(__dirname, '..', 'packaging', 'desktop', 'lib', 'page-theme'));
+const { READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, isDarkColor, ThemeFeed } = require(path.join(__dirname, '..', 'packaging', 'desktop', 'lib', 'page-theme'));
 
 // A stand-in page: <html> with a data-theme, and the Theme control's buttons.
 function fakePage(theme) {
@@ -47,6 +47,12 @@ test('the title bar is told to force Light or Dark, and to follow the system oth
     assert.equal(forcedTheme(undefined), null);
 });
 
+test('the page\'s theme-color tag is read as dark or light by its luminance, in any form the browser reports', () => {
+    for (const dark of ['#0d141c', '#0D141C', '#000', '#000f', '#0d141cff', '#2b2b2b', 'rgb(13, 20, 28)', 'rgba(13,20,28,1)', 'rgb(13 20 28)']) assert.equal(isDarkColor(dark), true, dark);
+    for (const light of ['#f3f6f9', '#fff', '#ffffff', '#f3f6f9ff', '#808080', 'rgb(243, 246, 249)']) assert.equal(isDarkColor(light), false, light);
+    for (const bad of [null, undefined, '', 'red', '#12', '#12345', '#ggg', 'rgb(1, 2)', 42, {}]) assert.equal(isDarkColor(bad), null, String(bad));
+});
+
 test('the theme feed reports changes only, skips pages that cannot answer and honors pause', async () => {
     const answers = ['system', 'system', 'dark', null, 'light'];
     const seen = [];
@@ -70,6 +76,20 @@ test('the theme feed reports changes only, skips pages that cannot answer and ho
     assert.deepEqual(seen, ['system', 'dark'], 'a paused feed does not ask');
     await feed.poll({ force: true });
     assert.deepEqual(seen, ['system', 'dark', 'light'], 'a choice just made from a menu is read even while paused');
+});
+
+test('a feed told to forget what it last saw reports the next answer even when it is the same', async () => {
+    const seen = [];
+    const feed = new ThemeFeed({ read: async () => 'dark', onChange: (choice) => seen.push(choice) });
+    await feed.poll();
+    await feed.poll();
+    feed.forget();
+    await feed.poll();
+    assert.deepEqual(seen, ['dark', 'dark']);
+});
+
+test('the theme feed asks only slowly unless told otherwise', () => {
+    assert.ok(new ThemeFeed({ read: async () => null, onChange: () => {} }).intervalMs >= 3000);
 });
 
 test('the theme feed starts and stops its own timer', async () => {

@@ -15,7 +15,7 @@ const { wiiAddress, probeDiscovery, findFreePort, portIsFree } = require('./lib/
 const { guidance, allowWindowsFirewall } = require('./lib/firewall');
 const { openLog } = require('./lib/logfile');
 const { APP_NAME, TitleFeed } = require('./lib/window-title');
-const { READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require('./lib/page-theme');
+const { READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, isDarkColor, ThemeFeed } = require('./lib/page-theme');
 const { BAR_HEIGHT, layoutViews } = require('./lib/window-layout');
 const { buildMenuModel } = require('./lib/menu-model');
 
@@ -83,14 +83,17 @@ let menuActions = null;
 let relayout = () => {};
 let titleFeed = null;
 let themeFeed = null;
-// The web UI's own choice (System, Light or Dark), read back from the page; it also decides the window's backdrop.
+// The web UI's own choice (System, Light or Dark), read back from the page.
 let themeChoice = 'system';
+// Whether the page's theme-color tag says dark, which is what the page looks like right now. Null while it has none.
+let pageDark = null;
 let playbackTitle = APP_NAME;
 let windowTitleText = APP_NAME;
 let queue = Promise.resolve();
 const notes = [];
 
-const bg = () => ((themeChoice === 'system' ? nativeTheme.shouldUseDarkColors : themeChoice === 'dark') ? '#0d141c' : '#f3f6f9');
+const pageIsDark = () => pageDark ?? (themeChoice === 'system' ? nativeTheme.shouldUseDarkColors : themeChoice === 'dark');
+const bg = () => (pageIsDark() ? '#0d141c' : '#f3f6f9');
 const trayName = TRAY_NAMES[process.platform] || 'system tray';
 
 // A development run has no bundled FFmpeg, so the option to choose between the two does not exist there.
@@ -241,6 +244,9 @@ function createWindow(geometry) {
         closeBarMenu();
         layout();
     };
+    view.webContents.on('did-change-theme-color', (event, color) => {
+        if (content === view) onPageColor(color);
+    });
     view.webContents.on('enter-html-full-screen', fullScreenChanged(true));
     view.webContents.on('leave-html-full-screen', fullScreenChanged(false));
     window.contentView.on('bounds-changed', layout);
@@ -299,8 +305,11 @@ async function setSystemTitleBar(enabled) {
     writeState();
 }
 
+// The bar is told the page's look when it has one; with none (a setup page) it follows the system as the page does.
+const barTheme = () => (pageDark === null ? forcedTheme(themeChoice) : pageDark ? 'dark' : 'light');
+
 function barState() {
-    return { title: windowTitleText, maximized: Boolean(win?.isMaximized()), focused: Boolean(win?.isFocused()), theme: forcedTheme(themeChoice) };
+    return { title: windowTitleText, maximized: Boolean(win?.isMaximized()), focused: Boolean(win?.isFocused()), theme: barTheme() };
 }
 
 function sendBarState() {
@@ -313,20 +322,41 @@ async function readPageTheme() {
     return parsePageTheme(await page.executeJavaScript(READ_THEME));
 }
 
-function onThemeChange(choice) {
-    themeChoice = choice;
-    win?.setBackgroundColor(bg());
-    content?.setBackgroundColor(bg());
-    if (!menuOpen) bar?.setBackgroundColor(bg());
-    buildMenus();
+// The bar first, since it is what the eye catches changing, then the backdrops behind the views.
+function showPageTheme() {
     sendBarState();
+    const color = bg();
+    win?.setBackgroundColor(color);
+    content?.setBackgroundColor(color);
+    if (!menuOpen) bar?.setBackgroundColor(color);
     writeState();
 }
 
-// The page's own control is pressed, so its stored choice, its look and its buttons all follow.
+// The poll's answer is the page's own choice, so it settles any guess; the tag takes over again on its next change.
+function onThemeChange(choice) {
+    themeChoice = choice;
+    pageDark = null;
+    showPageTheme();
+    buildMenus();
+}
+
+// The page changes its theme-color tag in the same step as its look, so the bar need not wait for the next poll.
+function onPageColor(color) {
+    pageDark = isDarkColor(color);
+    showPageTheme();
+    themeFeed?.poll({ force: true });
+}
+
+// The page's own control is pressed, so its stored choice, its look and its buttons all follow. The bar is switched
+// at once rather than after the page's answer, which then corrects any guess.
 async function setPageTheme(choice) {
     if (currentPage !== 'player' || !content) return;
+    themeChoice = choice;
+    pageDark = choice === 'system' ? nativeTheme.shouldUseDarkColors : choice === 'dark';
+    showPageTheme();
+    buildMenus();
     await content.webContents.executeJavaScript(chooseThemeScript(choice)).catch(() => {});
+    themeFeed?.forget();
     await themeFeed?.poll({ force: true });
 }
 
@@ -923,6 +953,10 @@ if (!relaunching && !app.requestSingleInstanceLock()) {
         titleFeed.start();
         themeFeed = new ThemeFeed({ read: readPageTheme, onChange: onThemeChange });
         themeFeed.start();
+        nativeTheme.on('updated', () => {
+            if (themeChoice === 'system' && pageDark !== null) pageDark = nativeTheme.shouldUseDarkColors;
+            showPageTheme();
+        });
         await showPage('starting');
         if (!startedQuietly) showMainWindow();
         else {

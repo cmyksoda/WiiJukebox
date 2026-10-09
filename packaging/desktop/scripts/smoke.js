@@ -59,7 +59,7 @@ function executableOf(file) {
 const executable = executableOf(target);
 
 class App {
-    /** @param {{args?: string[], settings?: object, env?: object, discoveryPort?: number, config?: object}} options `settings` is the app's saved state (none means a first run); `config` is the server's config.json. */
+    /** @param {{args?: string[], settings?: object, env?: object, discoveryPort?: number, config?: object}} options `settings` is the app's saved state (none means a first run); `config` is the server's config.json; a null in `env` removes that variable. */
     constructor(name, { args: extraArgs = [], settings = null, env = {}, discoveryPort = DISCOVERY_PORT, config = { port: PORT, discoveryPort } } = {}) {
         this.dir = fs.mkdtempSync(path.join(process.env.WIIJUKEBOX_SMOKE_DIR || os.tmpdir(), `wiijukebox-smoke-${name}-`));
         this.config = path.join(this.dir, 'config');
@@ -76,7 +76,7 @@ class App {
     }
 
     get env() {
-        return {
+        const env = {
             ...process.env,
             XDG_CONFIG_HOME: this.config,
             WIIJUKEBOX_USER_DATA: this.userData,
@@ -86,6 +86,9 @@ class App {
             APPIMAGE_EXTRACT_AND_RUN: '1',
             ...this.extraEnv,
         };
+        // A null in `env` removes the variable.
+        for (const [name, value] of Object.entries(env)) if (value === null) delete env[name];
+        return env;
     }
 
     command(extra = [], { quitting = false } = {}) {
@@ -720,6 +723,18 @@ const viewOf = (layout, kind) => layout.views.find((view) => (kind === 'bar' ? v
 
 const press = (client, key, vk) => Promise.all(['rawKeyDown', 'keyUp'].map((type) => client.send('Input.dispatchKeyEvent', { type, key, code: key, windowsVirtualKeyCode: vk })));
 
+const barMenuShown = (bar) => bar.evaluate("!document.querySelector('#menu-scrim').hidden");
+
+// Opens the ≡ menu and clicks down a path of entries (a submenu's parent, then its entry), as a user would.
+async function chooseFromBarMenu(bar, labels) {
+    await bar.evaluate("document.querySelector('#menu').click(); true");
+    await until('the menu', () => barMenuShown(bar), 5000);
+    for (const label of labels) {
+        await bar.evaluate(`(() => { const row = [...document.querySelectorAll('.item')].find((n) => n.querySelector('.label').textContent === ${JSON.stringify(label)}); row.focus(); row.click(); })(); true`);
+        await sleep(150);
+    }
+}
+
 // The bar's own ≡ menu: it grows the bar's view over the window, is drawn in the bar, answers keys and clicks, and runs
 // entries by id only, from the bar and nowhere else.
 async function checkBarMenu(app, bar, page) {
@@ -825,14 +840,7 @@ async function checkBarMenu(app, bar, page) {
     check('and nothing was changed by it', savedMode() === 'background' && await page.evaluate("document.documentElement.dataset.theme === undefined"));
 
     // Choosing entries: a checkbox, and a theme in the submenu.
-    const choose = async (path) => {
-        await bar.evaluate("document.querySelector('#menu').click(); true");
-        await opened();
-        for (const label of path) {
-            await bar.evaluate(`(() => { const row = [...document.querySelectorAll('.item')].find((n) => n.querySelector('.label').textContent === ${JSON.stringify(label)}); row.focus(); row.click(); })(); true`);
-            await sleep(150);
-        }
-    };
+    const choose = (labels) => chooseFromBarMenu(bar, labels);
     await choose(['Keep playing when the window is closed']);
     check('choosing a checkbox runs it and closes the menu', await closed('the menu to close') && await until('the setting', () => savedMode() === 'quit', 5000).then(() => true, () => false));
     await choose(['Keep playing when the window is closed']);
@@ -845,7 +853,7 @@ async function checkBarMenu(app, bar, page) {
     check('the app\'s state file says so', app.state().theme === 'dark');
     // The page's own control moves everything the other way, with nothing told to the app.
     await page.evaluate("document.querySelector('[data-theme-choice=\"light\"]').click(); true");
-    check('a choice made in the web UI reaches the bar within a few seconds',
+    check('a choice made in the web UI reaches the bar by the slow poll, even where nothing renders to report its tag',
         await until('the light bar', () => bar.evaluate("document.documentElement.dataset.theme === 'light'"), 8000).then(() => true, () => false));
     check('and ticks Light in the menu', await until('the tick', async () => JSON.parse(await inMain("return JSON.stringify(electron.Menu.getApplicationMenu().getMenuItemById('theme-light').checked)")), 8000).then(() => true, () => false));
     await choose(['Theme', 'System']);
@@ -857,8 +865,46 @@ async function checkBarMenu(app, bar, page) {
     await clickMenuItem('sidebar-settings');
     check('and so does the same entry in the application menu', await until('the sheet', sheetOpen, 8000).then(() => true, () => false));
     await page.evaluate("document.querySelector('dialog.sheet').close(); true");
-    check('System hands the colors back to the system on both', await until('system', async () =>
-        await page.evaluate("document.documentElement.dataset.theme === undefined && localStorage.getItem('wiijukebox.theme') === null") && await bar.evaluate("document.documentElement.dataset.theme === undefined"), 8000).then(() => true, () => false));
+    check('System hands the colors back to the system: the page clears its choice and the bar looks as the system does', await until('system', async () => {
+        const systemDark = await page.evaluate("matchMedia('(prefers-color-scheme: dark)').matches");
+        const barTheme = await bar.evaluate('document.documentElement.dataset.theme');
+        return await page.evaluate("document.documentElement.dataset.theme === undefined && localStorage.getItem('wiijukebox.theme') === null")
+            && (barTheme === undefined || barTheme === (systemDark ? 'dark' : 'light'));
+    }, 8000).then(() => true, () => false));
+}
+
+// The page's theme-color tag changes with its look, and the app passes that to the bar at once instead of on a poll:
+// both are timed on the shared clock, from the page switching to the bar switching.
+async function checkThemeSync(app, bar, page) {
+    const watch = (client, theme) => client.evaluate(`window.__switched = new Promise((resolve) => {
+        const root = document.documentElement;
+        const seen = () => { if (root.dataset.theme === ${JSON.stringify(theme)}) { observer.disconnect(); resolve(Date.now()); } };
+        const observer = new MutationObserver(seen);
+        observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+        seen();
+    }); true`);
+    const switched = (client) => Promise.race([client.evaluate('window.__switched'), sleep(5000).then(() => null)]);
+    // `trigger` starts a change to `theme`; the answer is how long after the page switched the bar did (negative: before it).
+    const lag = async (theme, trigger) => {
+        await Promise.all([watch(page, theme), watch(bar, theme)]);
+        await trigger();
+        const [atPage, atBar] = await Promise.all([switched(page), switched(bar)]);
+        return atPage === null || atBar === null ? Infinity : atBar - atPage;
+    };
+    const pressPage = (theme) => () => page.evaluate(`document.querySelector('[data-theme-choice="${theme}"]').click(); true`);
+
+    await pressPage('light')();
+    await until('the light bar', () => bar.evaluate("document.documentElement.dataset.theme === 'light'"), 8000);
+    const fromPage = [];
+    for (const theme of ['dark', 'light', 'dark', 'light', 'dark', 'light']) fromPage.push(await lag(theme, pressPage(theme)));
+    const median = [...fromPage].sort((a, b) => a - b)[Math.floor(fromPage.length / 2)];
+    check('a theme chosen in the web UI reaches the bar within 100 ms of the page, both ways', median <= 100 && Math.max(...fromPage) <= 250, fromPage.join(', ') + ' ms');
+    const fromMenu = [];
+    for (const theme of ['Dark', 'Light', 'Dark', 'Light']) fromMenu.push(await lag(theme.toLowerCase(), () => chooseFromBarMenu(bar, ['Theme', theme])));
+    check('and so does one chosen in the ≡ menu, which switches the bar without waiting for the page', Math.max(...fromMenu.map(Math.abs)) <= 150, fromMenu.join(', ') + ' ms');
+    check('the bar and the page agree, and the state file and the menu tick say the same', await bar.evaluate('document.documentElement.dataset.theme') === await page.evaluate('document.documentElement.dataset.theme')
+        && await until('the state', () => app.state().theme === 'light', 3000).then(() => true, () => false)
+        && JSON.parse(await inMain("return JSON.stringify(electron.Menu.getApplicationMenu().getMenuItemById('theme-light').checked)")) === true);
 }
 
 async function checkTitleBar() {
@@ -1014,6 +1060,36 @@ async function checkTitleBar() {
         bar?.close();
         page?.close();
         await fixture?.close();
+        app.kill();
+    }
+}
+
+// A window that is never shown renders no frames, so its page never reports a changed theme-color tag and its timers run
+// slowly. This one is shown on Chromium's headless platform with no display variables, so it renders and nothing reaches a screen.
+async function checkLiveBar() {
+    if (process.platform !== 'linux') return console.log('\n== skipped: the live title bar checks need Chromium\'s headless platform, which is Linux only ==');
+    console.log('\n== title bar: the theme follows the page at once, and the menu answers the pointer ==');
+    const app = new App('live', {
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`, '--ozone-platform=headless', '--disable-gpu'],
+        settings: { setupDone: true, onClose: 'background' },
+        env: { DISPLAY: null, WAYLAND_DISPLAY: null, WIIJUKEBOX_HIDDEN: null },
+    });
+    app.start();
+    let bar;
+    let page;
+    try {
+        const state = await app.waitState('the web UI', (s) => s.page === 'player' && s.serverUrl);
+        await until('the web UI to load into the window', async () => viewOf(await windowViews(), 'page'), 30000);
+        bar = await pageClient('titlebar.html');
+        page = await devtoolsClient({ urlPart: state.serverUrl });
+        await checkThemeSync(app, bar, page);
+        check('app quits', Boolean(await app.quit()));
+    } catch (err) {
+        check('live title bar flow', false, err.message);
+        app.dump();
+    } finally {
+        bar?.close();
+        page?.close();
         app.kill();
     }
 }
@@ -1254,6 +1330,7 @@ async function main() {
         await checkSystemFfmpeg();
     }
     await checkTitleBar();
+    await checkLiveBar();
     await checkSystemTitleBar();
     await checkCloseDialog();
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
