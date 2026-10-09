@@ -123,8 +123,58 @@ const check = (label, ok) => {
         check('Try again loads it', true);
 
 
+        // --- clearing Jump back in ----------------------------------------------------------
+        const dialogText = () => page.textContent('dialog.confirm p');
+        await page.click('.home-section:has(h3:text("Recently added")) .card >> nth=0');
+        await page.waitForSelector('.row');
+        await page.click('#back');
+        await page.waitForSelector('#home-recent .shelf');
+        const historyFile = path.join(app.dir, 'history.json');
+        app.web.history.flush();
+        check('there is history to clear', JSON.parse(fs.readFileSync(historyFile, 'utf8')).entries.length > 0);
+        check('Clear sits beside the heading', (await page.textContent('#home-recent .home-head')).startsWith('Jump back inClear'));
+        await page.click('#home-recent button:text("Clear")');
+        await page.waitForSelector('dialog.confirm[open]');
+        check('the dialog asks before clearing', await dialogText() === 'Clear recently played? This removes everything from Jump back in.');
+        check('with Cancel and Clear', (await page.$$eval('dialog.confirm button', (b) => b.map((x) => x.textContent))).join() === 'Cancel,Clear');
+        await page.click('dialog.confirm >> text=Cancel');
+        check('Cancel keeps it all', await page.isVisible('#home-recent .shelf')
+            && JSON.parse(fs.readFileSync(historyFile, 'utf8')).entries.length > 0);
+        await page.click('#home-recent button:text("Clear")');
+        await page.click('dialog.confirm >> button:text-is("Clear")');
+        await page.waitForSelector('#home-recent .shelf', { state: 'detached' });
+        check('confirming hides the section', !(await page.isVisible('#home-recent .home-section')));
+        check('and empties history.json', JSON.parse(fs.readFileSync(historyFile, 'utf8')).entries.length === 0);
+        check('and the server has nothing to offer again', (await (await fetch(`${app.base}/api/home`)).json()).recent.length === 0);
+        check('focus stays at the top of the page', await page.evaluate(() => document.activeElement.tagName) === 'H3');
+
+
         check('covers came through the proxy, never from a service', direct.length === 0
             && await page.$$eval('img', (imgs) => imgs.every((img) => new URL(img.src).pathname.startsWith('/api/art/'))));
+
+        // The dialog's edges and text stay on whole pixels at 1x, at odd and even widths and on a phone.
+        for (const [name, viewport, phone] of [['1281x801', { width: 1281, height: 801 }, false], ['1280x800', { width: 1280, height: 800 }, false],
+            ['390x844', { width: 390, height: 844 }, true], ['375x667', { width: 375, height: 667 }, true], ['361x640', { width: 361, height: 640 }, true]]) {
+            app.web.history.record('subsonic', { id: 'album/n1', type: 'album', title: 'Paper Lanterns', subtitle: 'Mika Ito' });
+            const view = await open(viewport, phone);
+            await view.click('#home-recent button:text("Clear")');
+            await view.waitForSelector('dialog.confirm[open]');
+            const box = await view.$eval('dialog.confirm', (el) => {
+                const r = el.getBoundingClientRect();
+                return [r.left, r.top, r.width, r.height, ...[...el.querySelectorAll('button')].flatMap((b) => {
+                    const q = b.getBoundingClientRect();
+                    return [q.left, q.top, q.width, q.height];
+                })];
+            });
+            check(`${name}: the dialog sits on whole pixels`, box.every(Number.isInteger));
+            const fits = await view.$eval('dialog.confirm', (el) => {
+                const r = el.getBoundingClientRect();
+                return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
+            });
+            check(`${name}: and fits the screen`, fits);
+            await view.keyboard.press('Escape');
+            await view.context().close();
+        }
     } finally {
         check('no console errors', errors.length === 0);
         if (errors.length) console.log(errors.join('\n'));

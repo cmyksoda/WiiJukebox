@@ -200,6 +200,9 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .pill[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
 .pill:disabled { opacity: .45; cursor: default; pointer-events: none; }
 .pill.danger { color: var(--danger); }
+/* An outline with no fill, for controls that should be findable but not loud. */
+.pill.quiet { background: transparent; box-shadow: none; color: var(--dim); }
+.pill.quiet:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
 
 .round {
     display: inline-grid;
@@ -543,6 +546,7 @@ body.viz #viz-fullscreen { display: inline-grid; }
     .home-arrows { display: inline-flex; }
 }
 .home-arrows .pill.icon { width: 40px; min-height: 36px; }
+.home-head .pill.quiet { min-height: 32px; padding: 0 12px; font-size: 14px; }
 .home-note { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 0; font-size: 14px; color: var(--dim); }
 
 /* A row that scrolls on its own; on phones it runs to the screen edge so the next cover peeks in. */
@@ -800,6 +804,33 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 }
 #toast.error { background: var(--danger); border-color: var(--danger); color: #fff; }
 
+/* --- confirm dialog -------------------------------------------------------------------- */
+
+/* Whole-pixel size and offsets, so its text and edges stay crisp on 1x screens. */
+.confirm {
+    position: fixed;
+    inset: 96px auto auto calc(50% - 200px);
+    width: 400px;
+    max-width: none;
+    max-height: calc(100dvh - 128px);
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 12px 32px rgba(20, 40, 60, .3), var(--highlight);
+}
+@supports (left: round(down, 1.5px, 1px)) {
+    .confirm { left: round(down, calc((100vw - 400px) / 2), 1px); }
+}
+.confirm::backdrop { background: rgba(20, 40, 60, .45); }
+.confirm form { display: flex; flex-direction: column; gap: 20px; padding: 22px; }
+.confirm p { margin: 0; font-size: 16px; line-height: 24px; }
+.confirm strong { display: block; font-size: 18px; font-weight: 800; }
+.confirm .buttons { display: flex; justify-content: flex-end; gap: 10px; }
+
 /* --- phones and tablets: drawer, transport bar, now-playing sheet ----------------------------- */
 
 @media (max-width: 900px) {
@@ -893,6 +924,9 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 
 @media (max-width: 519px) {
     body.viz #mini-prev, body.viz #mini-next, body.viz #mini-monitor { display: none; }
+
+    /* A card above the bottom edge, 16px in from both sides. */
+    .confirm { inset: auto 16px calc(16px + env(safe-area-inset-bottom)) 16px; width: auto; }
 
     /* Room for the title and a Settings pill beside the menu button. */
     #sources-toggle { width: 44px; padding: 0; }

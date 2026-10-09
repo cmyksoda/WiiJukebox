@@ -82,6 +82,30 @@ function toast(message, isError = false) {
     }, 5000);
 }
 
+/**
+ * A small modal question. Resolves true on the confirm button; Cancel, Escape and a tap outside all
+ * answer no. The browser's own modal dialog keeps focus inside and handles Escape.
+ */
+function confirmDialog({ question, detail, confirm }) {
+    return new Promise((resolve) => {
+        const dialog = h('dialog', { class: 'confirm', 'aria-labelledby': 'confirm-question', 'aria-describedby': 'confirm-text' },
+            h('form', { method: 'dialog' },
+                h('p', { id: 'confirm-text' }, h('strong', { id: 'confirm-question', text: question }), ` ${detail}`),
+                h('div', { class: 'buttons' },
+                    h('button', { class: 'pill', value: 'cancel', text: 'Cancel', autofocus: true }),
+                    h('button', { class: 'pill primary', value: 'ok', text: confirm }))));
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) dialog.close('cancel');
+        });
+        dialog.addEventListener('close', () => {
+            dialog.remove();
+            resolve(dialog.returnValue === 'ok');
+        });
+        document.body.append(dialog);
+        dialog.showModal();
+    });
+}
+
 function fmtDuration(seconds) {
     if (!Number.isFinite(seconds) || seconds < 0) return '';
     const total = Math.floor(seconds);
@@ -227,10 +251,14 @@ async function loadHome(token) {
     const slots = overview.services.map(() => h('div', { class: 'home-service' }));
     $('#home-rows').replaceChildren(...slots);
     await Promise.all(overview.services.map((service, i) => loadService(service, slots[i], token)));
-    if (token === homeView.token && !overview.recent.length && !$('#home-rows').querySelector('.home-section')) {
-        $('#home-recent').replaceChildren(
-            h('p', { class: 'hint', text: 'Start something from a channel below and it shows up here to play again.' }));
-    }
+    if (token === homeView.token) showFirstRunHint();
+}
+
+/** On a page with nothing to offer yet, say where things come from. */
+function showFirstRunHint() {
+    if ($('#home-rows').querySelector('.home-section') || $('#home-recent .home-section')) return;
+    $('#home-recent').replaceChildren(
+        h('p', { class: 'hint', text: 'Start something from a channel below and it shows up here to play again.' }));
 }
 
 async function loadService(service, slot, token) {
@@ -267,8 +295,31 @@ function paintRecent(recent) {
     const focused = document.activeElement?.closest?.('[data-entry]')?.dataset.entry;
     slot.replaceChildren(...(recent.length ? [homeSection('Jump back in', null, shelf(recent.map((entry) => homeCard({
         ...entry.item, type: entry.type, title: entry.title, subtitle: entry.subtitle, artwork: entry.artwork,
-    }, entry.source, { replay: entry.item, id: entry.id }))))] : []));
+    }, entry.source, { replay: entry.item, id: entry.id }))), clearButton())] : []));
     if (focused) slot.querySelector(`[data-entry="${focused}"] .card`)?.focus();
+}
+
+function clearButton() {
+    return h('button', { class: 'pill small quiet', 'aria-label': 'Clear recently played', text: 'Clear', onclick: clearRecent });
+}
+
+async function clearRecent() {
+    const yes = await confirmDialog({
+        question: 'Clear recently played?', detail: 'This removes everything from Jump back in.', confirm: 'Clear',
+    });
+    if (!yes) return;
+    try {
+        await api('/home/recent', { method: 'DELETE' });
+    } catch (err) {
+        return toast(err.message, true);
+    }
+    paintRecent([]);
+    showFirstRunHint();
+    // The button that had focus is gone; keep the keyboard at the top of the page.
+    const first = $('#content h3');
+    first.tabIndex = -1;
+    first.focus({ preventScroll: true });
+    toast('Cleared recently played');
 }
 
 /** Plays count as new history, so what is showing may be out of date. */
@@ -284,7 +335,7 @@ function refreshRecent() {
 }
 
 let sectionCount = 0;
-function homeSection(title, service, body) {
+function homeSection(title, service, body, action = null) {
     const id = `home-section-${++sectionCount}`;
     const shelfEl = body.classList?.contains('shelf') ? body : null;
     return h('section', { class: 'home-section', 'aria-labelledby': id },
@@ -294,6 +345,7 @@ function homeSection(title, service, body) {
                 const src = state.sources.find((entry) => entry.id === service.id);
                 if (src) openSource(src);
             } }, SHORT[service.id] || service.label, h('i', { class: 'g g-right', 'aria-hidden': 'true' })) : null,
+            action,
             shelfEl ? shelfArrows(shelfEl) : null),
         body);
 }
@@ -1416,6 +1468,8 @@ PHONE.addEventListener('change', () => {
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+        // A dialog answers its own Escape.
+        if (document.querySelector('dialog[open]')) return;
         // In fullscreen Escape only leaves it; the visualizer closes on the next press.
         if (document.fullscreenElement) return;
         if (document.body.classList.contains('viz')) toggleVisualizer();
@@ -1440,7 +1494,9 @@ $('#back').onclick = () => {
 
 // The Android app asks this on its back button; true means the page used it.
 window.wiiJukeboxBack = () => {
-    if (document.body.classList.contains('viz')) toggleVisualizer();
+    const dialog = document.querySelector('dialog[open]');
+    if (dialog) dialog.close('cancel');
+    else if (document.body.classList.contains('viz')) toggleVisualizer();
     else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
     else if (document.body.classList.contains('sources-open')) setSourcesOpen(false);
     else if (!$('#back').hidden) $('#back').click();
