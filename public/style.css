@@ -580,12 +580,14 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     flex-direction: column;
     align-items: center;
     gap: 18px;
-    padding: 22px 24px 24px;
+    /* The 1px divider counts as left padding, so centered controls land on whole pixels. */
+    padding: 22px 24px 24px 23px;
     overflow-y: auto;
     background: var(--surface);
     border-left: 1px solid var(--edge);
 }
-#np-head { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+/* Whole-pixel line heights above the transport keep its glyphs from rounding off-center on 1x screens. */
+#np-head { width: 100%; display: flex; align-items: center; justify-content: space-between; min-height: 18px; }
 #np-close { display: none; }
 
 #np-art-frame {
@@ -606,8 +608,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #mini-placeholder { isolation: isolate; }
 
 #np-text { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-#np-title { font-size: 22px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
-#np-artist { color: var(--dim); font-size: 15px; overflow-wrap: anywhere; min-height: 1.45em; }
+#np-title { font-size: 22px; font-weight: 800; line-height: 26px; overflow-wrap: anywhere; }
+#np-artist { color: var(--dim); font-size: 15px; line-height: 21px; overflow-wrap: anywhere; min-height: 21px; }
 #np-source { margin-top: 4px; }
 
 #seek { width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 10px; }
@@ -823,7 +825,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 
 @media (min-width: 901px) and (max-width: 1180px) {
     #app { grid-template-columns: 220px minmax(0, 1fr) 300px; }
-    #nowplaying { padding: 18px 16px; }
+    #nowplaying { padding: 18px 16px 18px 15px; }
 }
 
 @media (max-width: 380px) {
