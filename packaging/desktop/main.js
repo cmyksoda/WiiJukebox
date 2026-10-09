@@ -209,8 +209,7 @@ function createWindow(geometry) {
         : null;
     for (const child of [view, barView]) {
         if (!child) continue;
-        // The bar is clear: it draws its own strip, and the page shows through below it while its menu is open.
-        child.setBackgroundColor(child === barView ? '#00000000' : bg());
+        child.setBackgroundColor(bg());
         window.contentView.addChildView(child);
     }
     barView?.webContents.loadFile(path.join(__dirname, 'ui', 'titlebar.html'));
@@ -306,6 +305,7 @@ function onThemeChange(choice) {
     themeChoice = choice;
     win?.setBackgroundColor(bg());
     content?.setBackgroundColor(bg());
+    if (!menuOpen) bar?.setBackgroundColor(bg());
     buildMenus();
     sendBarState();
     writeState();
@@ -738,6 +738,8 @@ function openBarMenu() {
     });
     menuActions = actions;
     menuOpen = true;
+    // Opaque keeps the bar's text subpixel-sharp, so it is clear only while it covers the page for its menu.
+    bar.setBackgroundColor('#00000000');
     relayout();
     bar.webContents.focus();
     bar.webContents.send('titlebar:menu', { items });
@@ -748,6 +750,7 @@ function closeBarMenu() {
     menuOpen = false;
     menuActions = null;
     relayout();
+    bar?.setBackgroundColor(bg());
     if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('titlebar:menu-closed');
     content?.webContents.focus();
 }
