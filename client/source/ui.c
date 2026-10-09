@@ -648,11 +648,11 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
         wj_gfx_rect(x, top + 2, 1, 1, tail, tail);
         wj_gfx_rect(x, top + 3, 1, 1, sheen, sheen);
     }
-    for (int side = 0; side < 2; side++) wj_gfx_ring(side ? L.w - 58 : 58, y + 18, 29, 2, T->blue);
-    round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS || s->entry.open, pointer, WJ_TARGET_BACK, glyph_back);
-    round_button(L.w - 58, y + 18, 26, !s->entry.open, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
-    label("B", 58, y + 64, 12, 1, T->muted, 40, 1);
-    label("2", L.w - 58, y + 64, 12, 1, T->muted, 40, 1);
+    // Low in the shoulders, leaving the Wii Menu's breathing room between the edge and the rings.
+    float by = DOCK_SHOULDER + 47;
+    for (int side = 0; side < 2; side++) wj_gfx_ring(side ? L.w - 58 : 58, by, 29, 2, T->blue);
+    round_button(58, by, 26, s->view != WJ_VIEW_SERVERS || s->entry.open, pointer, WJ_TARGET_BACK, glyph_back);
+    round_button(L.w - 58, by, 26, !s->entry.open, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
 
     time_t now = time(NULL);
     struct tm *local = localtime(&now);
