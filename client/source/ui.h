@@ -11,6 +11,16 @@ enum wj_target {
     WJ_TARGET_ENTER_ADDRESS, WJ_TARGET_HOME_ITEM, WJ_TARGET_HOME_DISMISS, WJ_TARGET_KEY, WJ_TARGET_FORGET
 };
 
+/* Equal gaps above and below the panels, wide enough for a toast and its shadow; the dock's date
+   then ends inside a CRT's action-safe area (row 456). The header's ink ends at row 46. */
+#define WJ_HEADER_INK_BOTTOM 46.0f
+#define WJ_PANEL_GAP 30.0f
+#define WJ_PANEL_TOP (WJ_HEADER_INK_BOTTOM + WJ_PANEL_GAP)
+#define WJ_PANEL_H 290.0f
+#define WJ_ROW_H 20.0f
+#define WJ_DOCK_VALLEY (WJ_PANEL_TOP + WJ_PANEL_H + WJ_PANEL_GAP)
+#define WJ_DOCK_SHOULDER (WJ_DOCK_VALLEY - 24.0f)
+
 struct wj_pointer { int valid; float x, y; };
 struct wj_hit { enum wj_target target; int index; };
 

@@ -10,9 +10,9 @@
 #include <string.h>
 #include <time.h>
 
-#define TOP 72.0f
-#define PANEL_H 304.0f
-#define ROW_H 21.0f
+#define TOP WJ_PANEL_TOP
+#define PANEL_H WJ_PANEL_H
+#define ROW_H WJ_ROW_H
 #define GRID_ROWS 3
 #define MAX_HITS 48
 
@@ -353,7 +353,7 @@ static void discovery(const struct wj_session *s, const struct wj_pointer *point
     // A failure here needs the whole sentence, so it sits in the panel, not in a toast.
     if (failed) paragraph(s->message, cx, TOP + 186, 15, 0, T->ink, w - 80, 3);
     else label("Press 1 to start again", cx, TOP + 190, 14, 0, T->faint, w - 40, 1);
-    pill(cx - 85, TOP + 252, 170, 34, "Enter address", failed, 1, pointer, WJ_TARGET_ENTER_ADDRESS, now);
+    pill(cx - 85, TOP + PANEL_H - 52, 170, 34, "Enter address", failed, 1, pointer, WJ_TARGET_ENTER_ADDRESS, now);
 }
 
 static void tiles(const struct wj_session *s, const struct wj_pointer *pointer, long long now) {
@@ -363,7 +363,7 @@ static void tiles(const struct wj_session *s, const struct wj_pointer *pointer, 
     int servers = s->view == WJ_VIEW_SERVERS;
     label(servers ? "Choose a server" : s->title, x + 18, TOP + 27, 19, 1, T->ink, w - 36 - (servers ? 150 : 0), 0);
     if (servers) pill(x + w - 18 - 132, TOP + 9, 132, 26, "Enter address", 0, 0, pointer, WJ_TARGET_ENTER_ADDRESS, now);
-    float gap = 12, tile_w = (w - 32 - gap * (cols - 1)) / cols, tile_h = 74;
+    float gap = 10, tile_w = (w - 32 - gap * (cols - 1)) / cols, tile_h = 72;
     int first = s->selected / cols >= GRID_ROWS ? (s->selected / cols - GRID_ROWS + 1) * cols : 0;
     for (int i = first; i < s->count && i < first + cols * GRID_ROWS; i++) {
         float tx = x + 16 + (i % cols) * (tile_w + gap), ty = TOP + 44 + ((i - first) / cols) * (tile_h + gap);
@@ -375,11 +375,11 @@ static void tiles(const struct wj_session *s, const struct wj_pointer *pointer, 
             focus_ring(tx, ty, tile_w, tile_h, 12, now);
         } else wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 1.5f, T->border);
         enum icon kind = icon_for(item->type, item->ref);
-        icon(kind, tx + tile_w / 2, ty + 26, 26, icon_color(kind), T->tile_top);
+        icon(kind, tx + tile_w / 2, ty + 23, 26, icon_color(kind), T->tile_top);
         if (item->subtitle[0]) {
-            label(item->title, tx + tile_w / 2, ty + 54, 13, selected, T->ink, tile_w - 8, 1);
-            label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, T->muted, tile_w - 8, 1);
-        } else label_two_lines(item->title, tx + tile_w / 2, ty + 54, 13, selected, T->ink, tile_w - 8);
+            label(item->title, tx + tile_w / 2, ty + 51, 13, selected, T->ink, tile_w - 8, 1);
+            label(item->subtitle, tx + tile_w / 2, ty + 65, 11, 0, T->muted, tile_w - 8, 1);
+        } else label_two_lines(item->title, tx + tile_w / 2, ty + 51, 13, selected, T->ink, tile_w - 8);
         hit(tx, ty, tile_w, tile_h, WJ_TARGET_ITEM, i);
     }
     if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, T->muted, w - 60, 2);
@@ -530,7 +530,7 @@ static void glyph_repeat(float cx, float cy, float r, u32 c) {
 static void now_playing(const struct wj_session *s, const struct wj_pointer *pointer) {
     float x = L.card_x, w = L.card_w;
     panel(x, TOP, w, PANEL_H, 18);
-    float size = w - 40 < 120 ? w - 40 : 120, ax = x + (w - size) / 2, ay = TOP + 14;
+    float size = w - 40 < 108 ? w - 40 : 108, ax = x + (w - size) / 2, ay = TOP + 12;
     wj_gfx_round(ax, ay + 3, size, size, 12, T->shadow, T->shadow);
     art_x = ax;
     art_y = ay;
@@ -620,8 +620,8 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
 
 // Like the Wii Menu's bar: raised shoulders hold the B and 2 buttons, and the edge dips between
 // them, low enough that a toast sits evenly between it and the panels.
-#define DOCK_SHOULDER 386.0f
-#define DOCK_VALLEY 410.0f
+#define DOCK_SHOULDER WJ_DOCK_SHOULDER
+#define DOCK_VALLEY WJ_DOCK_VALLEY
 #define DOCK_FLAT 64.0f
 #define DOCK_RAMP 140.0f
 
@@ -634,7 +634,7 @@ static float dock_edge_y(float x) {
 }
 
 static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
-    float y = 404;
+    float y = DOCK_VALLEY - 6;
     for (int x = 0; x < (int)L.w; x++) {
         float e = dock_edge_y(x + 0.5f), top = floorf(e), f = e - top;
         u32 fill = wj_gfx_mix(T->dock_top, T->dock_bottom, (top + 1 - DOCK_SHOULDER) / (WJ_GFX_HEIGHT - DOCK_SHOULDER));
@@ -701,7 +701,7 @@ static void entry_screen(const struct wj_session *s, const struct wj_pointer *po
     panel(x, TOP, w, PANEL_H, 18);
     float content_w = w - 36 < 600 ? w - 36 : 600, left = x + floorf((w - content_w) / 2);
     float side = 150, field_x = left + side + 22, field_w = content_w - side - 22;
-    float field_y = TOP + 12, field_h = 46, cx = left + side / 2;
+    float field_y = TOP + 10, field_h = 46, cx = left + side / 2;
 
     label("Server address", left, centered(field_y + field_h / 2, 19), 19, 1, T->ink, side, 0);
     wj_gfx_round(field_x, field_y, field_w, field_h, 12, T->key_bottom, T->key_top);
@@ -712,7 +712,7 @@ static void entry_screen(const struct wj_session *s, const struct wj_pointer *po
     if (!e->connecting && now / 500 % 2 == 0)
         wj_gfx_rect(floorf(caret_x) + 2, field_y + 9, 2, field_h - 18, T->accent, T->accent);
     const char *line = e->message[0] ? e->message : "The port is 4005 unless you type :port";
-    label(line, field_x + field_w / 2, TOP + 76, 13, 0, e->failed ? T->danger : T->muted, field_w, 1);
+    label(line, field_x + field_w / 2, TOP + 70, 13, 0, e->failed ? T->danger : T->muted, field_w, 1);
 
     paragraph("Point at a key and press A, or move with the D-pad. B deletes.", cx, TOP + 100, 13, 0, T->muted, side, 6);
     if (e->saved[0]) {
@@ -722,7 +722,7 @@ static void entry_screen(const struct wj_session *s, const struct wj_pointer *po
     }
 
     float group_w = 3 * KEY_W + ACTION_W + 3 * KEY_GAP;
-    float gx = floorf(field_x + (field_w - group_w) / 2), gy = TOP + 84;
+    float gx = floorf(field_x + (field_w - group_w) / 2), gy = TOP + 76;
     int focus = wj_keypad_at(e->column, e->row);
     for (int i = 0; i < WJ_KEY_COUNT; i++) {
         const struct wj_key *key = &wj_keypad[i];
@@ -830,7 +830,7 @@ static void expanded_art(const struct wj_session *s, long long now) {
     if (open <= 0.01f) return;
     hit_count = 0;
     wj_gfx_rect(0, 0, L.w, WJ_GFX_HEIGHT, WJ_RGBA(0x10, 0x16, 0x1c, (u32)(0xb0 * open)), WJ_RGBA(0x10, 0x16, 0x1c, (u32)(0xc8 * open)));
-    float size = 288, x = L.w / 2 - size / 2, y = 36;
+    float size = 272, x = L.w / 2 - size / 2, y = 36;
     float ix = art_x + (x - art_x) * open, iy = art_y + (y - art_y) * open, is = art_size + (size - art_size) * open;
     const struct wj_image *image = s->has_large_art && large_art.ready ? &large_art : &art;
     wj_gfx_round(ix - 2, iy + 4, is + 4, is + 4, 18, wj_gfx_fade(WJ_RGBA(0, 0, 0, 0x60), open), wj_gfx_fade(WJ_RGBA(0, 0, 0, 0x60), open));
@@ -852,10 +852,12 @@ static void toast_and_volume(const struct wj_session *s, long long now) {
     } else toast_alpha *= 0.85f;
     if (toast_alpha > 0.02f && toast[0]) {
         float w = wj_font_measure(toast, (int)strlen(toast), 14, 0) + 32;
-        // As wide as the dip allows before the edge rises into the toast's shadow (y 406).
-        float clear = DOCK_FLAT + DOCK_RAMP * acosf(1 - 2 * (406 - DOCK_SHOULDER) / (DOCK_VALLEY - DOCK_SHOULDER)) / 3.14159265f;
+        // The gap under the panels holds the toast and its 2px shadow, centered.
+        float y = TOP + PANEL_H + floorf((DOCK_VALLEY - TOP - PANEL_H - 26) / 2), shadow_bottom = y + 26;
+        // As wide as the dip allows before the edge rises into the toast's shadow.
+        float clear = DOCK_FLAT + DOCK_RAMP * acosf(1 - 2 * (shadow_bottom - DOCK_SHOULDER) / (DOCK_VALLEY - DOCK_SHOULDER)) / 3.14159265f;
         if (w > L.w - 2 * clear - 8) w = L.w - 2 * clear - 8;
-        float x = L.w / 2 - w / 2, y = 380;
+        float x = L.w / 2 - w / 2;
         wj_gfx_round(x, y + 2, w, 24, 12, wj_gfx_fade(T->shadow, toast_alpha), wj_gfx_fade(T->shadow, toast_alpha));
         wj_gfx_round(x, y, w, 24, 12, wj_gfx_fade(T->toast_top, toast_alpha), wj_gfx_fade(T->toast_bottom, toast_alpha));
         label(toast, L.w / 2, y + 17, 14, 0, wj_gfx_fade(T->toast_text, toast_alpha), w - 24, 1);

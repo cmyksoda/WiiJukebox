@@ -181,7 +181,7 @@ static void servers_and_discovery(struct wj_session *s, struct wj_pointer *none)
     draw(s, none, 1);
     save("01-finding-server");
     assert_surface(4, 70);
-    assert(wj_ui_hit(cx, 72 + 252 + 17).target == WJ_TARGET_ENTER_ADDRESS);
+    assert(wj_ui_hit(cx, WJ_PANEL_TOP + WJ_PANEL_H - 52 + 17).target == WJ_TARGET_ENTER_ADDRESS);
 
     s->discovering = 0;
     snprintf(s->message, sizeof(s->message), "%s", "Server discovery isn't available on this network. Enter the "
@@ -189,16 +189,16 @@ static void servers_and_discovery(struct wj_session *s, struct wj_pointer *none)
     s->message_held = 1;
     draw(s, none, 20);
     save("02-no-server");
-    assert(wj_ui_hit(cx, 72 + 252 + 17).target == WJ_TARGET_ENTER_ADDRESS);
-    assert(wj_ui_hit(cx - 86, 72 + 252 + 17).target == WJ_TARGET_NONE);
+    assert(wj_ui_hit(cx, WJ_PANEL_TOP + WJ_PANEL_H - 52 + 17).target == WJ_TARGET_ENTER_ADDRESS);
+    assert(wj_ui_hit(cx - 86, WJ_PANEL_TOP + WJ_PANEL_H - 52 + 17).target == WJ_TARGET_NONE);
 
     s->message[0] = 0;
     item(s, "server", "server", "Living room PC", "ID 3f2a9c1e");
     item(s, "server", "server", "Studio laptop", "ID 77b01d42");
     draw(s, none, 1);
     save("03-choose-server");
-    assert(wj_ui_hit(layout_width() - 20 - 18 - 66, 72 + 9 + 13).target == WJ_TARGET_ENTER_ADDRESS);
-    assert(wj_ui_hit(60, 72 + 44 + 30).target == WJ_TARGET_ITEM);
+    assert(wj_ui_hit(layout_width() - 20 - 18 - 66, WJ_PANEL_TOP + 9 + 13).target == WJ_TARGET_ENTER_ADDRESS);
+    assert(wj_ui_hit(60, WJ_PANEL_TOP + 44 + 30).target == WJ_TARGET_ITEM);
     assert_surface(30, 100);
 }
 
@@ -234,6 +234,38 @@ static int hint_ink(int y) {
     return 0;
 }
 
+/* Whether row y of a frame has ink: something unlike the page beside it at ref_x. */
+static int row_has_ink(const unsigned char *frame, int y, int x0, int x1, int ref_x) {
+    const unsigned char *ref = frame + (y * 640 + ref_x) * 3;
+    for (int x = x0; x < x1; x++)
+        if (differs(frame + (y * 640 + x) * 3, ref, 40)) return 1;
+    return 0;
+}
+
+/* The header, panels, toast zone and dock keep their measured spacing: equal gaps above and below the
+   panels, and the dock's clock and date inside a CRT's action-safe area. */
+static void check_vertical_layout(void) {
+    static unsigned char frame[640 * 480 * 3];
+    gx_soft_frame(frame);
+    int header_bottom = -1, panel_bottom = (int)(WJ_PANEL_TOP + WJ_PANEL_H);
+    for (int y = 0; y < (int)WJ_PANEL_TOP - 10; y++)
+        if (row_has_ink(frame, y, 12, 200, 6) || row_has_ink(frame, y, 380, 630, 6)) header_bottom = y;
+    assert(header_bottom == (int)WJ_HEADER_INK_BOTTOM);
+    int valley = -1;
+    for (int y = panel_bottom; y < 470 && valley < 0; y++) {
+        const unsigned char *c = frame + (y * 640 + 320) * 3;
+        if (c[2] > c[0] + 60) valley = y;
+    }
+    assert(valley == (int)WJ_DOCK_VALLEY);
+    assert((int)WJ_PANEL_TOP - header_bottom == valley - panel_bottom);
+    // A toast and its 2px shadow fit in that gap with at least 2px above and below.
+    assert(valley - panel_bottom >= 24 + 2 + 2 + 2);
+    int date_bottom = -1;
+    for (int y = valley + 4; y < 480; y++)
+        if (row_has_ink(frame, y, 250, 390, 215)) date_bottom = y;
+    assert(date_bottom > valley && date_bottom <= 456);
+}
+
 /* The playing card's pixels, to show it keeps its shapes under every overlay test. */
 static void album(struct wj_session *s, struct wj_pointer *none) {
     memset(&s->menu, 0, sizeof(s->menu));
@@ -256,10 +288,11 @@ static void album(struct wj_session *s, struct wj_pointer *none) {
     clock_ms += 1600;
     draw(s, &pointer, 20);
     save("05-album");
+    check_vertical_layout();
     assert(wj_ui_hit(pointer.x, pointer.y).target == WJ_TARGET_SEEK);
     int seek = wj_ui_seek_at(s, pointer.x);
     assert(seek > 0 && seek < s->duration_ms);
-    assert(wj_ui_hit(wide ? 300 : 200, 44 + 72 + 3 * 21 + 10).target == WJ_TARGET_ITEM);
+    assert(wj_ui_hit(wide ? 300 : 200, WJ_PANEL_TOP + 44 + 3 * WJ_ROW_H + 10).target == WJ_TARGET_ITEM);
     assert_surface(30, 100);
     unsigned char c[3];
     pixel(4, 470, c);
@@ -267,7 +300,7 @@ static void album(struct wj_session *s, struct wj_pointer *none) {
 
     // Pointing at the cover opens it large over a dimmed screen; nothing beneath reacts.
     float art_x = layout_width() - 20 - floorf(layout_width() * 0.335f) / 2;
-    assert(wj_ui_hit(art_x, 72 + 14 + 60).target == WJ_TARGET_ART);
+    assert(wj_ui_hit(art_x, WJ_PANEL_TOP + 12 + 54).target == WJ_TARGET_ART);
     s->message[0] = 0;
     s->has_large_art = 1;
     s->large_art_version = 1;
@@ -275,15 +308,15 @@ static void album(struct wj_session *s, struct wj_pointer *none) {
     assert(wj_ui_art_open());
     draw(s, none, 15);
     save("06-cover-expanded");
-    // The close hint sits in the toast zone, centered between the panels (376) and the dock's valley (410).
-    int hint_top = 0, hint_bottom = 0;
-    for (int y = 384; y < 420; y++) {
+    // The close hint sits in the toast zone, centered between the panels and the dock's valley, clear of the artist line.
+    int hint_top = 0, hint_bottom = 0, zone_top = (int)(WJ_PANEL_TOP + WJ_PANEL_H), valley = (int)WJ_DOCK_VALLEY;
+    for (int y = zone_top + 6; y < valley + 12; y++) {
         if (!hint_ink(y)) continue;
         if (!hint_top) hint_top = y;
         hint_bottom = y + 1;
     }
-    assert(hint_top >= 386 && hint_bottom <= 402 && hint_top + hint_bottom == 376 + 410);
-    assert(wj_ui_hit(art_x, 72 + 14 + 60).target == WJ_TARGET_NONE);
+    assert(hint_top > zone_top + 6 && hint_bottom < valley - 2 && hint_top + hint_bottom == zone_top + valley);
+    assert(wj_ui_hit(art_x, WJ_PANEL_TOP + 12 + 54).target == WJ_TARGET_NONE);
     pixel(4, 470, c);
     assert(c[0] < 90 && c[1] < 90 && c[2] < 100);
     wj_ui_show_art(0);
@@ -294,7 +327,7 @@ static void album(struct wj_session *s, struct wj_pointer *none) {
     // Shuffle and repeat flank the state chip: plain when off, blue when on, a 1 for repeat-one,
     // and gray, without a target, for a source that cannot use them.
     float card_w = floorf(layout_width() * 0.335f), card_x = layout_width() - 20 - card_w;
-    float shuffle_x = card_x + 31, repeat_x = card_x + card_w - 31, modes_y = 72 + 14 + 120 + 59;
+    float shuffle_x = card_x + 31, repeat_x = card_x + card_w - 31, modes_y = WJ_PANEL_TOP + 12 + 108 + 59;
     struct { const char *name; int shuffle; enum wj_repeat repeat; } modes[] = {
         { "07-modes-off", 0, WJ_REPEAT_OFF }, { "08-modes-shuffle", 1, WJ_REPEAT_OFF },
         { "09-modes-repeat-all", 0, WJ_REPEAT_ALL }, { "10-modes-repeat-one", 0, WJ_REPEAT_ONE },
@@ -416,7 +449,7 @@ static void entry_keys(struct box keys[WJ_KEY_COUNT]) {
         // Big enough to hit with a Wii Remote, and sitting on whole units.
         assert(w >= 64 && h >= 46 * key->rows);
         assert(whole_edges(WJ_TARGET_KEY, i, &keys[i]));
-        assert(keys[i].y0 >= 72 && keys[i].y1 <= 72 + 304);
+        assert(keys[i].y0 >= WJ_PANEL_TOP && keys[i].y1 <= WJ_PANEL_TOP + WJ_PANEL_H);
         for (int j = 0; j < i; j++) {
             const struct box *a = &keys[i], *b = &keys[j];
             assert(a->x1 <= b->x0 || b->x1 <= a->x0 || a->y1 <= b->y0 || b->y1 <= a->y0);
@@ -471,7 +504,7 @@ static void entry_screen(struct wj_session *s, struct wj_pointer *none) {
     // The dock's back pod closes it; the visualizer pod rests.
     assert(wj_ui_hit(58, 422).target == WJ_TARGET_BACK);
     assert(wj_ui_hit(layout_width() - 58, 422).target != WJ_TARGET_VISUALIZER);
-    assert(!red_on_row(72 + 12 + 23));
+    assert(!red_on_row(WJ_PANEL_TOP + 10 + 23));
     assert_surface(30, 100);
 
     // Mid-typing: one key flashes from the press while the pointer rests on another.
@@ -494,7 +527,7 @@ static void entry_screen(struct wj_session *s, struct wj_pointer *none) {
     e->pressed = -1;
     draw(s, none, 3);
     save("20-entry-error");
-    assert(red_on_row(72 + 12 + 23));
+    assert(red_on_row(WJ_PANEL_TOP + 10 + 23));
 
     // D-pad focus: the ring follows the cell, and a two-row key keeps its row.
     e->message[0] = 0;
@@ -560,8 +593,8 @@ static void names_list(struct wj_session *s, struct wj_pointer *none) {
     float scale = 640 / layout_width();
     for (int row = 0; row < 12; row++) {
         // Ink is anything unlike the row's own fill, just left of its text.
-        int y0 = (int)(116 + row * 21 + 4), left = (int)(62 * scale), ink = 0;
-        const unsigned char *fill = frame + (((int)(116 + row * 21 + 10)) * 640 + left - 4) * 3;
+        int row_y = (int)(WJ_PANEL_TOP + 44 + row * WJ_ROW_H), y0 = row_y + 4, left = (int)(62 * scale), ink = 0;
+        const unsigned char *fill = frame + ((row_y + 10) * 640 + left - 4) * 3;
         for (int y = y0; y < y0 + 13; y++)
             for (int x = left; x < left + 60; x++) {
                 const unsigned char *c = frame + (y * 640 + x) * 3;
