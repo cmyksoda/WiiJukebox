@@ -118,7 +118,7 @@ class HomeService {
 
     // Only rows that come from a service are cached; saved stations and recent links must show edits at once.
     _row(instance, row) {
-        const ctx = { limit: ROW_LIMIT, history: this.history };
+        const ctx = { limit: ROW_LIMIT };
         if (!row.remote) return instance.homeRow(row.id, ctx);
         const key = `${instance.id}:${row.id}`;
         const hit = this._cache.get(key);

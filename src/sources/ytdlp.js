@@ -63,10 +63,8 @@ class YtdlpSource extends QueueSource {
     static id = 'ytdlp';
     static label = 'YouTube / SoundCloud';
     static family = 'pull';
-    static homeRows = [
-        { id: 'recent', title: 'Recent links' },
-        { id: 'saved', title: 'Saved links' },
-    ];
+    // Recent plays are already in Jump back in, so only the saved links get a row of their own.
+    static homeRows = [{ id: 'saved', title: 'Saved links' }];
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
@@ -326,13 +324,8 @@ class YtdlpSource extends QueueSource {
         return { items: items.slice(offset, offset + limit), total: entries.length };
     }
 
-    /** Recent plays from the history, and the links saved for the Wii. */
-    async homeRow(row, { limit, history }) {
-        if (row === 'recent') {
-            return history.list({ source: this.id, limit }).map((entry) => ({
-                ...entry.item, title: entry.title, subtitle: entry.subtitle, artwork: entry.art,
-            }));
-        }
+    /** The links saved for the Wii. */
+    async homeRow(_row, { limit }) {
         const { items } = await this.browse({ limit });
         return items.map((item) => ({ ...item, subtitle: linkHost(item.subtitle) }));
     }

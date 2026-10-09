@@ -222,7 +222,7 @@ test('the podcast row merges the newest episodes and skips a feed that will not 
     }
 });
 
-test('saved stations and recent links show a change at once', async () => {
+test('saved stations and links show a change at once', async () => {
     const app = await harness({ radio: { stations: [{ id: 's1', name: 'Groove Salad', url: 'http://ice.example/groove' }] } });
     try {
         const stations = async () => only((await app.get('/api/home/radio')).rows, 'saved').items;
@@ -232,15 +232,11 @@ test('saved stations and recent links show a change at once', async () => {
         assert.deepEqual((await stations()).map((station) => station.title), ['Groove Salad', 'WFMU']);
 
         app.config.updateSource('ytdlp', { links: [{ id: 'l1', name: 'Rain sounds', url: 'https://tube.example/watch?v=1' }] });
-        app.web.history.record('ytdlp', { id: 'https://tube.example/watch?v=2', title: 'Lo-fi mix', type: 'track', artist: 'Chill Co' });
-        app.web.history.record('ytmusic', { id: 'https://music.example/watch?v=3', title: 'Elsewhere', type: 'track' });
         const rows = (await app.get('/api/home/ytdlp')).rows;
-        assert.deepEqual(rows.map((row) => row.title), ['Recent links', 'Saved links']);
-        assert.deepEqual(only(rows, 'recent').items.map((item) => [item.title, item.subtitle]), [['Lo-fi mix', 'Chill Co']],
-            'only this service\'s own plays');
+        assert.deepEqual(rows.map((row) => row.title), ['Saved links'], 'plays are under Jump back in, not a row of their own');
         assert.deepEqual(only(rows, 'saved').items.map((item) => [item.id, item.title, item.subtitle]),
             [['https://tube.example/watch?v=1', 'Rain sounds', 'tube.example']]);
-        assert.equal(only((await app.get('/api/home/ytmusic')).rows, 'recent').items[0].title, 'Elsewhere');
+        assert.deepEqual((await app.get('/api/home/ytmusic')).rows.map((row) => row.title), ['Saved links']);
     } finally {
         await app.close();
     }

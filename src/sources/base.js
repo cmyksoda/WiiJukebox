@@ -164,7 +164,7 @@ class Source extends EventEmitter {
     /**
      * The items for one of homeRows, in the shape browse() returns them.
      * @param {string} _row
-     * @param {{limit: number, history: import('../core/history').PlayHistory}} _ctx
+     * @param {{limit: number}} _ctx
      * @returns {Promise<Array>}
      */
     async homeRow(_row, _ctx) {
