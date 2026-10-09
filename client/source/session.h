@@ -21,6 +21,8 @@ enum wj_action {
 /* Read-only for the UI; changed only by the functions below, on the main thread. */
 struct wj_session {
     enum wj_view view;
+    /* The dark look; chosen from the HOME menu and kept on the SD card. */
+    int dark;
     char title[257], message[257], network[80], server_name[128], server_id[37];
     /* Held messages describe a condition that still applies; others expire. */
     int message_held;

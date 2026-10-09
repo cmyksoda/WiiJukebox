@@ -57,12 +57,16 @@ host-test: | build
 	./build/layout_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/font.c tests/font_test.c $(shell pkg-config --libs freetype2) -lm -o build/font_test
 	./build/font_test $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK)
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource $(shell pkg-config --cflags freetype2) source/utf8.c source/layout.c source/font.c source/gfx.c source/theme.c source/address.c source/ui.c tests/gx_soft.c tests/ui_render.c $(shell pkg-config --libs freetype2) -lm -o build/ui_render
 	./build/ui_render $(FONT_LATIN) $(FONT_GREEK) $(FONT_CJK) $(LOGO_MARK)
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Isource source/pcm_snapshot.c tests/pcm_snapshot_test.c -o build/pcm_snapshot_test
 	./build/pcm_snapshot_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/address.c tests/address_test.c -o build/address_test
 	./build/address_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/settings.c tests/settings_test.c -o build/settings_test
+	./build/settings_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource source/theme.c tests/theme_test.c -lm -o build/theme_test
+	./build/theme_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
 	./build/menu_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/init_wait.c tests/init_wait_test.c -o build/init_wait_test

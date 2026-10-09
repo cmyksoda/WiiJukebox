@@ -4,6 +4,7 @@
 #include "font.h"
 #include "layout.h"
 #include "net.h"
+#include "theme.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,29 +16,14 @@
 #define GRID_ROWS 3
 #define MAX_HITS 48
 
-/* Wii System Menu palette: light pinstripes, gray type, one blue accent. */
-#define BG_TOP WJ_RGBA(0xf7, 0xf8, 0xfa, 0xff)
-#define BG_BOTTOM WJ_RGBA(0xe2, 0xe6, 0xea, 0xff)
-#define STRIPE WJ_RGBA(0x00, 0x00, 0x00, 0x09)
-#define PANEL_TOP WJ_RGBA(0xff, 0xff, 0xff, 0xff)
-#define PANEL_BOTTOM WJ_RGBA(0xf1, 0xf3, 0xf5, 0xff)
-#define BORDER WJ_RGBA(0xcf, 0xd6, 0xdc, 0xff)
-#define SHADOW WJ_RGBA(0x30, 0x40, 0x50, 0x1c)
-#define INK WJ_RGBA(0x3a, 0x40, 0x48, 0xff)
-#define MUTED WJ_RGBA(0x8a, 0x92, 0x9a, 0xff)
-#define FAINT WJ_RGBA(0xb4, 0xbb, 0xc2, 0xff)
-#define BLUE WJ_RGBA(0x34, 0xbe, 0xed, 0xff)
-#define DEEP_BLUE WJ_RGBA(0x1f, 0x9c, 0xd0, 0xff)
-#define PALE_BLUE WJ_RGBA(0xe2, 0xf5, 0xfd, 0xff)
+/* Never themed: image tints, the cursor and the dimmed cover view. */
 #define WHITE WJ_RGBA(0xff, 0xff, 0xff, 0xff)
-#define TRACK WJ_RGBA(0xd6, 0xdc, 0xe1, 0xff)
-#define DOCK_TOP WJ_RGBA(0xf2, 0xf4, 0xf6, 0xff)
-#define DOCK_BOTTOM WJ_RGBA(0xc8, 0xce, 0xd4, 0xff)
 
 enum icon { ICON_NOTE, ICON_FOLDER, ICON_ALBUM, ICON_RADIO, ICON_ARTIST, ICON_PLAYLIST, ICON_SERVER,
             ICON_VIDEO, ICON_DESKTOP, ICON_JELLYFIN, ICON_PLEX, ICON_SPOTIFY, ICON_AIRPLAY, ICON_YTMUSIC,
             ICON_PODCAST };
 
+static const struct wj_theme *T;
 static struct { float w, content_x, content_w, card_x, card_w; } L;
 static struct { float x, y, w, h; enum wj_target target; int index; } hits[MAX_HITS];
 static int hit_count, columns = 3, seek_preview = -1, seek_pointer;
@@ -154,13 +140,13 @@ static float paragraph(const char *text, float cx, float baseline, int size, int
 static float centered(float cy, int size) { return floorf(cy + size * 0.37f + 0.5f); }
 
 static void panel(float x, float y, float w, float h, float r) {
-    wj_gfx_round(x, y + 3, w, h, r, SHADOW, SHADOW);
-    wj_gfx_round(x, y, w, h, r, PANEL_TOP, PANEL_BOTTOM);
-    wj_gfx_round_line(x, y, w, h, r, 1.5f, BORDER);
+    wj_gfx_round(x, y + 3, w, h, r, T->shadow, T->shadow);
+    wj_gfx_round(x, y, w, h, r, T->panel_top, T->panel_bottom);
+    wj_gfx_round_line(x, y, w, h, r, 1.5f, T->border);
 }
 
-static void icon(enum icon kind, float cx, float cy, float s, u32 color) {
-    u32 hole = PANEL_TOP;
+/* `hole` is the surface behind the icon, for the parts cut out of it. */
+static void icon(enum icon kind, float cx, float cy, float s, u32 color, u32 hole) {
     switch (kind) {
     case ICON_NOTE:
         wj_gfx_circle(cx - s * 0.16f, cy + s * 0.26f, s * 0.19f, color);
@@ -190,7 +176,7 @@ static void icon(enum icon kind, float cx, float cy, float s, u32 color) {
     case ICON_PLAYLIST:
         for (int i = 0; i < 3; i++)
             wj_gfx_round(cx - s * 0.45f, cy - s * 0.32f + i * s * 0.24f, s * (i == 2 ? 0.45f : 0.75f), s * 0.11f, s * 0.05f, color, color);
-        icon(ICON_NOTE, cx + s * 0.22f, cy + s * 0.18f, s * 0.55f, color);
+        icon(ICON_NOTE, cx + s * 0.22f, cy + s * 0.18f, s * 0.55f, color, hole);
         break;
     case ICON_SERVER:
         for (int i = 0; i < 2; i++) {
@@ -269,25 +255,25 @@ static u32 icon_color(enum icon kind) {
     case ICON_VIDEO: return WJ_RGBA(0xe5, 0x4f, 0x4a, 0xff);
     case ICON_DESKTOP: return WJ_RGBA(0x2c, 0xb0, 0xa0, 0xff);
     case ICON_SPOTIFY: return WJ_RGBA(0x1d, 0xb9, 0x54, 0xff);
-    case ICON_AIRPLAY: return WJ_RGBA(0x6b, 0x75, 0x80, 0xff);
+    case ICON_AIRPLAY: return T->icon_gray;
     case ICON_YTMUSIC: return WJ_RGBA(0xe0, 0x2f, 0x3b, 0xff);
     case ICON_PODCAST: return WJ_RGBA(0xd9, 0x4a, 0x8c, 0xff);
-    default: return BLUE;
+    default: return T->blue;
     }
 }
 
 static void background(void) {
-    wj_gfx_rect(0, 0, L.w, WJ_GFX_HEIGHT, BG_TOP, BG_BOTTOM);
-    for (float y = 2; y < WJ_GFX_HEIGHT; y += 4) wj_gfx_rect(0, y, L.w, 1, STRIPE, STRIPE);
+    wj_gfx_rect(0, 0, L.w, WJ_GFX_HEIGHT, T->bg_top, T->bg_bottom);
+    for (float y = 2; y < WJ_GFX_HEIGHT; y += 4) wj_gfx_rect(0, y, L.w, 1, T->stripe, T->stripe);
 }
 
 static void header(const struct wj_session *s, long long now) {
     // The web UI's wordmark: blue "Wii", ink "Jukebox", then the jukebox mark.
-    float x = 24 + label("Wii", 24, 42, 22, 1, BLUE, 100, 0) + 1;
-    x += label("Jukebox", x, 42, 22, 1, INK, 200, 0);
-    wj_gfx_mask(&logo, x + 7, 13, 24, 35, BLUE);
+    float x = 24 + label("Wii", 24, 42, 22, 1, T->blue, 100, 0) + 1;
+    x += label("Jukebox", x, 42, 22, 1, T->ink, 200, 0);
+    wj_gfx_mask(&logo, x + 7, 13, 24, 35, T->blue);
     char status[200];
-    u32 dot = MUTED;
+    u32 dot = T->muted;
     if (s->view == WJ_VIEW_SERVERS) snprintf(status, sizeof(status), "%s", s->network);
     else {
         int tenths = (int)((long long)s->audio.buffered * 80 / ((s->audio.bitrate ? s->audio.bitrate : 128) * 1000));
@@ -300,14 +286,14 @@ static void header(const struct wj_session *s, long long now) {
         if (s->underruns && length > 0 && length < (int)sizeof(status))
             snprintf(status + length, sizeof(status) - length, "  \xc2\xb7  %d restarts", s->underruns);
     }
-    float width = label(status, L.w - 24, 40, 13, 0, MUTED, L.w - 300, 2);
+    float width = label(status, L.w - 24, 40, 13, 0, T->muted, L.w - 300, 2);
     float pulse = s->audio_running && !s->audio.connected ? 0.5f + 0.5f * sinf(now / 160.0f) : 1;
     wj_gfx_circle(L.w - 34 - width, 36, 4, wj_gfx_fade(dot, pulse));
 }
 
 static void page_arrow(float cx, float cy, int direction, int enabled, enum wj_target target) {
-    u32 color = enabled ? BLUE : FAINT;
-    wj_gfx_circle(cx, cy, 11, enabled ? PALE_BLUE : WJ_RGBA(0xee, 0xf0, 0xf2, 0xff));
+    u32 color = enabled ? T->blue : T->faint;
+    wj_gfx_circle(cx, cy, 11, enabled ? T->select_top : T->disabled);
     float d = direction * 4.0f;
     wj_gfx_triangle(cx - d, cy - 6, cx + d, cy, cx - d, cy + 6, color);
     if (enabled) hit(cx - 13, cy - 13, 26, 26, target, 0);
@@ -318,7 +304,7 @@ static void spinner(float cx, float cy, float r, long long now) {
     for (int i = 0; i < 12; i++) {
         float angle = (float)M_PI * 2 * i / 12;
         int age = (lead - i + 12) % 12;
-        wj_gfx_circle(cx + cosf(angle) * r, cy + sinf(angle) * r, 4.5f, wj_gfx_fade(BLUE, 1.0f - age / 12.0f));
+        wj_gfx_circle(cx + cosf(angle) * r, cy + sinf(angle) * r, 4.5f, wj_gfx_fade(T->blue, 1.0f - age / 12.0f));
     }
 }
 
@@ -328,51 +314,51 @@ static void discovery(const struct wj_session *s, long long now) {
     int failed = !s->discovering && s->message[0];
     if (failed) {
         u32 amber = WJ_RGBA(0xf0, 0xa8, 0x30, 0xff);
-        wj_gfx_circle(L.w / 2, TOP + 96, 28, WJ_RGBA(0xfd, 0xf1, 0xdc, 0xff));
+        wj_gfx_circle(L.w / 2, TOP + 96, 28, T->warn_fill);
         wj_gfx_ring(L.w / 2, TOP + 96, 28, 3, amber);
         wj_gfx_round(L.w / 2 - 3, TOP + 80, 6, 22, 3, amber, amber);
         wj_gfx_circle(L.w / 2, TOP + 110, 3.5f, amber);
     } else spinner(L.w / 2, TOP + 96, 26, now);
     const char *heading = s->discovering && s->phase ? s->phase : failed ? "Couldn't find your server" :
         "Looking for WiiJukebox servers";
-    label(heading, L.w / 2, TOP + 168, 19, 1, INK, w - 40, 1);
+    label(heading, L.w / 2, TOP + 168, 19, 1, T->ink, w - 40, 1);
     char line[96];
     if (s->discovering) snprintf(line, sizeof(line), "Attempt %d  \xc2\xb7  %llds", s->attempt,
                                  (now - s->discovery_started) / 1000);
     else snprintf(line, sizeof(line), "%s", s->network);
-    label(line, L.w / 2, TOP + 194, 15, 0, MUTED, w - 40, 1);
+    label(line, L.w / 2, TOP + 194, 15, 0, T->muted, w - 40, 1);
     // A failure here needs the whole sentence, so it sits in the panel, not in a toast.
-    if (failed) paragraph(s->message, L.w / 2, TOP + 228, 15, 0, INK, w - 80, 3);
-    else label("Press 1 to start again", L.w / 2, TOP + 236, 14, 0, FAINT, w - 40, 1);
+    if (failed) paragraph(s->message, L.w / 2, TOP + 228, 15, 0, T->ink, w - 80, 3);
+    else label("Press 1 to start again", L.w / 2, TOP + 236, 14, 0, T->faint, w - 40, 1);
 }
 
 static void tiles(const struct wj_session *s, long long now) {
     float x = L.content_x, w = s->view == WJ_VIEW_SERVERS ? L.w - 40 : L.content_w;
     int cols = wj_ui_grid_columns(s->view);
     panel(x, TOP, w, PANEL_H, 18);
-    label(s->view == WJ_VIEW_SERVERS ? "Choose a server" : s->title, x + 18, TOP + 27, 19, 1, INK, w - 36, 0);
+    label(s->view == WJ_VIEW_SERVERS ? "Choose a server" : s->title, x + 18, TOP + 27, 19, 1, T->ink, w - 36, 0);
     float gap = 12, tile_w = (w - 32 - gap * (cols - 1)) / cols, tile_h = 74;
     int first = s->selected / cols >= GRID_ROWS ? (s->selected / cols - GRID_ROWS + 1) * cols : 0;
     for (int i = first; i < s->count && i < first + cols * GRID_ROWS; i++) {
         float tx = x + 16 + (i % cols) * (tile_w + gap), ty = TOP + 44 + ((i - first) / cols) * (tile_h + gap);
         const struct wj_item *item = &s->menu.items[i];
         int selected = i == s->selected;
-        wj_gfx_round(tx, ty + 2, tile_w, tile_h, 12, SHADOW, SHADOW);
-        wj_gfx_round(tx, ty, tile_w, tile_h, 12, WHITE, WJ_RGBA(0xec, 0xef, 0xf2, 0xff));
+        wj_gfx_round(tx, ty + 2, tile_w, tile_h, 12, T->shadow, T->shadow);
+        wj_gfx_round(tx, ty, tile_w, tile_h, 12, T->tile_top, T->tile_bottom);
         if (selected) {
             float pulse = 0.55f + 0.45f * sinf(now / 260.0f);
-            wj_gfx_round_line(tx - 3, ty - 3, tile_w + 6, tile_h + 6, 15, 3, wj_gfx_fade(BLUE, 0.25f * pulse));
-            wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 3, BLUE);
-        } else wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 1.5f, BORDER);
+            wj_gfx_round_line(tx - 3, ty - 3, tile_w + 6, tile_h + 6, 15, 3, wj_gfx_fade(T->blue, 0.25f * pulse));
+            wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 3, T->blue);
+        } else wj_gfx_round_line(tx, ty, tile_w, tile_h, 12, 1.5f, T->border);
         enum icon kind = icon_for(item->type, item->ref);
-        icon(kind, tx + tile_w / 2, ty + 26, 26, icon_color(kind));
+        icon(kind, tx + tile_w / 2, ty + 26, 26, icon_color(kind), T->tile_top);
         if (item->subtitle[0]) {
-            label(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8, 1);
-            label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, MUTED, tile_w - 8, 1);
-        } else label_two_lines(item->title, tx + tile_w / 2, ty + 54, 13, selected, INK, tile_w - 8);
+            label(item->title, tx + tile_w / 2, ty + 54, 13, selected, T->ink, tile_w - 8, 1);
+            label(item->subtitle, tx + tile_w / 2, ty + 68, 11, 0, T->muted, tile_w - 8, 1);
+        } else label_two_lines(item->title, tx + tile_w / 2, ty + 54, 13, selected, T->ink, tile_w - 8);
         hit(tx, ty, tile_w, tile_h, WJ_TARGET_ITEM, i);
     }
-    if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, MUTED, w - 60, 2);
+    if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, T->muted, w - 60, 2);
 }
 
 static void list(const struct wj_session *s, long long now) {
@@ -382,31 +368,31 @@ static void list(const struct wj_session *s, long long now) {
     if (s->total > 0) snprintf(pages, sizeof(pages), "%d\xe2\x80\x93%d of %d",
                                s->count ? s->offset + 1 : 0, s->offset + s->count, s->total);
     float pages_w = pages[0] ? wj_font_measure(pages, (int)strlen(pages), 13, 0) : 0;
-    label(s->title, x + 18, TOP + 27, 19, 1, INK, w - 100 - pages_w, 0);
+    label(s->title, x + 18, TOP + 27, 19, 1, T->ink, w - 100 - pages_w, 0);
     int more = s->offset + s->count < s->total, less = s->offset > 0;
     if (s->total > WJ_PAGE_SIZE) {
         page_arrow(x + w - 24, TOP + 21, 1, more, WJ_TARGET_PAGE_NEXT);
         page_arrow(x + w - 52, TOP + 21, -1, less, WJ_TARGET_PAGE_PREVIOUS);
-        label(pages, x + w - 70, TOP + 26, 13, 0, MUTED, 120, 2);
-    } else if (pages[0]) label(pages, x + w - 18, TOP + 26, 13, 0, MUTED, 120, 2);
-    wj_gfx_rect(x + 14, TOP + 38, w - 28, 1, BORDER, BORDER);
+        label(pages, x + w - 70, TOP + 26, 13, 0, T->muted, 120, 2);
+    } else if (pages[0]) label(pages, x + w - 18, TOP + 26, 13, 0, T->muted, 120, 2);
+    wj_gfx_rect(x + 14, TOP + 38, w - 28, 1, T->border, T->border);
     float rows_y = TOP + 44;
     if (s->count) {
         float target = rows_y + s->selected * ROW_H;
         highlight_y = highlight_y < 0 || last_view != (int)s->view ? target : highlight_y + (target - highlight_y) * 0.35f;
-        wj_gfx_round(x + 8, highlight_y, w - 16, ROW_H, 8, PALE_BLUE, WJ_RGBA(0xd2, 0xef, 0xfb, 0xff));
-        wj_gfx_round_line(x + 8, highlight_y, w - 16, ROW_H, 8, 2, BLUE);
+        wj_gfx_round(x + 8, highlight_y, w - 16, ROW_H, 8, T->select_top, T->select_bottom);
+        wj_gfx_round_line(x + 8, highlight_y, w - 16, ROW_H, 8, 2, T->blue);
     }
     for (int i = 0; i < s->count; i++) {
         const struct wj_item *item = &s->menu.items[i];
         float y = rows_y + i * ROW_H, cy = y + ROW_H / 2;
         int selected = i == s->selected;
         enum icon kind = icon_for(item->type, item->ref);
-        icon(kind, x + 26, cy, 13, selected ? DEEP_BLUE : FAINT);
+        icon(kind, x + 26, cy, 13, selected ? T->accent : T->faint, selected ? T->select_top : T->panel_top);
         float text_x = x + 42, room = w - 54;
         float sub_w = 0;
         if (item->subtitle[0] && room > 200) {
-            sub_w = label(item->subtitle, x + w - 16, centered(cy, 12), 12, 0, MUTED, room * 0.38f, 2) + 12;
+            sub_w = label(item->subtitle, x + w - 16, centered(cy, 12), 12, 0, T->muted, room * 0.38f, 2) + 12;
         }
         float title_room = room - sub_w;
         float full = wj_font_measure(item->title, (int)strlen(item->title), 15, selected);
@@ -418,12 +404,12 @@ static void list(const struct wj_session *s, long long now) {
                 travel - (phase - 80 - travel);
             if (offset < 0) offset = 0;
             wj_gfx_clip(text_x, y, title_room, ROW_H);
-            wj_gfx_text(item->title, (int)strlen(item->title), text_x - offset, centered(cy, 15), 15, 1, INK);
+            wj_gfx_text(item->title, (int)strlen(item->title), text_x - offset, centered(cy, 15), 15, 1, T->ink);
             wj_gfx_unclip();
-        } else label(item->title, text_x, centered(cy, 15), 15, selected, INK, title_room, 0);
+        } else label(item->title, text_x, centered(cy, 15), 15, selected, T->ink, title_room, 0);
         hit(x + 8, y, w - 16, ROW_H, WJ_TARGET_ITEM, i);
     }
-    if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, MUTED, w - 60, 2);
+    if (!s->count && s->empty[0]) paragraph(s->empty, x + w / 2, TOP + PANEL_H / 2, 15, 0, T->muted, w - 60, 2);
 }
 
 static int over(const struct wj_pointer *pointer, float x, float y, float w, float h) {
@@ -435,12 +421,12 @@ static void button(float cx, float cy, float r, float reach, int enabled, int li
                    enum wj_target target, void (*glyph)(float, float, float, u32)) {
     lit = lit && enabled;
     int hover = enabled && over(pointer, cx - r, cy - r, r * 2, r * 2);
-    u32 face_top = lit ? (hover ? wj_gfx_mix(BLUE, WHITE, 0.25f) : BLUE) : hover ? PALE_BLUE : WHITE;
-    u32 face_bottom = lit ? (hover ? BLUE : DEEP_BLUE) : hover ? WJ_RGBA(0xcf, 0xee, 0xfa, 0xff) : WJ_RGBA(0xe8, 0xec, 0xef, 0xff);
-    wj_gfx_circle(cx, cy + 2, r, SHADOW);
+    u32 face_top = lit ? (hover ? wj_gfx_mix(T->blue, WHITE, 0.25f) : T->blue) : hover ? T->select_top : T->key_top;
+    u32 face_bottom = lit ? (hover ? T->blue : T->deep_blue) : hover ? T->select_bottom : T->key_bottom;
+    wj_gfx_circle(cx, cy + 2, r, T->shadow);
     wj_gfx_round(cx - r, cy - r, r * 2, r * 2, r, face_top, face_bottom);
-    wj_gfx_ring(cx, cy, r, 1.5f, lit ? DEEP_BLUE : hover ? BLUE : BORDER);
-    glyph(cx, cy, r, !enabled ? FAINT : lit ? WHITE : hover ? DEEP_BLUE : INK);
+    wj_gfx_ring(cx, cy, r, 1.5f, lit ? T->deep_blue : hover ? T->blue : T->border);
+    glyph(cx, cy, r, !enabled ? T->faint : lit ? T->on_blue : hover ? T->accent : T->ink);
     if (enabled) hit(cx - reach, cy - reach, reach * 2, reach * 2, target, 0);
 }
 
@@ -525,7 +511,7 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
     float x = L.card_x, w = L.card_w;
     panel(x, TOP, w, PANEL_H, 18);
     float size = w - 40 < 120 ? w - 40 : 120, ax = x + (w - size) / 2, ay = TOP + 14;
-    wj_gfx_round(ax, ay + 3, size, size, 12, SHADOW, SHADOW);
+    wj_gfx_round(ax, ay + 3, size, size, 12, T->shadow, T->shadow);
     art_x = ax;
     art_y = ay;
     art_size = size;
@@ -533,22 +519,22 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
         wj_gfx_round_image(&art, ax, ay, size, size, 12, WHITE);
         hit(ax, ay, size, size, WJ_TARGET_ART, 0);
     } else {
-        wj_gfx_round(ax, ay, size, size, 12, WJ_RGBA(0xe9, 0xf7, 0xfd, 0xff), WJ_RGBA(0xc8, 0xea, 0xf8, 0xff));
-        icon(ICON_NOTE, ax + size / 2 + 4, ay + size / 2, size * 0.5f, wj_gfx_fade(WHITE, 0.95f));
+        wj_gfx_round(ax, ay, size, size, 12, T->art_top, T->art_bottom);
+        icon(ICON_NOTE, ax + size / 2 + 4, ay + size / 2, size * 0.5f, T->art_note, T->art_top);
     }
-    wj_gfx_round_line(ax, ay, size, size, 12, 1.5f, BORDER);
+    wj_gfx_round_line(ax, ay, size, size, 12, 1.5f, T->border);
     int idle = !strcmp(s->state, "idle");
     const char *song = s->song[0] ? s->song : idle ? "Nothing playing" : "";
-    label(song, x + w / 2, ay + size + 24, 17, 1, INK, w - 24, 1);
-    label(s->artist, x + w / 2, ay + size + 42, 14, 0, MUTED, w - 24, 1);
+    label(song, x + w / 2, ay + size + 24, 17, 1, T->ink, w - 24, 1);
+    label(s->artist, x + w / 2, ay + size + 42, 14, 0, T->muted, w - 24, 1);
 
     char state[24];
     snprintf(state, sizeof(state), "%s", s->seek_until ? "Seeking" : s->state);
     if (state[0] >= 'a' && state[0] <= 'z') state[0] -= 'a' - 'A';
-    u32 chip = !strcmp(s->state, "playing") ? BLUE : !strcmp(s->state, "paused") ? WJ_RGBA(0xf0, 0xa8, 0x30, 0xff) : FAINT;
+    u32 chip = !strcmp(s->state, "playing") ? T->blue : !strcmp(s->state, "paused") ? WJ_RGBA(0xf0, 0xa8, 0x30, 0xff) : T->faint;
     float chip_w = wj_font_measure(state, (int)strlen(state), 12, 1) + 20;
     wj_gfx_round(x + w / 2 - chip_w / 2, ay + size + 50, chip_w, 18, 9, chip, chip);
-    label(state, x + w / 2, ay + size + 63, 12, 1, WHITE, chip_w, 1);
+    label(state, x + w / 2, ay + size + 63, 12, 1, T->on_blue, chip_w, 1);
 
     // Shuffle and repeat flank the state chip. A mode that is on is lit, repeat-one adds a 1, and a source
     // that cannot use a mode leaves its button gray.
@@ -558,9 +544,9 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
     button(x + w - mode_x, my, 12, 14, can_repeat, s->repeat != WJ_REPEAT_OFF, pointer, WJ_TARGET_REPEAT, glyph_repeat);
     if (can_repeat && s->repeat == WJ_REPEAT_ONE) {
         float bx = x + w - mode_x + 9, by = my + 9;
-        wj_gfx_circle(bx, by, 8, WHITE);
-        wj_gfx_ring(bx, by, 8, 1.5f, DEEP_BLUE);
-        label("1", bx, centered(by, 11), 11, 1, DEEP_BLUE, 12, 1);
+        wj_gfx_circle(bx, by, 8, T->key_top);
+        wj_gfx_ring(bx, by, 8, 1.5f, T->deep_blue);
+        label("1", bx, centered(by, 11), 11, 1, T->accent, 12, 1);
     }
 
     // Seek bar: blue fill up to the heard position, knob only where seeking works.
@@ -572,35 +558,35 @@ static void now_playing(const struct wj_session *s, const struct wj_pointer *poi
     int can_seek = (s->capabilities & WJ_CAN_SEEK) && duration > 0;
     int seek_hover = can_seek && over(pointer, bar_x - 8, bar_y - 12, bar_w + 16, 24);
     float fraction = wj_seek_fraction(position, duration);
-    wj_gfx_round(bar_x, bar_y - 3, bar_w, 6, 3, TRACK, TRACK);
-    if (duration > 0 && !idle) wj_gfx_round(bar_x, bar_y - 3, bar_w * fraction, 6, 3, BLUE, DEEP_BLUE);
+    wj_gfx_round(bar_x, bar_y - 3, bar_w, 6, 3, T->track, T->track);
+    if (duration > 0 && !idle) wj_gfx_round(bar_x, bar_y - 3, bar_w * fraction, 6, 3, T->blue, T->deep_blue);
     int preview = seek_preview;
     if (seek_hover && preview < 0) preview = wj_seek_at(pointer->x, bar_x, bar_w, duration);
     if (can_seek && !idle) {
         float knob = bar_x + bar_w * fraction;
-        wj_gfx_circle(knob, bar_y + 1, 8, SHADOW);
-        wj_gfx_circle(knob, bar_y, 8, WHITE);
-        wj_gfx_ring(knob, bar_y, 8, 2.5f, BLUE);
+        wj_gfx_circle(knob, bar_y + 1, 8, T->shadow);
+        wj_gfx_circle(knob, bar_y, 8, T->knob);
+        wj_gfx_ring(knob, bar_y, 8, 2.5f, T->blue);
         if (preview >= 0) {
             char time[16];
             float px = bar_x + bar_w * wj_seek_fraction(preview, duration);
             wj_format_time(time, sizeof(time), preview);
             float tw = wj_font_measure(time, (int)strlen(time), 12, 1) + 14;
             float bx = px - tw / 2 < x + 4 ? x + 4 : px + tw / 2 > x + w - 4 ? x + w - 4 - tw : px - tw / 2;
-            wj_gfx_circle(px, bar_y + 1, 8, SHADOW);
-            wj_gfx_circle(px, bar_y, 8, PALE_BLUE);
-            wj_gfx_ring(px, bar_y, 8, 2.5f, DEEP_BLUE);
-            wj_gfx_round(bx, bar_y - 30, tw, 18, 9, DEEP_BLUE, DEEP_BLUE);
+            wj_gfx_circle(px, bar_y + 1, 8, T->shadow);
+            wj_gfx_circle(px, bar_y, 8, T->select_top);
+            wj_gfx_ring(px, bar_y, 8, 2.5f, T->deep_blue);
+            wj_gfx_round(bx, bar_y - 30, tw, 18, 9, T->deep_blue, T->deep_blue);
             seek_pointer = seek_hover;
-            label(time, bx + tw / 2, bar_y - 17, 12, 1, WHITE, tw, 1);
+            label(time, bx + tw / 2, bar_y - 17, 12, 1, T->on_blue, tw, 1);
         }
         hit(bar_x - 8, bar_y - 12, bar_w + 16, 24, WJ_TARGET_SEEK, 0);
     }
     char elapsed[16], total[16];
     wj_format_time(elapsed, sizeof(elapsed), idle ? 0 : position);
     wj_format_time(total, sizeof(total), duration > 0 ? duration : -1);
-    label(elapsed, bar_x, bar_y + 20, 12, 0, MUTED, 80, 0);
-    label(duration > 0 || idle ? total : "Live", bar_x + bar_w, bar_y + 20, 12, 0, MUTED, 80, 2);
+    label(elapsed, bar_x, bar_y + 20, 12, 0, T->muted, 80, 0);
+    label(duration > 0 || idle ? total : "Live", bar_x + bar_w, bar_y + 20, 12, 0, T->muted, 80, 2);
 
     float by = TOP + PANEL_H - 30, gap = (w - 32) / 4;
     unsigned c = s->capabilities;
@@ -617,16 +603,16 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
     // Raised pods at each end, like the Wii Menu's Wii and mail buttons.
     for (int side = 0; side < 2; side++) {
         float cx = side ? L.w - 58 : 58;
-        wj_gfx_circle(cx, y + 34, 50, BORDER);
-        wj_gfx_circle(cx, y + 35, 49, DOCK_TOP);
+        wj_gfx_circle(cx, y + 34, 50, T->border);
+        wj_gfx_circle(cx, y + 35, 49, T->dock_top);
     }
-    wj_gfx_rect(0, y, L.w, WJ_GFX_HEIGHT - y, DOCK_TOP, DOCK_BOTTOM);
-    wj_gfx_rect(106, y - 1, L.w - 212, 1, BORDER, BORDER);
-    wj_gfx_rect(106, y, L.w - 212, 2, WHITE, WHITE);
+    wj_gfx_rect(0, y, L.w, WJ_GFX_HEIGHT - y, T->dock_top, T->dock_bottom);
+    wj_gfx_rect(106, y - 1, L.w - 212, 1, T->border, T->border);
+    wj_gfx_rect(106, y, L.w - 212, 2, T->dock_edge, T->dock_edge);
     round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS, pointer, WJ_TARGET_BACK, glyph_back);
     round_button(L.w - 58, y + 18, 26, 1, pointer, WJ_TARGET_VISUALIZER, glyph_visualizer);
-    label("B", 58, y + 64, 12, 1, MUTED, 40, 1);
-    label("2", L.w - 58, y + 64, 12, 1, MUTED, 40, 1);
+    label("B", 58, y + 64, 12, 1, T->muted, 40, 1);
+    label("2", L.w - 58, y + 64, 12, 1, T->muted, 40, 1);
 
     time_t now = time(NULL);
     struct tm *local = localtime(&now);
@@ -636,9 +622,9 @@ static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
     static const char *days[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
     snprintf(date, sizeof(date), "%s %d/%d", days[local->tm_wday], local->tm_mon + 1, local->tm_mday);
     float clock_w = wj_font_measure(clock, (int)strlen(clock), 34, 1);
-    label(clock, L.w / 2 - 14, y + 46, 34, 1, WJ_RGBA(0x93, 0x9c, 0xa4, 0xff), 200, 1);
-    label(local->tm_hour < 12 ? "AM" : "PM", L.w / 2 - 14 + clock_w / 2 + 4, y + 46, 14, 1, FAINT, 40, 0);
-    label(date, L.w / 2, y + 66, 13, 0, MUTED, 200, 1);
+    label(clock, L.w / 2 - 14, y + 46, 34, 1, T->clock, 200, 1);
+    label(local->tm_hour < 12 ? "AM" : "PM", L.w / 2 - 14 + clock_w / 2 + 4, y + 46, 14, 1, T->faint, 40, 0);
+    label(date, L.w / 2, y + 66, 13, 0, T->muted, 200, 1);
 }
 
 /* The cover grows out of the card over a dimmed screen; A or B closes it. */
@@ -672,21 +658,20 @@ static void toast_and_volume(const struct wj_session *s, long long now) {
         float w = wj_font_measure(toast, (int)strlen(toast), 14, 0) + 32;
         if (w > L.w - 260) w = L.w - 260;
         float x = L.w / 2 - w / 2, y = 378;
-        wj_gfx_round(x, y + 2, w, 24, 12, wj_gfx_fade(SHADOW, toast_alpha), wj_gfx_fade(SHADOW, toast_alpha));
-        wj_gfx_round(x, y, w, 24, 12, wj_gfx_fade(WJ_RGBA(0x4a, 0x52, 0x5c, 0xee), toast_alpha),
-                     wj_gfx_fade(WJ_RGBA(0x3a, 0x40, 0x48, 0xee), toast_alpha));
-        label(toast, L.w / 2, y + 17, 14, 0, wj_gfx_fade(WHITE, toast_alpha), w - 24, 1);
+        wj_gfx_round(x, y + 2, w, 24, 12, wj_gfx_fade(T->shadow, toast_alpha), wj_gfx_fade(T->shadow, toast_alpha));
+        wj_gfx_round(x, y, w, 24, 12, wj_gfx_fade(T->toast_top, toast_alpha), wj_gfx_fade(T->toast_bottom, toast_alpha));
+        label(toast, L.w / 2, y + 17, 14, 0, wj_gfx_fade(T->toast_text, toast_alpha), w - 24, 1);
     }
     if (now - volume_shown < 1500) {
         float alpha = now - volume_shown > 1200 ? (1500 - (now - volume_shown)) / 300.0f : 1;
         float w = 220, x = L.w / 2 - w / 2, y = 14;
-        wj_gfx_round(x, y, w, 40, 20, wj_gfx_fade(WJ_RGBA(0x3a, 0x40, 0x48, 0xee), alpha), wj_gfx_fade(WJ_RGBA(0x3a, 0x40, 0x48, 0xee), alpha));
+        wj_gfx_round(x, y, w, 40, 20, wj_gfx_fade(T->toast_top, alpha), wj_gfx_fade(T->toast_bottom, alpha));
         int level = (s->volume * 10 + 127) / 255;
         for (int i = 0; i < 10; i++)
             wj_gfx_round(x + 62 + i * 14, y + 26 - i * 1.4f, 10, 6 + i * 1.4f, 2,
-                         wj_gfx_fade(i < level ? BLUE : WJ_RGBA(0x70, 0x78, 0x80, 0xff), alpha),
-                         wj_gfx_fade(i < level ? DEEP_BLUE : WJ_RGBA(0x70, 0x78, 0x80, 0xff), alpha));
-        label("Vol", x + 30, y + 26, 14, 1, wj_gfx_fade(WHITE, alpha), 40, 1);
+                         wj_gfx_fade(i < level ? T->blue : T->meter_off, alpha),
+                         wj_gfx_fade(i < level ? T->deep_blue : T->meter_off, alpha));
+        label("Vol", x + 30, y + 26, 14, 1, wj_gfx_fade(T->toast_text, alpha), 40, 1);
     }
 }
 
@@ -695,9 +680,9 @@ static void cursor(const struct wj_pointer *pointer) {
     if (!pointer->valid || seek_pointer) return;
     int active = wj_ui_hit(pointer->x, pointer->y).target != WJ_TARGET_NONE;
     wj_gfx_circle(pointer->x + 2, pointer->y + 3, 11, WJ_RGBA(0, 0, 0, 0x30));
-    wj_gfx_circle(pointer->x, pointer->y, 11, active ? PALE_BLUE : WHITE);
-    wj_gfx_ring(pointer->x, pointer->y, 11, active ? 4 : 3, active ? DEEP_BLUE : BLUE);
-    wj_gfx_circle(pointer->x, pointer->y, 2.5f, DEEP_BLUE);
+    wj_gfx_circle(pointer->x, pointer->y, 11, active ? WJ_RGBA(0xe2, 0xf5, 0xfd, 0xff) : WHITE);
+    wj_gfx_ring(pointer->x, pointer->y, 11, active ? 4 : 3, active ? T->deep_blue : T->blue);
+    wj_gfx_circle(pointer->x, pointer->y, 2.5f, T->deep_blue);
 }
 
 int wj_ui_seek_at(const struct wj_session *s, float x) {
@@ -707,6 +692,7 @@ int wj_ui_seek_at(const struct wj_session *s, float x) {
 
 void wj_ui_draw(const struct wj_session *s, const struct wj_pointer *pointer) {
     long long now = wj_milliseconds();
+    T = wj_theme(s->dark);
     seek_pointer = 0;
     if (s->selected != last_selected) { last_selected = s->selected; selection_changed = now; }
     if (s->art_version != art_version) {
