@@ -5,6 +5,7 @@
 // honest -- there is no bundler step that has to happen before the app can run.
 
 import butterchurn from './vendor/butterchurn.min.js';
+import { isContainer, playRequest } from './play-request.mjs';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -221,7 +222,7 @@ const settingsAction = (src) => (SETTINGS[src.id] ? () => renderSettings(src) : 
 
 // --- library browsing ----------------------------------------------------
 
-async function browse(path, label, offset = 0) {
+async function browse(path, label, offset = 0, container = null) {
     const id = state.activeSource;
     const src = state.sources.find((s) => s.id === id);
 
@@ -247,8 +248,8 @@ async function browse(path, label, offset = 0) {
         );
         if (state.activeSource !== id) return;
         const items = result.items.length > 100 ? result.items.slice(offset, offset + 100) : result.items;
-        setPager(result.total, offset, items.length, (to) => browse(path, label, to));
-        renderItems(items, path, label, offset);
+        setPager(result.total, offset, items.length, (to) => browse(path, label, to, container));
+        renderItems(items, path, label, offset, container);
     } catch (err) {
         content.replaceChildren();
         toast(err.message, true);
@@ -278,7 +279,7 @@ function artwork(item, extraClass = '') {
     return frame;
 }
 
-function renderItems(items, path, label, offset = 0) {
+function renderItems(items, path, label, offset = 0, container = null) {
     const content = $('#content');
     content.replaceChildren();
     content.className = '';
@@ -289,10 +290,14 @@ function renderItems(items, path, label, offset = 0) {
     }
 
     const open = (item) => {
-        // Folders and containers drill in; anything playable plays.
-        if (item.type === 'track' || item.type === 'station') return play(item);
-        state.stack.push({ path, label, offset });
-        browse(item.id, item.title);
+        // A track inside an album or playlist queues all of it from that track.
+        if (item.type === 'track') {
+            return play(playRequest(item, { container, offset, index: items.indexOf(item) }), { name: item.title });
+        }
+        if (item.type === 'station') return play(item);
+        // Folders and containers drill in.
+        state.stack.push({ path, label, offset, container });
+        browse(item.id, item.title, 0, isContainer(item) ? item : null);
     };
 
     const rowFor = (item) => {
@@ -347,10 +352,10 @@ function renderItems(items, path, label, offset = 0) {
     }
 }
 
-async function play(item) {
+async function play(item, { name = item.title } = {}) {
     try {
         await api(`/sources/${state.activeSource}/play`, { method: 'POST', body: item });
-        toast(`Playing ${item.title}`);
+        toast(`Playing ${name}`);
     } catch (err) {
         toast(err.message, true);
     }
@@ -564,7 +569,7 @@ function renderLinks(src) {
             h('button', { class: 'pill', id: 'yt-open', text: 'Open as list', onclick: () => {
                 if (!url()) return toast('Paste a link first', true);
                 state.stack.push({ path: '', label: src.label });
-                browse(`list/${url()}`, 'Link contents');
+                browse(`list/${url()}`, 'Link contents', 0, { id: `list/${url()}`, type: 'playlist', title: 'Link contents' });
             } })),
         h('div', { id: 'favorites' }),
         h('p', { class: 'hint', text: music
@@ -1228,7 +1233,7 @@ document.addEventListener('keydown', (event) => {
 $('#back').onclick = () => {
     const prev = state.stack.pop();
     if (prev?.render) prev.render();
-    else if (prev) browse(prev.path, prev.label, prev.offset);
+    else if (prev) browse(prev.path, prev.label, prev.offset, prev.container);
 };
 
 // The Android app asks this on its back button; true means the page used it.
