@@ -65,7 +65,7 @@ test('Navidrome auth preserves password whitespace, pages libraries and queues c
     } finally { await source.disconnect(); server.close(); }
 });
 
-test('Navidrome requests use the server-side address while artwork keeps the public URL', async () => {
+test('Navidrome requests, covers included, use the server-side address', async () => {
     const password = 'fixture';
     const server = http.createServer((req, res) => {
         const q = new URL(req.url, 'http://fixture').searchParams;
@@ -83,7 +83,7 @@ test('Navidrome requests use the server-side address while artwork keeps the pub
     try {
         await source.connect();
         const page = await source.browse({ path: 'album/a1', offset: 0, limit: 12 });
-        assert.ok(page.items[0].artwork.startsWith('https://music.example.invalid/rest/getCoverArt.view?'));
+        assert.ok(page.items[0].artwork.startsWith(`${local}/rest/getCoverArt.view?`), 'the art proxy fetches it from here');
         const handle = await source.open({ id: 's1', type: 'track' });
         assert.ok(handle.uri.startsWith(`${local}/rest/stream.view?`));
     } finally { await source.disconnect(); server.close(); }

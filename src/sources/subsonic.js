@@ -79,8 +79,8 @@ class SubsonicSource extends QueueSource {
         return `${base}/rest/${endpoint}?${params}`;
     }
 
-    // Requests made by this server can use a faster address, such as Navidrome on the
-    // same machine; artwork links go to browsers, so they keep the public URL.
+    // Everything this server fetches, covers included, can use a faster address such as
+    // Navidrome on the same machine; browsers only ever see the art proxy.
     _serverUrl(endpoint, extra = {}) {
         return this._url(endpoint, extra, this.config.serverUrl || this.config.url);
     }
@@ -285,7 +285,7 @@ class SubsonicSource extends QueueSource {
     }
 
     _artUrl(coverArt, size = 300) {
-        return this._url('getCoverArt.view', { id: coverArt, size });
+        return this._serverUrl('getCoverArt.view', { id: coverArt, size });
     }
 
     // --- playback -----------------------------------------------------------
