@@ -70,10 +70,10 @@
       "maintainer": "WiiJukebox contributors",
       "vendor": "WiiJukebox contributors",
       "synopsis": "Plays your music to the Wii",
-      "description": "WiiJukebox runs a music server on this computer and plays your library, radio, podcasts and streaming links to a Wii over the local network. This package includes FFmpeg.",
+      "description": "Plays your library, radio, podcasts and streaming links to a Wii over the local network.",
       "desktop": {
         "entry": {
-          "Comment": "Plays your music to the Wii",
+          "Comment": "Plays your library, radio, podcasts and streaming links to a Wii over the local network.",
           "Categories": "AudioVideo;Audio;Player;",
           "Keywords": "Wii;music;jukebox;stream;radio;podcast;"
         }
