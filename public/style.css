@@ -126,9 +126,10 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .pill.icon .g-close { font-size: 16px; }
 .g-pause {
     background: linear-gradient(90deg, transparent 0 20%, currentColor 20% 42%, transparent 42% 58%, currentColor 58% 80%, transparent 80%);
-    clip-path: inset(10% 0 10% 0 round 2px);
+    clip-path: inset(3px 0 round 2px);
 }
-.g-stop { background: currentColor; clip-path: inset(18% round 3px); }
+/* Whole-pixel insets: percentages left 1x screens rounding the shape half a pixel up and left. */
+.g-stop { background: currentColor; clip-path: inset(3px round 3px); }
 .g-next::before, .g-prev::before, .g-next::after, .g-prev::after { content: ""; position: absolute; inset: 0; background: currentColor; }
 .g-next::before { clip-path: polygon(11% 14%, 65% 50%, 11% 86%); }
 .g-next::after { clip-path: inset(14% 11% 14% 79% round 2px); }
@@ -137,7 +138,7 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 /* Shuffle is one arrow mirrored top to bottom; repeat is one half-loop turned half way round. */
 .g-shuffle::before, .g-shuffle::after, .g-repeat::before, .g-repeat::after { content: ""; position: absolute; inset: 0; background: currentColor; }
 .g-shuffle::before, .g-shuffle::after {
-    clip-path: polygon(0 67%, 23.5% 67%, 55.5% 23%, 74% 23%, 74% 14%, 96% 28%, 74% 42%, 74% 33%, 60.5% 33%, 28.5% 77%, 0 77%);
+    clip-path: polygon(2% 67%, 25.5% 67%, 57.5% 23%, 76% 23%, 76% 14%, 98% 28%, 76% 42%, 76% 33%, 62.5% 33%, 30.5% 77%, 2% 77%);
 }
 .g-shuffle::after { transform: scaleY(-1); }
 .g-repeat::before, .g-repeat::after {
