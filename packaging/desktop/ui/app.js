@@ -105,7 +105,6 @@ async function saveServer() {
 async function fillConnect(firstRun) {
     const info = await bridge.info();
     $('#address').textContent = `${info.address}:${info.port}`;
-    $('#stream').textContent = info.streamUrl;
 
     const rows = [
         [info.serverRunning, info.serverRunning ? `WiiJukebox is running on port ${info.port}.` : 'The server is not running. Choose Restart server from the menu.'],

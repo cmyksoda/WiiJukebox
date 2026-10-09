@@ -636,14 +636,17 @@ static float dock_edge_y(float x) {
 static void dock(const struct wj_session *s, const struct wj_pointer *pointer) {
     float y = 404;
     for (int x = 0; x < (int)L.w; x++) {
-        float e = dock_edge_y(x + 0.5f), top = floorf(e);
-        u32 fill = wj_gfx_mix(T->dock_top, T->dock_bottom, (top - DOCK_SHOULDER) / (WJ_GFX_HEIGHT - DOCK_SHOULDER));
-        wj_gfx_rect(x, top, 1, WJ_GFX_HEIGHT - top, fill, T->dock_bottom);
-        // A partly covered pixel above the line keeps the curve from stair-stepping on a TV.
-        u32 soft = wj_gfx_fade(T->blue, 1 - (e - top));
-        wj_gfx_rect(x, top - 1, 1, 1, soft, soft);
-        wj_gfx_rect(x, top, 1, 2, T->blue, T->blue);
+        float e = dock_edge_y(x + 0.5f), top = floorf(e), f = e - top;
+        u32 fill = wj_gfx_mix(T->dock_top, T->dock_bottom, (top + 1 - DOCK_SHOULDER) / (WJ_GFX_HEIGHT - DOCK_SHOULDER));
+        wj_gfx_rect(x, top + 1, 1, WJ_GFX_HEIGHT - top - 1, fill, T->dock_bottom);
+        // GX has no antialiasing: the 2px line spans [e, e+2] and the sheen [e+2, e+3], so each
+        // pixel row gets the color in proportion to how much of it they cover.
+        u32 head = wj_gfx_fade(T->blue, 1 - f), tail = wj_gfx_fade(T->blue, f), sheen = wj_gfx_fade(T->dock_edge, f);
+        wj_gfx_rect(x, top, 1, 1, head, head);
+        wj_gfx_rect(x, top + 1, 1, 1, T->blue, T->blue);
         wj_gfx_rect(x, top + 2, 1, 1, T->dock_edge, T->dock_edge);
+        wj_gfx_rect(x, top + 2, 1, 1, tail, tail);
+        wj_gfx_rect(x, top + 3, 1, 1, sheen, sheen);
     }
     for (int side = 0; side < 2; side++) wj_gfx_ring(side ? L.w - 58 : 58, y + 18, 29, 2, T->blue);
     round_button(58, y + 18, 26, s->view != WJ_VIEW_SERVERS || s->entry.open, pointer, WJ_TARGET_BACK, glyph_back);
