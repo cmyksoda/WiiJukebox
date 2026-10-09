@@ -35,9 +35,8 @@ export function closeMenu({ restoreFocus = false } = {}) {
 }
 
 /**
- * `items` are { label, run, checked?, detail? }, { heading }, or 'separator'; a `checked` of true or false makes the row
- * a radio. `anchor` is { x, top, bottom, keyboard? }: the menu starts at `top` and grows down, or ends at `bottom` and
- * grows up when there is no room below. Opened by keyboard, the first row is highlighted; otherwise none is until the pointer or keys move.
+ * `items` are { label, run, checked?, detail? }, { heading } or 'separator'; `checked` makes a row a radio. `anchor` is
+ * { x, top, bottom, keyboard? }: the menu starts at `top` and grows down, or ends at `bottom` when there is no room; `keyboard` lights the first row.
  */
 export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
     closeMenu();

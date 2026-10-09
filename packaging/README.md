@@ -26,8 +26,8 @@ A native shell around the controller web page. It:
 - remembers the chosen server by its ID, so a changed IP address is found again;
 - lets you type an address (`192.168.0.3:4005`) when discovery is blocked;
 - shows the controller page in a WebView that follows the system light/dark
-  setting unless the page's own Theme control (System, Light, Dark, at the foot
-  of its menu) says otherwise, and sends its Back button to the page first (close a sheet, go up a
+  setting unless the page's own Theme control (System, Light, Dark, in the menu button at
+  the right of its toolbar) says otherwise, and sends its Back button to the page first (close a sheet, go up a
   folder) before leaving the app.
 
 Requirements: JDK 17 or newer, the Android SDK with platform 37 and build-tools
@@ -107,20 +107,28 @@ WebKit packages.
   - **The menu button** opens the menu entries below as a compact list the bar draws itself (28 px
     rows of 13 px text in the web UI's colors, light or dark), since a window without a system frame
     has no menu bar to show with Alt and a native popup cannot be made smaller. It takes the arrow
-    keys, Enter and Escape, and a click anywhere else closes it. The Alt menu and the tray menu stay
-    native, drawn by the system, with the same entries.
+    keys, Enter and Escape, and a click anywhere else closes it. The light follows the pointer and goes
+    when it leaves (the parent of an open submenu and an entry the keys chose stay lit), and an open
+    submenu closes about 200 ms after the pointer rests on another entry, but not while it crosses the
+    list on its way to the submenu. The Alt menu and the tray menu stay native, drawn by the system,
+    with the same entries.
   - **Theme** (in the menu, the Alt menu and the tray menu) is System, Light or Dark for the web UI.
     The web UI keeps the choice itself, in its own storage, and the app only presses its System, Light
-    or Dark buttons and reads the result back, so a choice made in the web UI's sidebar reaches the
-    bar and the menus too. The setup pages follow the system, so Theme is grayed out until the player
-    shows.
+    or Dark buttons and reads the result back. The page keeps one `theme-color` tag at its effective
+    background (set before first paint, and again when the choice or the system's scheme changes), and
+    the app switches the bar the moment Chromium reports the tag changing, so the bar and the page change
+    together. A slow poll of the page's choice only settles the menu's tick marks. The setup pages follow
+    the system, so Theme is grayed out until the player shows.
+  - **Sidebar settings…** (same three menus) presses the web UI's own control for its Sidebar settings
+    sheet, where channels are shown or hidden. In a plain browser that sheet is behind the menu button
+    at the right of the toolbar, which the desktop app hides, since the app has this entry.
   - **Fullscreen.** When a page goes fullscreen (F11 in the web UI, or the visualizer's own
     button) the bar steps aside and the page fills the whole display, on whichever monitor the
     window is on.
 - **Menu and tray entries.** Connect your Wii, Copy Wii address, Copy stream address,
   Open in browser, Restart server, Server name and port, Install or update yt-dlp, Use
   included FFmpeg, Start at login, Keep playing when the window is closed, Use system title
-  bar, Show settings folder, Show server log (`logs/server.log` in the app's data folder).
+  bar, Theme, Sidebar settings, Show settings folder, Show server log (`logs/server.log` in the app's data folder).
   - **Server name and port…** opens a small window with the same two fields as the
     welcome page. Saving stops the server, writes `config.json` and starts it again (a
     change of nothing does not restart it). Keeping the port the server already holds is
@@ -259,8 +267,12 @@ Then it runs:
   stand-in shell script, so not on Windows), and the computer's own FFmpeg followed by the
   switch back to the included one;
 - the menu button: the bar's view stretching over the window, the entries and their check marks,
-  the keys, a click outside, that only the bar can use it, and Theme (the menu to the web UI to the
-  bar and back);
+  the keys, a click outside, that only the bar can use it, Theme (the menu to the web UI to the
+  bar and back) and Sidebar settings…;
+- the live title bar, in a window shown on Chromium's headless platform (Linux only, since a window
+  that is never shown renders nothing): a theme chosen in the web UI or the menu reaches the bar within
+  100 ms of the page, and the menu's hover (the light following the pointer and clearing, the submenu
+  closing after a rest and staying through a slow diagonal);
 - the title bar: the bar view above the page, the window title while a stand-in Subsonic server
   (`scripts/fake-subsonic.js`) plays a five-track album (count, paused, next, stopped), the bar
   buttons reaching the window (with the window's maximize, minimize and hide recorded, since
