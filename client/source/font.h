@@ -18,6 +18,11 @@ struct wj_font_face { const void *data; long size; };
    Each code point comes from the first face that has it; faces[0] is required. */
 int wj_font_init(const struct wj_font_face *faces, int count, float scale_x, float scale_y);
 void wj_font_shutdown(void);
+/* Called before the atlas is wiped, so a GPU still reading it can finish first. */
+void wj_font_set_reset_hook(void (*hook)(void));
+/* Caches every glyph of `text`, even when the atlas resets partway through it,
+   so the next wj_font_run rasterizes nothing and the upload that follows is complete. */
+void wj_font_prepare(const char *text, int bytes, int size, int bold);
 float wj_font_measure(const char *text, int bytes, int size, int bold);
 /* Emits quads for `bytes` of `text` from x along `baseline`; returns the pen x. */
 float wj_font_run(const char *text, int bytes, int size, int bold, float x, float baseline,

@@ -12,6 +12,9 @@ static void count(void *context, float x0, float y0, float x1, float y1, float u
     quads++;
 }
 
+static int flushes;
+static void flush(void) { flushes++; }
+
 static long load(const char *path, unsigned char *data, long capacity) {
     FILE *file = fopen(path, "rb");
     assert(file);
@@ -29,6 +32,7 @@ int main(int argc, char **argv) {
         { cjk, load(argv[3], cjk, sizeof(cjk)) },
     };
     assert(!wj_font_init(faces, 3, 1, 1));
+    wj_font_set_reset_hook(flush);
     int rendered, resets, changed;
     float hello = wj_font_measure("Hello", 5, 20, 0);
     assert(hello > 30 && hello < 80);
@@ -68,6 +72,7 @@ int main(int argc, char **argv) {
 
     /* Enough large glyphs to overflow the atlas: it resets and keeps working. */
     char text[8];
+    flushes = 0;
     for (unsigned code = 0x4E00; code < 0x9FA0; code += 3) {
         text[0] = (char)(0xE0 | code >> 12);
         text[1] = (char)(0x80 | (code >> 6 & 0x3F));
@@ -77,6 +82,28 @@ int main(int argc, char **argv) {
     wj_font_stats(&rendered, &resets);
     assert(resets > 0);
     assert(wj_font_measure("Hello", 5, 20, 0) == hello);
+    /* The GPU is let finish before every wipe, since queued quads read the atlas when it gets to them. */
+    assert(flushes == resets);
+
+    /* A reset partway through a string must leave the draw pass nothing to rasterize. */
+    int split = 0;
+    for (unsigned code = 0x5000; code < 0x9000 && split < 3; code += 24) {
+        char run[3 * 24 + 1];
+        int length = 0, before, after, drawn, resets_before, resets_after, resets_drawn;
+        for (unsigned i = 0; i < 24; i++, length += 3) {
+            run[length] = (char)(0xE0 | (code + i) >> 12);
+            run[length + 1] = (char)(0x80 | ((code + i) >> 6 & 0x3F));
+            run[length + 2] = (char)(0x80 | ((code + i) & 0x3F));
+        }
+        wj_font_stats(&before, &resets_before);
+        wj_font_prepare(run, length, 48, 0);
+        wj_font_stats(&after, &resets_after);
+        wj_font_run(run, length, 48, 0, 0, 60, count, NULL);
+        wj_font_stats(&drawn, &resets_drawn);
+        assert(drawn == after && resets_drawn == resets_after);
+        if (resets_after != resets_before) split++;
+    }
+    assert(split == 3);
 
     float wide;
     wj_font_shutdown();

@@ -28,6 +28,7 @@ static struct glyph glyphs[GLYPHS];
 static short slots[SLOTS];
 static int glyph_count, shelf_x, shelf_y, shelf_h, atlas_changed;
 static int rendered, resets;
+static void (*reset_hook)(void);
 
 static void reset_atlas(void) {
     memset(atlas, 0, WJ_ATLAS_WIDTH * WJ_ATLAS_HEIGHT);
@@ -62,6 +63,8 @@ void wj_font_shutdown(void) {
     library = NULL;
 }
 
+void wj_font_set_reset_hook(void (*hook)(void)) { reset_hook = hook; }
+
 static FT_Face set_size(int which, int size) {
     if (size != face_sizes[which]) {
         FT_Set_Char_Size(faces[which], (FT_F26Dot6)(size * 64 * scale_x), (FT_F26Dot6)(size * 64 * scale_y), 72, 72);
@@ -91,6 +94,7 @@ static struct glyph *rasterize(unsigned code, int size, int bold) {
     int w = (int)bitmap->width, h = (int)bitmap->rows;
     if (shelf_x + w + PAD > WJ_ATLAS_WIDTH) { shelf_x = 0; shelf_y += shelf_h + PAD; shelf_h = 0; }
     if (shelf_y + h + PAD > WJ_ATLAS_HEIGHT || glyph_count == GLYPHS) {
+        if (reset_hook) reset_hook();
         reset_atlas();
         resets++;
     }
@@ -161,6 +165,13 @@ float wj_font_run(const char *text, int bytes, int size, int bold, float x, floa
 
 float wj_font_measure(const char *text, int bytes, int size, int bold) {
     return wj_font_run(text, bytes, size, bold, 0, 0, NULL, NULL);
+}
+
+void wj_font_prepare(const char *text, int bytes, int size, int bold) {
+    int before = resets;
+    wj_font_measure(text, bytes, size, bold);
+    // A reset partway through dropped the glyphs cached before it.
+    if (resets != before) wj_font_measure(text, bytes, size, bold);
 }
 
 const unsigned char *wj_font_atlas(int *changed) {
