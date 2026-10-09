@@ -4,16 +4,7 @@
     font-weight: 400 800;
     src: url("fonts/nunito-latin.woff2") format("woff2");
 }
-:root {
-    color-scheme: light dark;
-    --bg: #f3f6f9; --stripe: rgba(40, 80, 120, .045); --edge: #ccd5de; --text: #263340; --dim: #647383;
-    --accent: #1aa5e8; --tile-hover: #dfe5ea; --tile-press: #d3dbe2; --danger: #c8423d; --focus: rgba(26, 165, 232, .7);
-    --bar: 34px;
-}
-@media (prefers-color-scheme: dark) {
-    :root { --bg: #0d141c; --stripe: rgba(150, 190, 230, .035); --edge: #2c3d4e; --text: #e3ebf2; --dim: #8ea1b3;
-        --accent: #3db8f2; --tile-hover: #223141; --tile-press: #2c3d4e; --danger: #ef7772; --focus: rgba(61, 184, 242, .75); }
-}
+:root { --bar: 34px; }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; height: var(--bar); overflow: hidden; user-select: none; }
 body {

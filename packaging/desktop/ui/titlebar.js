@@ -8,7 +8,7 @@ const maximize = document.querySelector('#maximize');
 
 document.body.dataset.platform = api.platform;
 
-function apply({ title, maximized, focused }) {
+function apply({ title, maximized, focused, theme }) {
     if (typeof title === 'string') {
         // The app name stays whole while a long song name is cut short.
         now.textContent = title.endsWith(SUFFIX) ? title.slice(0, -SUFFIX.length) : '';
@@ -20,6 +20,11 @@ function apply({ title, maximized, focused }) {
         maximize.title = maximized ? 'Restore' : 'Maximize';
     }
     if (typeof focused === 'boolean') document.body.dataset.focused = String(focused);
+    // The page's own choice; null leaves it to the system, as the page does.
+    if (theme !== undefined) {
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+        else delete document.documentElement.dataset.theme;
+    }
 }
 
 api.onState(apply);

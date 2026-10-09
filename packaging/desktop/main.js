@@ -15,6 +15,7 @@ const { wiiAddress, probeDiscovery, findFreePort, portIsFree } = require('./lib/
 const { guidance, allowWindowsFirewall } = require('./lib/firewall');
 const { openLog } = require('./lib/logfile');
 const { APP_NAME, TitleFeed } = require('./lib/window-title');
+const { READ_THEME, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require('./lib/page-theme');
 const { BAR_HEIGHT, layoutViews } = require('./lib/window-layout');
 
 const APP_ID = 'org.wiijukebox.desktop';
@@ -66,12 +67,15 @@ let currentPage = 'starting';
 let lastLoad = null;
 let hiddenToTray = false;
 let titleFeed = null;
+let themeFeed = null;
+// The web UI's own choice (System, Light or Dark), read back from the page; it also decides the window's backdrop.
+let themeChoice = 'system';
 let playbackTitle = APP_NAME;
 let windowTitleText = APP_NAME;
 let queue = Promise.resolve();
 const notes = [];
 
-const bg = () => (nativeTheme.shouldUseDarkColors ? '#0d141c' : '#f3f6f9');
+const bg = () => ((themeChoice === 'system' ? nativeTheme.shouldUseDarkColors : themeChoice === 'dark') ? '#0d141c' : '#f3f6f9');
 const trayName = TRAY_NAMES[process.platform] || 'system tray';
 
 // A development run has no bundled FFmpeg, so the option to choose between the two does not exist there.
@@ -104,6 +108,7 @@ function writeState() {
         useBundledFfmpeg: useBundled(),
         systemTitleBar: settings.get('systemTitleBar'),
         windowTitle: windowTitleText,
+        theme: themeChoice,
         tray: Boolean(tray),
         serverUrl,
         ffmpeg: tools?.ffmpeg || null,
@@ -143,8 +148,10 @@ async function showPage(page, params = {}) {
     currentPage = page;
     lastLoad = () => loadPage(content.webContents, page, params);
     writeState();
+    buildMenus();
     await lastLoad();
     refreshTitle();
+    themeFeed?.poll({ force: true });
 }
 
 function showMainWindow() {
@@ -152,6 +159,7 @@ function showMainWindow() {
     if (!win) createWindow();
     hiddenToTray = false;
     titleFeed?.resume();
+    themeFeed?.resume();
     if (win.isMinimized()) win.restore();
     win.show();
     win.focus();
@@ -263,11 +271,34 @@ async function setSystemTitleBar(enabled) {
 }
 
 function barState() {
-    return { title: windowTitleText, maximized: Boolean(win?.isMaximized()), focused: Boolean(win?.isFocused()) };
+    return { title: windowTitleText, maximized: Boolean(win?.isMaximized()), focused: Boolean(win?.isFocused()), theme: forcedTheme(themeChoice) };
 }
 
 function sendBarState() {
     if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('titlebar:state', barState());
+}
+
+async function readPageTheme() {
+    const page = content?.webContents;
+    if (!page || page.isDestroyed() || page.isLoading()) return null;
+    return parsePageTheme(await page.executeJavaScript(READ_THEME));
+}
+
+function onThemeChange(choice) {
+    themeChoice = choice;
+    win?.setBackgroundColor(bg());
+    content?.setBackgroundColor(bg());
+    bar?.setBackgroundColor(bg());
+    buildMenus();
+    sendBarState();
+    writeState();
+}
+
+// The page's own control is pressed, so its stored choice, its look and its buttons all follow.
+async function setPageTheme(choice) {
+    if (currentPage !== 'player' || !content) return;
+    await content.webContents.executeJavaScript(chooseThemeScript(choice)).catch(() => {});
+    await themeFeed?.poll({ force: true });
 }
 
 // Page titles of the web UI are ignored: the title comes from the server's status, so it reads the same everywhere.
@@ -283,6 +314,7 @@ function refreshTitle() {
 function hideToTray() {
     hiddenToTray = true;
     titleFeed?.pause();
+    themeFeed?.pause();
     win.hide();
 }
 
@@ -452,8 +484,10 @@ async function showPlayer() {
     const url = serverUrl;
     lastLoad = () => content.webContents.loadURL(url);
     writeState();
+    buildMenus();
     await lastLoad();
     refreshTitle();
+    themeFeed?.poll({ force: true });
 }
 
 async function openPlayer() {
@@ -582,6 +616,13 @@ function commonItems() {
             checked: settings.get('systemTitleBar'),
             enabled: Boolean(settings.get('setupDone')),
             click: (item) => setSystemTitleBar(item.checked),
+        },
+        {
+            label: 'Theme',
+            enabled: currentPage === 'player',
+            submenu: [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([id, label]) => ({
+                id: `theme-${id}`, label, type: 'radio', checked: themeChoice === id, click: () => setPageTheme(id),
+            })),
         },
         { type: 'separator' },
         { label: 'Show settings folder', click: () => shell.openPath(path.dirname(serverSettings.file)) },
@@ -716,6 +757,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     app.on('will-quit', () => {
         titleFeed?.stop();
+        themeFeed?.stop();
         tray?.destroy();
         log?.close();
     });
@@ -735,11 +777,14 @@ if (!app.requestSingleInstanceLock()) {
             },
         });
         titleFeed.start();
+        themeFeed = new ThemeFeed({ read: readPageTheme, onChange: onThemeChange });
+        themeFeed.start();
         await showPage('starting');
         if (!startedQuietly) showMainWindow();
         else {
             hiddenToTray = true;
             titleFeed.pause();
+            themeFeed.pause();
         }
         await launch();
     });
