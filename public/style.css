@@ -40,6 +40,9 @@
     --font: "Nunito", "Avenir Next Rounded", "Hiragino Maru Gothic ProN", "Segoe UI", system-ui, -apple-system, sans-serif;
     --mini-h: 68px;
     --gutter: 16px;
+    --sidebar-w: 250px;
+    /* The now-playing column; the divider's saved width overrides it on <html>. */
+    --np-w: 340px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -121,6 +124,7 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .g-play, .g-right { background: currentColor; clip-path: polygon(27% 10%, 95% 50%, 27% 90%); }
 .g-left { background: currentColor; clip-path: polygon(73% 10%, 5% 50%, 73% 90%); }
 .g-down { background: currentColor; clip-path: polygon(10% 27%, 90% 27%, 50% 95%); }
+.g-up { background: currentColor; clip-path: polygon(10% 73%, 90% 73%, 50% 5%); }
 .g-close::before, .g-close::after { content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: currentColor; transform: rotate(45deg); }
 .g-close::after { transform: rotate(-45deg); }
 .g-artist::before, .g-artist::after, .g-playlist::before, .g-playlist::after,
@@ -340,7 +344,7 @@ body.viz #viz-fullscreen { display: inline-grid; }
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr) 340px;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--np-w);
     height: 100vh;
     height: 100dvh;
     transition: opacity .5s ease;
@@ -762,6 +766,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 /* Whole-pixel line heights above the transport keep its glyphs from rounding off-center on 1x screens. */
 #np-head { width: 100%; display: flex; align-items: center; justify-content: space-between; min-height: 18px; }
 #np-close { display: none; }
+#np-resizer { display: none; }
+#mini-expand { display: none; }
 
 #np-art-frame {
     position: relative;
@@ -1004,6 +1010,65 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     #crumb { font-size: 26px; }
     #toast { bottom: 28px; }
 
+    #np-head { min-height: 32px; }
+    #np-head .eyebrow { line-height: 18px; }
+    #np-close { display: inline-flex; width: 32px; min-height: 32px; height: 32px; }
+
+    /* A 7px grab area centered on the column's 1px edge: three pixels either side. */
+    #np-resizer {
+        display: block;
+        position: absolute;
+        z-index: 2;
+        top: 0;
+        bottom: 0;
+        right: calc(var(--np-w) - 4px);
+        width: 7px;
+        cursor: col-resize;
+        touch-action: none;
+    }
+    #np-resizer::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 2px;
+        width: 3px;
+        background: var(--accent);
+        opacity: 0;
+        transition: opacity .15s ease;
+    }
+    #np-resizer:hover::before { opacity: .5; }
+    #np-resizer:focus-visible, .np-resizing #np-resizer { box-shadow: none; }
+    #np-resizer:focus-visible::before, .np-resizing #np-resizer::before { opacity: 1; }
+    .np-resizing, .np-resizing * { cursor: col-resize !important; user-select: none; }
+    @media (min-height: 900px) { #np-art-frame { max-width: 400px; } }
+
+    /* Minimized: the column gives way to the transport bar across the bottom, 1px border plus 72px of
+       whole-pixel rows so everything in it centers on whole pixels. */
+    .np-collapsed { --bar-h: 73px; }
+    .np-collapsed #app { grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: calc(100vh - var(--bar-h)); height: calc(100dvh - var(--bar-h)); }
+    .np-collapsed #nowplaying, .np-collapsed #np-resizer { display: none; }
+    .np-collapsed #player {
+        display: flex;
+        position: fixed;
+        z-index: 3;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--bar-h);
+        padding: 0 20px;
+        align-items: center;
+        gap: 12px;
+        border-top: 1px solid var(--edge);
+        background: var(--surface);
+        box-shadow: var(--highlight);
+    }
+    .np-collapsed #mini-prev, .np-collapsed #mini-next, .np-collapsed #mini-expand { display: inline-grid; }
+    .np-collapsed #mini-title { line-height: 20px; }
+    .np-collapsed #mini-artist { line-height: 18px; }
+    .np-collapsed #toast { bottom: calc(var(--bar-h) + 18px); }
+    body.viz #mini-expand { display: none; }
+
     /* The transport bar is only needed when the column is hidden. */
     body.viz #player {
         display: flex;
@@ -1027,7 +1092,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 }
 
 @media (min-width: 901px) and (max-width: 1180px) {
-    #app { grid-template-columns: 220px minmax(0, 1fr) 300px; }
+    :root { --sidebar-w: 220px; --np-w: 300px; }
     .segmented { --segment: 56px; }
     #nowplaying { padding: 18px 16px 18px 15px; }
 }

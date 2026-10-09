@@ -44,6 +44,25 @@ async function api(path, opts = {}) {
     return data;
 }
 
+/** Per-device settings in localStorage; a blocked or full store just means nothing is remembered. */
+const prefs = {
+    get(name) {
+        try {
+            return localStorage.getItem(`wiijukebox.${name}`);
+        } catch {
+            return null;
+        }
+    },
+    set(name, value) {
+        try {
+            if (value === null) localStorage.removeItem(`wiijukebox.${name}`);
+            else localStorage.setItem(`wiijukebox.${name}`, value);
+        } catch {
+            /* nothing to do: the setting still applies until the page is reloaded */
+        }
+    },
+};
+
 /** Build an element; string children become text, so nothing is parsed as HTML. */
 function h(tag, props = {}, ...children) {
     const node = document.createElement(tag);
@@ -1493,17 +1512,12 @@ function setNowPlayingOpen(open) {
 // Light, Dark or System. The choice lives in localStorage and shows as data-theme on <html> (no attribute
 // means System); the inline script in index.html applies it before first paint.
 
-const THEME_KEY = 'wiijukebox.theme';
 const THEME_COLORS = { light: '#f3f6f9', dark: '#0d141c' };
 const themeButtons = [...document.querySelectorAll('[data-theme-choice]')];
 
 function savedTheme() {
-    try {
-        const saved = localStorage.getItem(THEME_KEY);
-        return saved === 'light' || saved === 'dark' ? saved : 'system';
-    } catch {
-        return 'system';
-    }
+    const saved = prefs.get('theme');
+    return saved === 'light' || saved === 'dark' ? saved : 'system';
 }
 
 function applyTheme(choice) {
@@ -1522,12 +1536,7 @@ function applyTheme(choice) {
 
 function chooseTheme(choice) {
     applyTheme(choice);
-    try {
-        if (choice === 'system') localStorage.removeItem(THEME_KEY);
-        else localStorage.setItem(THEME_KEY, choice);
-    } catch {
-        /* the choice still applies until the page is reloaded */
-    }
+    prefs.set('theme', choice === 'system' ? null : choice);
 }
 
 for (const button of themeButtons) {
@@ -1543,19 +1552,105 @@ for (const button of themeButtons) {
 }
 applyTheme(savedTheme());
 
+// --- now-playing column --------------------------------------------------
+//
+// On wide screens the column can be dragged wider or narrower and minimized into the transport bar. Its width
+// stays even, so the controls centered in it sit on whole pixels; both settings are kept per device.
+
+const NP = { min: 280, max: 520, step: 10, libraryMin: 360 };
+const npRoot = document.documentElement;
+const npResizer = $('#np-resizer');
+const savedWidth = Number(prefs.get('np-width'));
+let npWidth = savedWidth >= NP.min && savedWidth <= NP.max ? savedWidth : null;
+
+const evenPx = (n) => Math.round(n / 2) * 2;
+
+// The widest column that still leaves the library its room.
+function npLimit() {
+    const room = window.innerWidth - $('#sidebar').offsetWidth - NP.libraryMin;
+    return Math.max(NP.min, Math.min(NP.max, room - (room % 2)));
+}
+
+function syncNowPlayingColumn() {
+    const label = PHONE.matches ? 'Hide now playing' : 'Minimize to the bottom bar';
+    $('#np-close').setAttribute('aria-label', label);
+    $('#np-close').title = label;
+    if (PHONE.matches) return;
+    if (npWidth === null) npRoot.style.removeProperty('--np-w');
+    else npRoot.style.setProperty('--np-w', `${Math.min(npLimit(), Math.max(NP.min, evenPx(npWidth)))}px`);
+    const width = $('#nowplaying').offsetWidth;
+    if (!width) return;
+    npResizer.setAttribute('aria-valuemax', String(npLimit()));
+    npResizer.setAttribute('aria-valuenow', String(width));
+}
+
+// A null width goes back to the stylesheet's own.
+function setNowPlayingWidth(width, { save = true } = {}) {
+    npWidth = width === null ? null : Math.min(npLimit(), Math.max(NP.min, evenPx(width)));
+    syncNowPlayingColumn();
+    if (save) prefs.set('np-width', npWidth === null ? null : String(npWidth));
+}
+
+function setNowPlayingCollapsed(collapsed) {
+    npRoot.classList.toggle('np-collapsed', collapsed);
+    prefs.set('np-collapsed', collapsed ? '1' : null);
+    syncNowPlayingColumn();
+}
+
+npResizer.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    npResizer.setPointerCapture(event.pointerId);
+    npRoot.classList.add('np-resizing');
+    const startX = event.clientX;
+    const startWidth = $('#nowplaying').offsetWidth;
+    const move = (e) => setNowPlayingWidth(startWidth + startX - e.clientX, { save: false });
+    const stop = () => {
+        for (const [type, handler] of [['pointermove', move], ['pointerup', stop], ['pointercancel', stop]]) npResizer.removeEventListener(type, handler);
+        npRoot.classList.remove('np-resizing');
+        prefs.set('np-width', npWidth === null ? null : String(npWidth));
+    };
+    npResizer.addEventListener('pointermove', move);
+    npResizer.addEventListener('pointerup', stop);
+    npResizer.addEventListener('pointercancel', stop);
+});
+npResizer.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? NP.step * 5 : NP.step;
+    const now = $('#nowplaying').offsetWidth;
+    const next = { ArrowLeft: now + step, ArrowRight: now - step, Home: NP.min, End: npLimit() }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    setNowPlayingWidth(next);
+});
+npResizer.addEventListener('dblclick', () => setNowPlayingWidth(null));
+window.addEventListener('resize', syncNowPlayingColumn);
+
 $('#home-link').onclick = goHome;
 $('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
 $('#sources-close').onclick = () => setSourcesOpen(false);
 $('#sidebar-shade').onclick = () => setSourcesOpen(false);
 $('#mini-open').onclick = async () => {
     if (document.body.classList.contains('viz')) await toggleVisualizer();
-    setNowPlayingOpen(true);
+    if (PHONE.matches) setNowPlayingOpen(true);
+    else setNowPlayingCollapsed(false);
 };
-$('#np-close').onclick = () => setNowPlayingOpen(false);
+$('#np-close').onclick = () => {
+    if (PHONE.matches) {
+        setNowPlayingOpen(false);
+        return;
+    }
+    setNowPlayingCollapsed(true);
+    $('#mini-expand').focus();
+};
+$('#mini-expand').onclick = () => {
+    setNowPlayingCollapsed(false);
+    $('#np-close').focus();
+};
 PHONE.addEventListener('change', () => {
     setSourcesOpen(false);
     setNowPlayingOpen(false);
+    syncNowPlayingColumn();
 });
+syncNowPlayingColumn();
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {

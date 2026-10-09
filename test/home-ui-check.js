@@ -266,6 +266,186 @@ const check = (label, ok) => {
             await context.close();
         }
 
+        // --- the now-playing column: drag, keys, minimize ------------------------------------------
+        const playOne = async (view) => {
+            await view.click('.home-section .card-wrap button.play-all >> nth=0');
+            await view.waitForFunction(() => document.querySelector('#np-title').textContent !== 'Nothing playing', null, { timeout: 15000 });
+        };
+        const columnWidth = (view) => view.$eval('#nowplaying', (el) => el.offsetWidth);
+        const stored = (view, name) => view.evaluate((key) => localStorage.getItem(`wiijukebox.${key}`), name);
+        // Every control in the column is on a whole pixel, and the play button is centered in the column's content.
+        const columnIsCrisp = (view) => view.evaluate(() => {
+            const panel = document.querySelector('#nowplaying').getBoundingClientRect();
+            const style = getComputedStyle(document.querySelector('#nowplaying'));
+            const inner = panel.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+            const content = panel.width - parseFloat(style.borderLeftWidth) - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+            const rects = ['#np-art-frame', '#seekbar', '#prev', '#playpause', '#next', '#shuffle', '#stop', '#repeat', '#np-close']
+                .map((sel) => document.querySelector(sel).getBoundingClientRect());
+            const play = document.querySelector('#playpause').getBoundingClientRect();
+            return {
+                whole: rects.every((r) => [r.x, r.y, r.width, r.height].every(Number.isInteger)),
+                centered: play.left + play.width / 2 === inner + content / 2,
+                even: content % 2 === 0,
+            };
+        });
+
+        for (const [name, width] of [['1280', 1280], ['1281', 1281]]) {
+            const view = await open({ width, height: 800 }, false);
+            await playOne(view);
+            check(`${name}: the column starts at 340 with a splitter that reports its range`, await columnWidth(view) === 340
+                && await view.$eval('#np-resizer', (el) => [el.getAttribute('role'), el.getAttribute('aria-valuenow'), el.getAttribute('aria-valuemin'), el.getAttribute('aria-valuemax'), el.tabIndex].join()) === 'separator,340,280,520,0');
+            check(`${name}: and sits over the column's edge, seven pixels wide`, await view.$eval('#np-resizer', (el) => {
+                const r = el.getBoundingClientRect();
+                const panel = document.querySelector('#nowplaying').getBoundingClientRect();
+                return r.width === 7 && r.left === panel.left - 3 && Number.isInteger(r.left);
+            }));
+            const centre = await view.$eval('#np-resizer', (el) => { const r = el.getBoundingClientRect(); return [r.x + r.width / 2, r.y + 300]; });
+            await view.mouse.move(...centre);
+            await view.mouse.down();
+            await view.mouse.move(centre[0] - 33, centre[1], { steps: 3 });
+            const during = await view.evaluate(() => document.documentElement.classList.contains('np-resizing'));
+            await view.mouse.move(centre[0] - 81, centre[1], { steps: 3 });
+            await view.mouse.up();
+            const dragged = await columnWidth(view);
+            check(`${name}: dragging the divider left widens it, to an even width`, dragged === 422 && during && await stored(view, 'np-width') === '422', String(dragged));
+            check(`${name}: the main column took up the difference`, await view.$eval('#main', (el) => el.getBoundingClientRect().right) === width - 422);
+            check(`${name}: and the column's content is still on whole pixels`, Object.values(await columnIsCrisp(view)).every(Boolean));
+            await view.mouse.move(centre[0] - 81, centre[1]);
+            await view.mouse.down();
+            await view.mouse.move(40, centre[1], { steps: 4 });
+            await view.mouse.up();
+            check(`${name}: dragging far left stops at 520`, await columnWidth(view) === 520);
+            const edge = await view.$eval('#np-resizer', (el) => { const r = el.getBoundingClientRect(); return [r.x + r.width / 2, r.y + 300]; });
+            await view.mouse.move(...edge);
+            await view.mouse.down();
+            await view.mouse.move(width - 20, edge[1], { steps: 4 });
+            await view.mouse.up();
+            check(`${name}: dragging far right stops at 280`, await columnWidth(view) === 280 && await stored(view, 'np-width') === '280');
+            check(`${name}: and 280 is still crisp`, Object.values(await columnIsCrisp(view)).every(Boolean));
+
+            await view.focus('#np-resizer');
+            await view.keyboard.press('ArrowLeft');
+            check(`${name}: arrow left widens by 10`, await columnWidth(view) === 290 && await view.getAttribute('#np-resizer', 'aria-valuenow') === '290');
+            await view.keyboard.press('ArrowRight');
+            await view.keyboard.press('ArrowRight');
+            check(`${name}: arrow right narrows, never below 280`, await columnWidth(view) === 280);
+            await view.keyboard.press('Shift+ArrowLeft');
+            check(`${name}: Shift moves by 50`, await columnWidth(view) === 330);
+            await view.keyboard.press('End');
+            check(`${name}: End goes to the widest`, await columnWidth(view) === 520);
+            await view.keyboard.press('Home');
+            check(`${name}: Home goes to the narrowest`, await columnWidth(view) === 280);
+            await view.keyboard.press('ArrowLeft');
+            await view.reload();
+            await view.waitForSelector('.channel');
+            check(`${name}: the width survives a reload`, await columnWidth(view) === 290 && await view.evaluate(() => document.documentElement.style.getPropertyValue('--np-w')) === '290px');
+            await view.dblclick('#np-resizer');
+            check(`${name}: a double click goes back to 340 and forgets the width`, await columnWidth(view) === 340 && await stored(view, 'np-width') === null
+                && await view.evaluate(() => document.documentElement.style.getPropertyValue('--np-w')) === '');
+            await view.context().close();
+        }
+
+        {
+            const view = await open({ width: 1280, height: 800 }, false);
+            await playOne(view);
+            await view.evaluate(() => localStorage.setItem('wiijukebox.np-width', '401'));
+            await view.reload();
+            await view.waitForSelector('.channel');
+            check('an odd saved width is rounded to an even one', await columnWidth(view) === 402);
+            await view.evaluate(() => localStorage.setItem('wiijukebox.np-width', '9999'));
+            await view.reload();
+            await view.waitForSelector('.channel');
+            check('a saved width out of range is ignored', await columnWidth(view) === 340);
+
+            check('the column header carries a minimize button', await view.getAttribute('#np-close', 'aria-label') === 'Minimize to the bottom bar');
+            check('and no transport bar shows while the column is out', await view.$eval('#player', (el) => getComputedStyle(el).display) === 'none');
+            await view.click('#np-close');
+            const bar = await view.evaluate(() => {
+                const r = document.querySelector('#player').getBoundingClientRect();
+                const play = document.querySelector('#mini-playpause').getBoundingClientRect();
+                const art = document.querySelector('#mini-art').getBoundingClientRect();
+                const rects = ['#mini-art', '#mini-playpause', '#mini-prev', '#mini-next', '#mini-expand', '#mini-title', '#mini-artist']
+                    .map((sel) => document.querySelector(sel).getBoundingClientRect());
+                return {
+                    full: r.left === 0 && r.right === innerWidth && r.bottom === innerHeight && r.height === 73,
+                    hiddenColumn: getComputedStyle(document.querySelector('#nowplaying')).display === 'none' && getComputedStyle(document.querySelector('#np-resizer')).display === 'none',
+                    mainFills: document.querySelector('#main').getBoundingClientRect().right === innerWidth && document.querySelector('#app').getBoundingClientRect().bottom === innerHeight - 73,
+                    whole: rects.every((q) => [q.x, q.y, q.width, q.height].every(Number.isInteger)),
+                    centered: play.top + play.height / 2 === r.top + 1 + 36 && art.top + art.height / 2 === r.top + 1 + 36,
+                    controls: ['#mini-prev', '#mini-playpause', '#mini-next', '#mini-expand'].every((sel) => getComputedStyle(document.querySelector(sel)).display !== 'none'),
+                    monitorHidden: ['#mini-monitor', '#mini-viz'].every((sel) => getComputedStyle(document.querySelector(sel)).display === 'none'),
+                    focus: document.activeElement.id,
+                };
+            });
+            check('minimizing turns the column into a bar across the bottom', bar.full && bar.hiddenColumn && bar.mainFills, JSON.stringify(bar));
+            check('with previous, play, next and expand, and the right things centered on whole pixels', bar.controls && bar.monitorHidden && bar.whole && bar.centered, JSON.stringify(bar));
+            check('focus moves to Expand', bar.focus === 'mini-expand');
+            check('it is remembered', await stored(view, 'np-collapsed') === '1');
+            await view.reload();
+            await view.waitForSelector('.channel');
+            check('and survives a reload', await view.evaluate(() => document.documentElement.classList.contains('np-collapsed') && getComputedStyle(document.querySelector('#player')).display === 'flex'));
+            check('the bar plays and pauses', await (async () => {
+                const before = await view.getAttribute('#mini-playpause', 'aria-label');
+                await view.click('#mini-playpause');
+                await view.waitForFunction((was) => document.querySelector('#mini-playpause').getAttribute('aria-label') !== was, before, { timeout: 8000 });
+                return true;
+            })());
+            await view.click('#mini-expand');
+            check('Expand brings the column back at its saved width', await columnWidth(view) === 340 && await view.evaluate(() => document.activeElement.id) === 'np-close'
+                && await stored(view, 'np-collapsed') === null);
+            await view.click('#np-close');
+            await view.click('#mini-open');
+            check('so does a click on the bar\'s cover and title', await columnWidth(view) === 340 && await view.$eval('#player', (el) => getComputedStyle(el).display) === 'none');
+
+            await view.click('#np-close');
+            await view.evaluate(() => document.body.classList.add('viz'));
+            const viz = await view.evaluate(() => {
+                const bar = document.querySelector('#player');
+                return { height: bar.getBoundingClientRect().height, dark: getComputedStyle(bar).backgroundColor, expand: getComputedStyle(document.querySelector('#mini-expand')).display,
+                    close: getComputedStyle(document.querySelector('#mini-viz')).display };
+            });
+            check('the visualizer keeps its own bar: 68px, translucent, with Close and no Expand', viz.height === 68 && viz.dark.startsWith('rgba(13, 20, 28') && viz.expand === 'none' && viz.close !== 'none', JSON.stringify(viz));
+            await view.evaluate(() => document.body.classList.remove('viz'));
+            await view.context().close();
+        }
+
+        for (const [name, width] of [['1000', 1000], ['901', 901]]) {
+            const view = await open({ width, height: 800 }, false);
+            await playOne(view);
+            const narrow = await view.evaluate(() => ({ w: document.querySelector('#nowplaying').offsetWidth, max: document.querySelector('#np-resizer').getAttribute('aria-valuemax'), side: document.querySelector('#sidebar').offsetWidth }));
+            check(`${name}: the column starts at 300 and its widest leaves the library 360px`, narrow.w === 300 && Number(narrow.max) === Math.min(520, (width - narrow.side - 360) & ~1), JSON.stringify(narrow));
+            await view.focus('#np-resizer');
+            await view.keyboard.press('End');
+            check(`${name}: End stops where the library still has its room`, await columnWidth(view) === Number(narrow.max) && await view.$eval('#main', (el) => el.getBoundingClientRect().width) >= 360);
+            await view.keyboard.press('Home');
+            check(`${name}: and crisp at its narrowest`, Object.values(await columnIsCrisp(view)).every(Boolean));
+            await view.context().close();
+        }
+
+        {
+            // A phone keeps its sheet and bar whatever was saved for the wide layout.
+            const view = await open({ width: 390, height: 844 }, true);
+            await view.evaluate(() => { localStorage.setItem('wiijukebox.np-collapsed', '1'); localStorage.setItem('wiijukebox.np-width', '500'); });
+            await view.reload();
+            await view.waitForSelector('.channel');
+            const phone = await view.evaluate(() => ({
+                bar: document.querySelector('#player').getBoundingClientRect().height,
+                resizer: getComputedStyle(document.querySelector('#np-resizer')).display,
+                expand: getComputedStyle(document.querySelector('#mini-expand')).display,
+                sheet: getComputedStyle(document.querySelector('#nowplaying')).position,
+                openLabel: document.querySelector('#np-close').getAttribute('aria-label'),
+                columns: getComputedStyle(document.querySelector('#app')).gridTemplateColumns,
+            }));
+            check('a phone ignores the saved column state: sheet, 68px bar, no splitter', phone.bar === 68 && phone.resizer === 'none' && phone.expand === 'none' && phone.sheet === 'fixed'
+                && phone.openLabel === 'Hide now playing' && !phone.columns.includes(' '), JSON.stringify(phone));
+            await view.click('#mini-open');
+            await view.waitForTimeout(400);
+            check('and the bar still opens the sheet', await view.evaluate(() => document.body.classList.contains('np-open')));
+            await view.click('#np-close');
+            check('whose button closes it', await view.evaluate(() => !document.body.classList.contains('np-open')));
+            await view.context().close();
+        }
+
         // The dialog's edges and text stay on whole pixels at 1x, at odd and even widths and on a phone.
         for (const [name, viewport, phone] of [['1281x801', { width: 1281, height: 801 }, false], ['1280x800', { width: 1280, height: 800 }, false],
             ['390x844', { width: 390, height: 844 }, true], ['375x667', { width: 375, height: 667 }, true], ['361x640', { width: 361, height: 640 }, true]]) {

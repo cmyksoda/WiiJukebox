@@ -6,8 +6,17 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d141c" media="(prefers-color-scheme: dark)">
-<!-- Before the stylesheet, so a saved Light or Dark choice never flashes the other theme. -->
-<script>try { var t = localStorage.getItem('wiijukebox.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<!-- Before the stylesheet, so saved choices (theme, column width, minimized) never flash their defaults. -->
+<script>
+try {
+    var root = document.documentElement;
+    var theme = localStorage.getItem('wiijukebox.theme');
+    if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    var width = Number(localStorage.getItem('wiijukebox.np-width'));
+    if (width >= 280 && width <= 520) root.style.setProperty('--np-w', Math.round(width / 2) * 2 + 'px');
+    if (localStorage.getItem('wiijukebox.np-collapsed') === '1') root.classList.add('np-collapsed');
+} catch (e) {}
+</script>
 <title>WiiJukebox</title>
 <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="images/favicon.ico" sizes="16x16 32x32 48x48">
@@ -72,11 +81,15 @@
     <div id="content"></div>
   </main>
 
+  <!-- Wide screens drag this to resize the column; it is a keyboard splitter too. -->
+  <div id="np-resizer" role="separator" aria-orientation="vertical" aria-label="Resize now playing" aria-controls="nowplaying"
+       aria-valuemin="280" aria-valuemax="520" tabindex="0"></div>
+
   <!-- A column beside the library on wide screens, a sheet over it on phones. -->
   <section id="nowplaying" aria-label="Now playing">
     <header id="np-head">
       <span class="eyebrow">Now playing</span>
-      <button id="np-close" class="pill icon" aria-label="Hide now playing"><i class="g g-down" aria-hidden="true"></i></button>
+      <button id="np-close" class="pill icon" aria-label="Hide now playing" title="Hide now playing"><i class="g g-down" aria-hidden="true"></i></button>
     </header>
 
     <div id="np-art-frame">
@@ -133,6 +146,7 @@
     <button id="mini-prev" aria-label="Previous track" class="round small viz-only" disabled><i class="g g-prev" aria-hidden="true"></i></button>
     <button id="mini-playpause" aria-label="Play" class="round" disabled><i class="g g-play" aria-hidden="true"></i><i class="g g-pause" aria-hidden="true"></i></button>
     <button id="mini-next" aria-label="Next track" class="round small viz-only" disabled><i class="g g-next" aria-hidden="true"></i></button>
+    <button id="mini-expand" class="round small" aria-label="Expand now playing" title="Expand now playing"><i class="g g-up" aria-hidden="true"></i></button>
     <button id="mini-monitor" class="pill small viz-only" aria-label="Monitor audio on this device" aria-pressed="false">Monitor</button>
     <button id="mini-viz" class="pill small viz-only" aria-label="Close visualizer" aria-pressed="true">Close</button>
   </div>
