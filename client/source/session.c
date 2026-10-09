@@ -924,6 +924,7 @@ void wj_session_entry_press(int key) {
     if (key < 0) key = wj_keypad_at(entry->column, entry->row);
     if (key < 0 || key >= WJ_KEY_COUNT) return;
     const struct wj_key *pressed = &wj_keypad[key];
+    wj_session_entry_focus(key);
     entry->pressed = key;
     entry->pressed_at = wj_milliseconds();
     entry->message[0] = 0;

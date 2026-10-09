@@ -50,7 +50,7 @@ dist/apps/wiijukebox/boot.dol: build/wiijukebox.elf
 	$(DEVKITPRO)/tools/bin/elf2dol $< $@
 HOST_CC ?= cc
 HOST_CFLAGS ?= -O2 -g
-host-test: | build
+host-test: build/discovery_port.h | build
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/playback_clock.c tests/playback_clock_test.c -o build/playback_clock_test
 	./build/playback_clock_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/utf8.c source/layout.c tests/layout_test.c -o build/layout_test
@@ -67,6 +67,8 @@ host-test: | build
 	./build/settings_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource source/theme.c tests/theme_test.c -lm -o build/theme_test
 	./build/theme_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Itests/session_shim -Isource -Ibuild source/wire.c source/menu.c source/init_wait.c source/playback_clock.c source/address.c source/settings.c tests/session_test.c -o build/session_test
+	./build/session_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
 	./build/menu_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/init_wait.c tests/init_wait_test.c -o build/init_wait_test
