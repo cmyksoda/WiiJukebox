@@ -67,9 +67,9 @@ host-test: build/discovery_port.h | build
 	./build/settings_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Itests/gx_shim -Isource source/theme.c tests/theme_test.c -lm -o build/theme_test
 	./build/theme_test
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Itests/session_shim -Isource -Ibuild source/wire.c source/menu.c source/init_wait.c source/playback_clock.c source/address.c source/settings.c tests/session_test.c -o build/session_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -pthread -Itests/session_shim -Isource -Ibuild source/wire.c source/menu.c source/utf8.c source/init_wait.c source/playback_clock.c source/address.c source/settings.c tests/session_test.c -o build/session_test
 	./build/session_test
-	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c tests/menu_test.c -o build/menu_test
+	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/wire.c source/menu.c source/utf8.c tests/menu_test.c -o build/menu_test
 	./build/menu_test
 	$(HOST_CC) $(HOST_CFLAGS) -std=gnu11 -Wall -Wextra -Werror -Isource source/init_wait.c tests/init_wait_test.c -o build/init_wait_test
 	./build/init_wait_test

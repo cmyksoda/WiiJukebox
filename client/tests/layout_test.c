@@ -23,6 +23,19 @@ int main(void) {
         assert(wj_utf8_next(&cursor) == WJ_REPLACEMENT && cursor == bad[i] + 1);
     }
 
+    /* A copy that runs out of room drops the whole character it would have cut. */
+    char small[8];
+    wj_utf8_copy(small, sizeof(small), "ab\xe3\x81\x82\xe3\x81\x84");
+    assert(!strcmp(small, "ab\xe3\x81\x82"));
+    wj_utf8_copy(small, sizeof(small), "abcd\xe3\x81\x82");
+    assert(!strcmp(small, "abcd\xe3\x81\x82"));
+    wj_utf8_copy(small, sizeof(small), "abcde\xe3\x81\x82");
+    assert(!strcmp(small, "abcde"));
+    wj_utf8_copy(small, sizeof(small), "abcdefghij");
+    assert(!strcmp(small, "abcdefg"));
+    wj_utf8_copy(small, 1, "abc");
+    assert(!small[0]);
+
     int truncated;
     assert(wj_fit_text("Short", 50, 10, measure, NULL, &truncated) == 5 && !truncated);
     assert(wj_fit_text("Longer title", 60, 10, measure, NULL, &truncated) == 5 && truncated);
@@ -46,6 +59,6 @@ int main(void) {
     assert(wj_grid_move(0, 5, 3, 1, 0) == 1 && wj_grid_move(2, 5, 3, 1, 0) == 2);
     assert(wj_grid_move(2, 5, 3, 0, 1) == 4 && wj_grid_move(4, 5, 3, 0, 1) == 4);
     assert(wj_grid_move(1, 5, 3, 0, -1) == 1 && wj_grid_move(3, 4, 3, 1, 0) == 3);
-    puts("layout: UTF-8, ellipsis fitting, times, seek mapping, wrapping and grid moves passed");
+    puts("layout: UTF-8, safe copies, ellipsis fitting, times, seek mapping, wrapping and grid moves passed");
     return 0;
 }

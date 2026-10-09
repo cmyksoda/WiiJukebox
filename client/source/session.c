@@ -5,6 +5,7 @@
 #include "init_wait.h"
 #include "playback_clock.h"
 #include "settings.h"
+#include "utf8.h"
 #include "discovery_port.h"
 #include <gccore.h>
 #include <asndlib.h>
@@ -76,7 +77,7 @@ const unsigned char *wj_session_art(void) { return art; }
 const unsigned char *wj_session_large_art(void) { return art_large; }
 void wj_session_want_large_art(int want) { want_large = want; }
 
-static void copy(char *out, size_t size, const char *in) { snprintf(out, size, "%s", in); }
+static void copy(char *out, size_t size, const char *in) { wj_utf8_copy(out, size, in); }
 /* Transient messages fade after a few seconds; held ones stay until replaced
    or cleared, because they describe a condition that still applies. */
 static void post(const char *text, int held) {
