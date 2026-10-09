@@ -26,7 +26,8 @@ A native shell around the controller web page. It:
 - remembers the chosen server by its ID, so a changed IP address is found again;
 - lets you type an address (`192.168.0.3:4005`) when discovery is blocked;
 - shows the controller page in a WebView that follows the system light/dark
-  setting, and sends its Back button to the page first (close a sheet, go up a
+  setting unless the page's own Theme control (System, Light, Dark, at the foot
+  of its menu) says otherwise, and sends its Back button to the page first (close a sheet, go up a
   folder) before leaving the app.
 
 Requirements: JDK 17 or newer, the Android SDK with platform 37 and build-tools
