@@ -1061,12 +1061,12 @@ const check = (label, ok) => {
                 // Phones and tablets keep their own overlay bars, and nothing here is reserved.
                 const phone = await open({ width: 390, height: 844 }, true);
                 const touch = await phone.evaluate(() => ({
-                    fine: matchMedia('(hover: hover) and (pointer: fine)').matches,
+                    coarse: matchMedia('(pointer: coarse)').matches,
                     gutter: ['#main', '#sidebar', '#nowplaying'].map((sel) => getComputedStyle(document.querySelector(sel)).scrollbarGutter).join(),
                     sheetPadding: getComputedStyle(document.querySelector('#nowplaying')).paddingLeft,
                     track: document.querySelector('#main').offsetWidth - document.querySelector('#main').clientWidth,
                 }));
-                check('on a touch screen none of this applies: no gutters, no reserved track, the sheet\'s own padding', !touch.fine && touch.gutter === 'auto,auto,auto' && touch.track === 0 && touch.sheetPadding === '20px', JSON.stringify(touch));
+                check('on a touch screen none of this applies: no gutters, no reserved track, the sheet\'s own padding', touch.coarse && touch.gutter === 'auto,auto,auto' && touch.track === 0 && touch.sheetPadding === '20px', JSON.stringify(touch));
                 await phone.context().close();
             }
             await painting.close();

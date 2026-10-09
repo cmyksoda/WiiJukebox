@@ -1187,12 +1187,12 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 /* --- scrollbars --------------------------------------------------------------------------------------- */
 
 /* Slim, themed, and out of sight until the pointer is over a scroller or it is scrolling (scrollbars.mjs marks it
-   is-scrolling). Touch screens keep their own overlay bars. The track stays in the layout, so nothing moves as the thumb fades. */
+   is-scrolling). Touch screens (a coarse primary pointer) keep their own overlay bars. The track stays in the layout, so nothing moves as the thumb fades. */
 /* Chromium restyles a scrollbar when its scroller changes, not for :hover on the thumb's own pseudo-element, and runs no
    transitions on the thumb. So the fade is a registered number that transitions on the scroller and tints the thumb. */
 @property --thumb { syntax: "<number>"; inherits: true; initial-value: 0; }
 
-@media (hover: hover) and (pointer: fine) and (forced-colors: none) {
+@media (not (pointer: coarse)) and (forced-colors: none) {
     @supports selector(::-webkit-scrollbar) {
         /* Chromium ignores these as soon as scrollbar-width or scrollbar-color is set, so those stay in the Firefox branch below. */
         ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
