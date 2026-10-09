@@ -189,6 +189,8 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .round {
     display: inline-grid;
     place-items: center;
+    /* Still centered when .viz-only switches it to inline-flex. */
+    justify-content: center;
     width: 56px;
     height: 56px;
     padding: 0;
