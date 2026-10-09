@@ -65,9 +65,9 @@ function kids(children) {
         .map((child) => (child instanceof Node ? child : document.createTextNode(String(child))));
 }
 
-/** Only http(s) and inline images reach an <img>. */
+/** Only http(s), inline images and this server's art proxy reach an <img>. */
 function safeImage(url) {
-    return typeof url === 'string' && /^(https?:\/\/|data:image\/)/i.test(url) ? url : null;
+    return typeof url === 'string' && /^(https?:\/\/|data:image\/|\/api\/art\/)/i.test(url) ? url : null;
 }
 
 let toastTimer;
@@ -127,8 +127,12 @@ function renderSources() {
     if (signature === sourcesSignature) return;
     sourcesSignature = signature;
 
+    const homeButton = h('button', {
+        class: 'source-btn home', 'aria-current': String(state.activeSource === null), onclick: goHome,
+    }, h('i', { class: 'g g-home', 'aria-hidden': 'true' }), h('span', { class: 'name', text: 'Home' }));
+
     const nav = $('#sources');
-    nav.replaceChildren(...state.sources.map((src) => {
+    nav.replaceChildren(homeButton, ...state.sources.map((src) => {
         const playing = playingId === src.id;
         const sub = playing ? 'playing' : src.configured ? 'ready' : 'needs setup';
         const btn = h('button', {
@@ -140,28 +144,45 @@ function renderSources() {
         return btn;
     }));
 
-    if (state.activeSource === null && $('#content').dataset.view === 'home') renderHome();
+    paintChannels();
+}
+
+// --- home --------------------------------------------------------------------
+//
+// Recent plays come from the server's history; each configured service then fills in
+// its own rows, so one slow or broken service never holds up or breaks the others.
+
+// Short names for the tag on a card and the link beside a row title.
+const SHORT = {
+    subsonic: 'Navidrome', jellyfin: 'Jellyfin', plex: 'Plex', radio: 'Radio', podcasts: 'Podcasts',
+    ytdlp: 'YouTube', ytmusic: 'YouTube Music',
+};
+const homeView = { token: 0, recentTimer: null };
+const homeVisible = () => state.activeSource === null && $('#content').dataset.view === 'home';
+
+function goHome() {
+    if (document.body.classList.contains('sources-open')) setSourcesOpen(false);
+    state.activeSource = null;
+    state.stack = [];
+    sourcesSignature = '';
+    renderSources();
+    renderHome();
+    $('#main').scrollTop = 0;
 }
 
 function renderHome() {
     stopPanelTimer();
-    setToolbar({ title: 'Pick a channel' });
+    setToolbar({ title: 'Home' });
     const content = $('#content');
     content.className = '';
     content.dataset.view = 'home';
-    const playingId = state.status?.source?.id;
-    const tiles = state.sources.map((src) => {
-        const playing = playingId === src.id;
-        const label = playing ? 'Playing' : src.configured ? 'Ready' : 'Needs setup';
-        return h('button', {
-            class: `channel ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
-            onclick: () => openSource(src),
-        }, h('span', { class: 'kind', text: KINDS[src.id] || '' }),
-        h('span', { class: 'name', text: src.label }),
-        h('span', { class: 'state' }, h('span', { class: 'dot' }), label));
-    });
-    content.replaceChildren(...kids([
-        h('div', { class: 'grid' }, tiles),
+    const token = ++homeView.token;
+    content.replaceChildren(
+        h('div', { id: 'home-recent' }),
+        h('div', { id: 'home-rows' }),
+        h('section', { class: 'home-section', 'aria-labelledby': 'home-channels-title' },
+            h('div', { class: 'home-head' }, h('h3', { id: 'home-channels-title', text: 'All channels' })),
+            h('div', { class: 'grid', id: 'home-channels' })),
         h('div', { class: 'panel', style: 'margin-top:18px' },
             h('h3', { text: 'Your Wii' }),
             h('p', { class: 'hint', text: 'Open WiiJukebox on your Wii and it connects to this server by itself.' }),
@@ -170,8 +191,178 @@ function renderHome() {
             window.WiiJukeboxApp
                 ? h('div', { class: 'buttons' }, h('button', { class: 'pill small', text: 'Choose another server',
                     onclick: () => window.WiiJukeboxApp.switchServer() }))
-                : null),
-    ]));
+                : null));
+    paintChannels();
+    loadHome(token);
+}
+
+/** The tile grid at the bottom of home; repainted alone when a source's state changes. */
+function paintChannels() {
+    const grid = homeVisible() && $('#home-channels');
+    if (!grid) return;
+    const playingId = state.status?.source?.id;
+    grid.replaceChildren(...state.sources.map((src) => {
+        const playing = playingId === src.id;
+        const label = playing ? 'Playing' : src.configured ? 'Ready' : 'Needs setup';
+        return h('button', {
+            class: `channel ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
+            onclick: () => openSource(src),
+        }, h('span', { class: 'kind', text: KINDS[src.id] || '' }),
+        h('span', { class: 'name', text: src.label }),
+        h('span', { class: 'state' }, h('span', { class: 'dot' }), label));
+    }));
+}
+
+async function loadHome(token) {
+    let overview;
+    try {
+        overview = await api('/home');
+    } catch (err) {
+        if (token === homeView.token) $('#home-rows').replaceChildren(homeNote(`Home could not load: ${err.message}`));
+        return;
+    }
+    if (token !== homeView.token) return;
+    paintRecent(overview.recent);
+
+    const slots = overview.services.map(() => h('div', { class: 'home-service' }));
+    $('#home-rows').replaceChildren(...slots);
+    await Promise.all(overview.services.map((service, i) => loadService(service, slots[i], token)));
+    if (token === homeView.token && !overview.recent.length && !$('#home-rows').querySelector('.home-section')) {
+        $('#home-recent').replaceChildren(
+            h('p', { class: 'hint', text: 'Start something from a channel below and it shows up here to play again.' }));
+    }
+}
+
+async function loadService(service, slot, token) {
+    slot.replaceChildren(...service.rows.map((row) => homeSection(row.title, service, h('p', { class: 'hint', text: 'Loading…' }))));
+    let data;
+    try {
+        data = await api(`/home/${service.id}`);
+    } catch (err) {
+        data = { error: err.message };
+    }
+    if (token !== homeView.token) return;
+
+    const retry = () => {
+        loadService(service, slot, token);
+    };
+    const channel = state.sources.find((src) => src.id === service.id);
+    const rows = data.rows || [];
+    // When every row fails together the cause is the same, so say it once.
+    if (data.error || (rows.length && rows.every((row) => row.error))) {
+        slot.replaceChildren(homeSection(service.label, null,
+            homeNote(`Could not load: ${data.error || rows[0].error}`, retry, channel && (() => openSource(channel)))));
+        return;
+    }
+    slot.replaceChildren(...rows.flatMap((row) => {
+        if (row.error) return [homeSection(row.title, service, homeNote(`Could not load: ${row.error}`, retry))];
+        if (!row.items.length) return [];
+        return [homeSection(row.title, service, shelf(row.items.map((item) => homeCard(item, service.id))))];
+    }));
+}
+
+function paintRecent(recent) {
+    const slot = $('#home-recent');
+    if (!slot) return;
+    const focused = document.activeElement?.closest?.('[data-entry]')?.dataset.entry;
+    slot.replaceChildren(...(recent.length ? [homeSection('Jump back in', null, shelf(recent.map((entry) => homeCard({
+        ...entry.item, type: entry.type, title: entry.title, subtitle: entry.subtitle, artwork: entry.artwork,
+    }, entry.source, { replay: entry.item, id: entry.id }))))] : []));
+    if (focused) slot.querySelector(`[data-entry="${focused}"] .card`)?.focus();
+}
+
+/** Plays count as new history, so what is showing may be out of date. */
+function refreshRecent() {
+    clearTimeout(homeView.recentTimer);
+    homeView.recentTimer = setTimeout(async () => {
+        if (!homeVisible()) return;
+        try {
+            const { recent } = await api('/home');
+            if (homeVisible()) paintRecent(recent);
+        } catch { /* the next visit loads it again */ }
+    }, 400);
+}
+
+let sectionCount = 0;
+function homeSection(title, service, body) {
+    const id = `home-section-${++sectionCount}`;
+    const shelfEl = body.classList?.contains('shelf') ? body : null;
+    return h('section', { class: 'home-section', 'aria-labelledby': id },
+        h('div', { class: 'home-head' },
+            h('h3', { id, text: title }),
+            service ? h('button', { class: 'chip home-from', 'aria-label': `Open ${service.label}`, onclick: () => {
+                const src = state.sources.find((entry) => entry.id === service.id);
+                if (src) openSource(src);
+            } }, SHORT[service.id] || service.label, h('i', { class: 'g g-right', 'aria-hidden': 'true' })) : null,
+            shelfEl ? shelfArrows(shelfEl) : null),
+        body);
+}
+
+function homeNote(message, retry, openChannel) {
+    return h('p', { class: 'home-note' }, message,
+        retry ? h('button', { class: 'pill small', text: 'Try again', onclick: retry }) : null,
+        openChannel ? h('button', { class: 'pill small', text: 'Open channel', onclick: openChannel }) : null);
+}
+
+function shelf(cards) {
+    return h('ul', { class: 'shelf' }, cards.map((card) => h('li', {}, card)));
+}
+
+/** Scroll buttons for mouse users; touch scrolls the row directly. */
+function shelfArrows(row) {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const step = (direction) => row.scrollBy({
+        left: direction * Math.max(200, row.clientWidth * 0.8), behavior: reduce.matches ? 'auto' : 'smooth',
+    });
+    const button = (direction, label, glyph) => h('button', {
+        class: 'pill icon small', 'aria-label': label, onclick: () => step(direction),
+    }, h('i', { class: `g g-${glyph}`, 'aria-hidden': 'true' }));
+    const back = button(-1, 'Scroll left', 'left');
+    const forward = button(1, 'Scroll right', 'right');
+    const wrap = h('span', { class: 'home-arrows', hidden: true }, back, forward);
+    const paint = () => {
+        const room = row.scrollWidth - row.clientWidth;
+        wrap.hidden = room <= 4;
+        back.disabled = row.scrollLeft <= 2;
+        forward.disabled = row.scrollLeft >= room - 2;
+    };
+    row.addEventListener('scroll', paint, { passive: true });
+    new ResizeObserver(paint).observe(row);
+    return wrap;
+}
+
+/**
+ * A cover with its title. Albums and playlists open on tap with a round button to play
+ * them whole, as in the library; stations, tracks and replays play on tap.
+ */
+function homeCard(item, source, { replay = null, id = null } = {}) {
+    const playable = Boolean(replay) || item.type === 'track' || item.type === 'station';
+    const cover = artwork(item);
+    if (replay) cover.append(h('span', { class: 'tag', text: SHORT[source] || source }));
+    const subtitle = item.type === 'track' && item.artist ? item.artist : item.subtitle;
+    const card = h('button', {
+        class: 'card',
+        onclick: () => (playable ? play(replay || item, { source, name: item.title }) : openInLibrary(source, item)),
+    }, cover, h('span', { class: 't', text: item.title || '' }), h('span', { class: 's', text: subtitle || '' }));
+    const wrap = h('div', { class: 'card-wrap' }, card, playable
+        ? h('span', { class: 'play-all', 'aria-hidden': 'true' }, h('i', { class: 'g g-right' }))
+        : h('button', {
+            class: 'play-all', 'aria-label': `Play ${item.title}`, title: 'Play all',
+            onclick: () => play(item, { source, name: item.title }),
+        }, h('i', { class: 'g g-right', 'aria-hidden': 'true' })));
+    if (id) wrap.dataset.entry = id;
+    return wrap;
+}
+
+/** Opens a card's album or playlist in its library, with Back returning to home. */
+function openInLibrary(sourceId, item) {
+    if (!state.sources.some((src) => src.id === sourceId)) return;
+    state.activeSource = sourceId;
+    state.stack = [{ render: goHome }];
+    sourcesSignature = '';
+    renderSources();
+    $('#content').dataset.view = sourceId;
+    browse(item.id, item.title, 0, isContainer(item) ? item : null);
 }
 
 async function openSource(src) {
@@ -271,11 +462,17 @@ function setPager(total, offset, count, goTo) {
 function artwork(item, extraClass = '') {
     const url = safeImage(item.artwork);
     const frame = h('span', { class: `art ${extraClass}`.trim() });
-    if (url) {
-        frame.append(h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }));
+    const placeholder = () => frame.append(h('span', { class: `ph${item.type === 'station' ? ' live' : ''}`, 'aria-hidden': 'true' }));
+    if (!url) {
+        placeholder();
         return frame;
     }
-    frame.append(h('span', { class: 'ph', 'aria-hidden': 'true' }));
+    const img = h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
+    img.onerror = () => {
+        img.remove();
+        placeholder();
+    };
+    frame.append(img);
     return frame;
 }
 
@@ -352,10 +549,11 @@ function renderItems(items, path, label, offset = 0, container = null) {
     }
 }
 
-async function play(item, { name = item.title } = {}) {
+async function play(item, { source = state.activeSource, name = item.title } = {}) {
     try {
-        await api(`/sources/${state.activeSource}/play`, { method: 'POST', body: item });
+        await api(`/sources/${source}/play`, { method: 'POST', body: item });
         toast(`Playing ${name}`);
+        refreshRecent();
     } catch (err) {
         toast(err.message, true);
     }
@@ -856,6 +1054,9 @@ function applyModes(modes = {}, caps) {
 
 function applyStatus(status) {
     state.status = status;
+    const playingKey = `${status.source?.id}|${status.nowPlaying?.title}`;
+    if (state.playingKey !== undefined && playingKey !== state.playingKey && homeVisible()) refreshRecent();
+    state.playingKey = playingKey;
     followJump(status.jump);
 
     const np = status.nowPlaying || {};
@@ -1199,6 +1400,7 @@ function setNowPlayingOpen(open) {
     else if ($('#nowplaying').contains(document.activeElement)) $('#mini-open').focus();
 }
 
+$('#home-link').onclick = goHome;
 $('#sources-toggle').onclick = () => setSourcesOpen(!document.body.classList.contains('sources-open'));
 $('#sources-close').onclick = () => setSourcesOpen(false);
 $('#sidebar-shade').onclick = () => setSourcesOpen(false);
@@ -1242,7 +1444,7 @@ window.wiiJukeboxBack = () => {
     else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
     else if (document.body.classList.contains('sources-open')) setSourcesOpen(false);
     else if (!$('#back').hidden) $('#back').click();
-    else if (state.activeSource !== null) { state.activeSource = null; sourcesSignature = ''; renderHome(); renderSources(); }
+    else if (state.activeSource !== null) goHome();
     else return false;
     return true;
 };

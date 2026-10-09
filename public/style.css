@@ -124,6 +124,7 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
         linear-gradient(currentColor 0 0) 0 62% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 38% 100% / 2px 38% no-repeat,
         linear-gradient(currentColor 0 0) 100% 62% / 38% 2px no-repeat, linear-gradient(currentColor 0 0) 62% 100% / 2px 38% no-repeat;
 }
+.g-home { background: currentColor; clip-path: polygon(50% 6%, 96% 48%, 82% 48%, 82% 92%, 58% 92%, 58% 64%, 42% 64%, 42% 92%, 18% 92%, 18% 48%, 4% 48%); }
 .g-star { background: currentColor; clip-path: polygon(50% 4%, 61% 37%, 96% 37%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 4% 37%, 39% 37%); }
 .g-note::before { left: 12%; top: 58%; width: 38%; height: 38%; border-radius: 50%; }
 .g-note::after { inset: 0; clip-path: polygon(42% 6%, 84% 24%, 84% 42%, 52% 30%, 52% 76%, 42% 76%); }
@@ -330,6 +331,8 @@ body.viz #viz-fullscreen { display: inline-grid; }
 
 #brand { display: flex; align-items: center; justify-content: space-between; padding: 2px 8px 6px; }
 #brand strong { font-size: 25px; font-weight: 800; letter-spacing: -.02em; }
+#home-link { margin: -4px -8px; padding: 4px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; text-align: left; }
+#home-link:hover { background: var(--tile); }
 .wii-word { color: var(--accent); margin-right: .06em; }
 /* A mask, so the jukebox takes the theme's accent in light and dark. */
 .logo-mark {
@@ -361,6 +364,7 @@ body.viz #viz-fullscreen { display: inline-grid; }
 }
 .source-btn:hover { background: var(--tile); }
 .source-btn[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.source-btn.home .g { width: 15px; height: 15px; margin: 0 -3px; color: var(--accent-text); }
 .source-btn .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--edge); flex: none; }
 .source-btn.configured .dot, .source-btn.ready .dot { background: var(--ok); }
 .source-btn.playing .dot { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
@@ -523,6 +527,74 @@ body.viz #viz-fullscreen { display: inline-grid; }
 .row .s { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .dur { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
 .row.unavailable { opacity: .5; }
+
+/* --- home ------------------------------------------------------------------------------- */
+
+.home-section { margin-top: 22px; }
+#home-recent > .home-section { margin-top: 0; }
+.home-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-height: 32px; margin-bottom: 6px; }
+.home-head h3 { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+.home-from { min-height: 28px; padding: 0 10px 0 12px; gap: 6px; border: 0; transition: background .15s ease, color .15s ease; }
+.home-from .g { font-size: 8px; }
+.home-from:hover { background: var(--accent-soft); color: var(--accent-text); }
+.home-arrows { display: none; gap: 8px; margin-left: auto; }
+@media (hover: hover) and (pointer: fine) {
+    .home-head { min-height: 44px; }
+    .home-arrows { display: inline-flex; }
+}
+.home-arrows .pill.icon { width: 40px; min-height: 36px; }
+.home-note { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 0; font-size: 14px; color: var(--dim); }
+
+/* A row that scrolls on its own; on phones it runs to the screen edge so the next cover peeks in. */
+.shelf {
+    --pad: max(var(--bleed, var(--gutter)), 4px);
+    display: flex;
+    gap: 14px;
+    margin: 0 calc(var(--pad) * -1);
+    padding: 4px var(--pad) 10px;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--pad);
+    scrollbar-width: thin;
+    scrollbar-color: var(--edge) transparent;
+}
+.shelf > li { flex: 0 0 148px; min-width: 0; scroll-snap-align: start; }
+span.play-all { pointer-events: none; }
+.card .tag {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    max-width: calc(100% - 12px);
+    padding: 1px 8px;
+    border: 1px solid var(--edge-soft);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--dim);
+    font-size: 11px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Stations have no cover, so they get level bars in place of the jukebox. */
+.ph.live::before {
+    inset: 26% 30%;
+    -webkit-mask: none;
+    mask: none;
+    opacity: .4;
+    background: linear-gradient(var(--accent) 0 0) 0 100% / 16% 40% no-repeat,
+        linear-gradient(var(--accent) 0 0) 33.3% 100% / 16% 75% no-repeat,
+        linear-gradient(var(--accent) 0 0) 66.6% 100% / 16% 55% no-repeat,
+        linear-gradient(var(--accent) 0 0) 100% 100% / 16% 100% no-repeat;
+}
+@media (min-width: 901px) { .shelf { --bleed: 0px; } }
+@media (max-width: 380px) {
+    .shelf { gap: 10px; }
+    .shelf > li { flex-basis: 132px; }
+    .home-head h3 { font-size: 17px; }
+}
 
 /* --- podcasts ------------------------------------------------------------------------- */
 
