@@ -20,7 +20,7 @@
 #define DELETE_REPEAT_MS 70
 
 extern const unsigned char wj_font_latin[], wj_font_latin_end[], wj_font_greek[], wj_font_greek_end[],
-    wj_font_cjk[], wj_font_cjk_end[], wj_logo_mark[];
+    wj_font_cjk[], wj_font_cjk_end[], wj_font_kr[], wj_font_kr_end[], wj_logo_mark[];
 
 static int visualizer, pcm_available;
 
@@ -129,14 +129,16 @@ int main(int argc, char **argv) {
         { wj_font_latin, (long)(wj_font_latin_end - wj_font_latin) },
         { wj_font_greek, (long)(wj_font_greek_end - wj_font_greek) },
         { wj_font_cjk, (long)(wj_font_cjk_end - wj_font_cjk) },
+        { wj_font_kr, (long)(wj_font_kr_end - wj_font_kr) },
     };
-    int font = wj_font_init(faces, 3, wj_gfx_scale_x(), wj_gfx_scale_y());
+    int font = wj_font_init(faces, 4, wj_gfx_scale_x(), wj_gfx_scale_y());
     wj_ui_init((void *)wj_logo_mark);
     ASND_Init();
     MP3Player_Init();
     pcm_available = wj_pcm_init() == 0;
     wj_session_init(argc, argv);
-    if (font) wj_session_set_message("The interface font could not be loaded");
+    if (font) wj_session_set_message(font < 0 ? "The interface font could not be loaded" :
+                                     "Some fallback fonts could not be loaded");
 
     int b_combo = 0, dragging = 0, preview = -1, leave = 0;
     long long preview_until = 0, delete_at = 0;

@@ -9,15 +9,18 @@
 typedef void (*wj_glyph_sink)(void *context, float x0, float y0, float x1, float y1,
                               float u0, float v0, float u1, float v1);
 
-#define WJ_FONT_FACES 3
+#define WJ_FONT_FACES 4
 
 struct wj_font_face { const void *data; long size; };
 
 /* scale_x/scale_y are framebuffer pixels per layout unit, so glyphs are
    rasterized at the size they appear on screen (widescreen squeezes x).
-   Each code point comes from the first face that has it; faces[0] is required. */
+   Each code point comes from the first face that has it; faces[0] is required.
+   Returns -1 if faces[0] fails, else how many of the other faces could not be opened. */
 int wj_font_init(const struct wj_font_face *faces, int count, float scale_x, float scale_y);
 void wj_font_shutdown(void);
+/* Whether some face has a glyph for `code`; anything else draws a missing-glyph box. */
+int wj_font_covers(unsigned code);
 /* Called before the atlas is wiped, so a GPU still reading it can finish first. */
 void wj_font_set_reset_hook(void (*hook)(void));
 /* Caches every glyph of `text`, even when the atlas resets partway through it,

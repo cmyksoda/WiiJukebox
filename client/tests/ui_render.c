@@ -5,6 +5,7 @@
 #include "font.h"
 #include "ui.h"
 #include "gx_soft.h"
+#include "utf8.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -530,16 +531,57 @@ static void entry_screen(struct wj_session *s, struct wj_pointer *none) {
     assert(!has_target(WJ_TARGET_KEY));
 }
 
+/* A page of names in every script the fonts reach: each row must show ink, never a blank, and no
+   character may need the missing-glyph box. */
+static void names_list(struct wj_session *s, struct wj_pointer *none) {
+    memset(&s->menu, 0, sizeof(s->menu));
+    s->count = 0;
+    s->view = WJ_VIEW_BROWSE;
+    s->depth = 1;
+    snprintf(s->title, sizeof(s->title), "Artists");
+    const char *names[] = {
+        "\xeb\xb0\xa9\xed\x83\x84\xec\x86\x8c\xeb\x85\x84\xeb\x8b\xa8", "Love Yourself \xe8\xbd\x89 \xe2\x80\x98Tear\xe2\x80\x99",
+        "\xe5\x91\xaa\xe8\xa9\x9b",
+        "\xe6\xa4\x8e\xe5\x90\x8d\xe6\x9e\x97\xe6\xaa\x8e", "\xe5\xae\x87\xe5\xa4\x9a\xe7\x94\xb0\xe3\x83\x92\xe3\x82\xab\xe3\x83\xab",
+        "\xeb\xb8\x94\xeb\x9e\x99\xed\x95\x91\xed\x81\xac", "\xec\x95\x84\xec\x9d\xb4\xec\x9c\xa0", "\xe6\x9d\xb1\xe4\xba\xac\xe4\xba\x8b\xe5\xa4\x89",
+        "\xe3\x85\x8b\xe3\x85\x8b\xe3\x85\x8b", "Sigur R\xc3\xb3s", "\xce\xa3\xcf\x89\xce\xba\xcf\x81\xce\xac\xcf\x84\xce\xb7\xcf\x82", "\xd0\x9a\xd0\xb8\xd0\xbd\xd0\xbe",
+    };
+    for (int i = 0; i < 12; i++) {
+        for (const char *cursor = names[i]; *cursor;) assert(wj_font_covers(wj_utf8_next(&cursor)));
+        item(s, "artist", "artist", names[i], "3 albums");
+    }
+    s->total = 12;
+    s->offset = 0;
+    s->selected = 1;
+    draw(s, none, 40);
+    save("25-names");
+    static unsigned char frame[640 * 480 * 3];
+    gx_soft_frame(frame);
+    float scale = 640 / layout_width();
+    for (int row = 0; row < 12; row++) {
+        // Ink is anything unlike the row's own fill, just left of its text.
+        int y0 = (int)(116 + row * 21 + 4), left = (int)(62 * scale), ink = 0;
+        const unsigned char *fill = frame + (((int)(116 + row * 21 + 10)) * 640 + left - 4) * 3;
+        for (int y = y0; y < y0 + 13; y++)
+            for (int x = left; x < left + 60; x++) {
+                const unsigned char *c = frame + (y * 640 + x) * 3;
+                ink += differs(c, fill, 60);
+            }
+        assert(ink > 30);
+    }
+}
+
 int main(int argc, char **argv) {
-    assert(argc >= 5);
-    out = argc > 5 ? argv[5] : NULL;
+    assert(argc >= 6);
+    out = argc > 6 ? argv[6] : NULL;
     static unsigned char logo[32 * 48] __attribute__((aligned(32)));
-    assert(load(argv[4], logo, sizeof(logo)) == sizeof(logo));
-    static unsigned char latin[1024 * 1024], greek[256 * 1024], cjk[2 * 1024 * 1024];
+    assert(load(argv[5], logo, sizeof(logo)) == sizeof(logo));
+    static unsigned char latin[1024 * 1024], greek[256 * 1024], cjk[3 * 1024 * 1024], korean[3 * 1024 * 1024];
     const struct wj_font_face faces[] = {
         { latin, load(argv[1], latin, sizeof(latin)) },
         { greek, load(argv[2], greek, sizeof(greek)) },
         { cjk, load(argv[3], cjk, sizeof(cjk)) },
+        { korean, load(argv[4], korean, sizeof(korean)) },
     };
     paint_art(art, WJ_ART_SIZE);
     paint_art(large_art, WJ_ART_LARGE);
@@ -548,7 +590,7 @@ int main(int argc, char **argv) {
         gx_soft_set_aspect(wide);
         assert(!wj_gfx_init());
         wj_font_shutdown();
-        assert(!wj_font_init(faces, 3, wj_gfx_scale_x(), wj_gfx_scale_y()));
+        assert(!wj_font_init(faces, 4, wj_gfx_scale_x(), wj_gfx_scale_y()));
         wj_ui_init(logo);
         struct wj_pointer none = { 0, 0, 0 };
         for (dark = 0; dark < 2; dark++) {
@@ -558,6 +600,7 @@ int main(int argc, char **argv) {
             album(&s, &none);
             home_menu(&s, &none);
             entry_screen(&s, &none);
+            names_list(&s, &none);
 
             memset(&s.menu, 0, sizeof(s.menu));
             s.count = s.total = 0;
@@ -569,7 +612,7 @@ int main(int argc, char **argv) {
         }
     }
     printf("UI render: discovery and its help, servers, sources, album list, now playing, shuffle and repeat states, expanded cover, "
-           "HOME menu, address numpad and empty folder in light and dark at 4:3 and 16:9 (%d frames, software GX)\n",
+           "HOME menu, address numpad, a page of names in every script and empty folder in light and dark at 4:3 and 16:9 (%d frames, software GX)\n",
            gx_soft_frames());
     return 0;
 }

@@ -34,9 +34,10 @@ choice is saved as `theme=dark` or `theme=light` in `sd:/apps/wiijukebox/setting
 Menu. Without a writable SD card the choice lasts for that run.
 
 Text is drawn with FreeType from embedded Nunito (Latin, Cyrillic), the web UI's
-typeface, with its kerning applied, then Noto Sans (Greek) and Noto Sans CJK JP
-(kana and common kanji) subsets; characters outside both,
-such as Hangul or emoji, show a missing-glyph box instead of `?`. Building the host tests needs FreeType
+typeface, with its kerning applied, then Noto Sans (Greek), Noto Sans CJK JP (kana and the
+6,355 JIS level 1 and 2 kanji) and Noto Sans CJK KR (all 11,172 Hangul syllables and the compatibility jamo)
+subsets, in that order, so Han characters shared by Japanese and Korean keep their Japanese forms. Characters outside
+all of them, such as emoji or Thai, show a missing-glyph box instead of `?`. Building the host tests needs FreeType
 development headers (`pkg-config freetype2`).
 
 ## Build and install
