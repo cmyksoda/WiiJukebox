@@ -300,7 +300,8 @@ function openSidebarSettings() {
             h('h3', { id: 'sheet-title', text: 'Sidebar settings' }),
             h('p', { id: 'sheet-hint', text: 'Unticked channels are hidden from the sidebar, Home and your Wii. '
                 + 'They keep working, and anything playing carries on.' })),
-        h('fieldset', { class: 'svc-list' }, h('legend', { class: 'sr-only', text: 'Channels to show' }), rows),
+        // Not a fieldset: Chromium paints a scrolling fieldset's rows over the buttons below it.
+        h('div', { class: 'svc-list', role: 'group', 'aria-label': 'Channels to show' }, rows),
         h('div', { class: 'buttons' }, showAll, done));
     sidebarSettings.paint = () => {
         for (const src of state.sources) {

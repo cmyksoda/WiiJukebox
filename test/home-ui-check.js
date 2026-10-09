@@ -891,6 +891,24 @@ const check = (label, ok) => {
             await view.context().close();
         }
 
+        {
+            // On a window too short for the list, it scrolls inside its own box, clear of the buttons beneath it.
+            const view = await open({ width: 1280, height: 520 }, false);
+            await openSettings(view);
+            const sheetNow = await view.evaluate(() => {
+                const dialog = document.querySelector('dialog.sheet');
+                const list = dialog.querySelector('.svc-list');
+                const box = list.getBoundingClientRect();
+                const done = [...dialog.querySelectorAll('button')].find((button) => button.textContent === 'Done').getBoundingClientRect();
+                const hit = document.elementFromPoint(done.x + done.width / 2, done.y + done.height / 2);
+                return { group: list.tagName === 'DIV' && list.getAttribute('role') === 'group' && list.getAttribute('aria-label') === 'Channels to show',
+                    scrolls: list.scrollHeight > list.clientHeight, clear: box.bottom <= done.top, hit: hit?.textContent };
+            });
+            check('the sheet\'s channel list is a named group that scrolls inside its own box and stays clear of the buttons', sheetNow.group && sheetNow.scrolls && sheetNow.clear && sheetNow.hit === 'Done', JSON.stringify(sheetNow));
+            await view.keyboard.press('Escape');
+            await view.context().close();
+        }
+
         // The dialog's edges and text stay on whole pixels at 1x, at odd and even widths and on a phone.
         for (const [name, viewport, phone] of [['1281x801', { width: 1281, height: 801 }, false], ['1280x800', { width: 1280, height: 800 }, false],
             ['390x844', { width: 390, height: 844 }, true], ['375x667', { width: 375, height: 667 }, true], ['361x640', { width: 361, height: 640 }, true]]) {
