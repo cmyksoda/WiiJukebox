@@ -754,7 +754,7 @@ async function checkBarMenu(app, bar, page) {
         firstFocused: document.activeElement.querySelector?.('.label')?.textContent,
     })`));
     check('it lists the same entries as the tray menu, then View and Quit', ['Connect your Wii…', 'Copy Wii address', 'Copy stream address', 'Open in browser', 'Restart server', 'Server name and port…',
-        'Install or update yt-dlp…', 'Start at login', 'Keep playing when the window is closed', 'Use system title bar', 'Theme', 'Show settings folder', 'Show server log', 'View', 'Quit']
+        'Install or update yt-dlp…', 'Start at login', 'Keep playing when the window is closed', 'Use system title bar', 'Theme', 'Sidebar settings…', 'Show settings folder', 'Show server log', 'View', 'Quit']
         .every((label) => menu.labels.includes(label)) && menu.labels.at(-1) === 'Quit' && menu.labels.at(-2) === 'View', menu.labels.join(' | '));
     check('with separators between the groups', menu.separators >= 4);
     check('its rows are 28px high with 13px text, and the menu sits on whole pixels',
@@ -784,8 +784,7 @@ async function checkBarMenu(app, bar, page) {
     await key('ArrowLeft');
     check('Left closes the submenu and returns to View', await focused() === 'View' && await bar.evaluate("document.querySelector('#menu-sub').hidden"));
     for (let i = 0; i < 4; i++) await key('ArrowUp');
-    check('Up skips the separators', await focused() === 'Use system title bar');
-    await key('ArrowDown');
+    check('Up skips the separators', await focused() === 'Theme');
     await key('Enter');
     const themeSub = JSON.parse(await bar.evaluate(`JSON.stringify({ labels: [...document.querySelectorAll('#menu-sub .label')].map((n) => n.textContent),
         checks: [...document.querySelectorAll('#menu-sub .item')].map((n) => n.getAttribute('aria-checked')) })`));
@@ -850,6 +849,14 @@ async function checkBarMenu(app, bar, page) {
         await until('the light bar', () => bar.evaluate("document.documentElement.dataset.theme === 'light'"), 8000).then(() => true, () => false));
     check('and ticks Light in the menu', await until('the tick', async () => JSON.parse(await inMain("return JSON.stringify(electron.Menu.getApplicationMenu().getMenuItemById('theme-light').checked)")), 8000).then(() => true, () => false));
     await choose(['Theme', 'System']);
+    // Sidebar settings… presses the page's own control, which opens its sheet.
+    await choose(['Sidebar settings…']);
+    const sheetOpen = () => page.evaluate("!!document.querySelector('dialog.sheet[open]')");
+    check('Sidebar settings… closes the menu and opens the web UI\'s own sheet', await closed('the menu to close') && await until('the sheet', sheetOpen, 8000).then(() => true, () => false));
+    await page.evaluate("document.querySelector('dialog.sheet').close(); true");
+    await clickMenuItem('sidebar-settings');
+    check('and so does the same entry in the application menu', await until('the sheet', sheetOpen, 8000).then(() => true, () => false));
+    await page.evaluate("document.querySelector('dialog.sheet').close(); true");
     check('System hands the colors back to the system on both', await until('system', async () =>
         await page.evaluate("document.documentElement.dataset.theme === undefined && localStorage.getItem('wiijukebox.theme') === null") && await bar.evaluate("document.documentElement.dataset.theme === undefined"), 8000).then(() => true, () => false));
 }

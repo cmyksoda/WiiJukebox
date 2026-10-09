@@ -15,7 +15,7 @@ const { wiiAddress, probeDiscovery, findFreePort, portIsFree } = require('./lib/
 const { guidance, allowWindowsFirewall } = require('./lib/firewall');
 const { openLog } = require('./lib/logfile');
 const { APP_NAME, TitleFeed } = require('./lib/window-title');
-const { READ_THEME, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require('./lib/page-theme');
+const { READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require('./lib/page-theme');
 const { BAR_HEIGHT, layoutViews } = require('./lib/window-layout');
 const { buildMenuModel } = require('./lib/menu-model');
 
@@ -328,6 +328,13 @@ async function setPageTheme(choice) {
     if (currentPage !== 'player' || !content) return;
     await content.webContents.executeJavaScript(chooseThemeScript(choice)).catch(() => {});
     await themeFeed?.poll({ force: true });
+}
+
+// The sheet is the page's own, opened by pressing its control, so a window in the tray comes back to show it.
+async function openSidebarSettings() {
+    if (currentPage !== 'player' || !content) return;
+    showMainWindow();
+    await content.webContents.executeJavaScript(OPEN_SIDEBAR_SETTINGS).catch(() => {});
 }
 
 // Page titles of the web UI are ignored: the title comes from the server's status, so it reads the same everywhere.
@@ -707,6 +714,7 @@ function commonItems() {
                 id: `theme-${id}`, label, type: 'radio', checked: themeChoice === id, click: () => setPageTheme(id),
             })),
         },
+        { id: 'sidebar-settings', label: 'Sidebar settings…', enabled: currentPage === 'player', click: openSidebarSettings },
         { type: 'separator' },
         { label: 'Show settings folder', click: () => shell.openPath(path.dirname(serverSettings.file)) },
         { label: 'Show server log', click: () => shell.showItemInFolder(logFile) },

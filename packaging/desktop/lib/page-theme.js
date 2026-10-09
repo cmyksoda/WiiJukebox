@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The web UI keeps its own theme choice (System, Light or Dark in localStorage, shown as data-theme on
 // <html>). The app never gives the page a bridge: it reads that choice, and sets it by pressing the page's own control.
+// Its Sidebar settings sheet is opened the same way.
 
 const CHOICES = ['system', 'light', 'dark'];
 
@@ -25,6 +26,9 @@ function chooseThemeScript(choice) {
     if (!CHOICES.includes(choice)) throw new Error(`unknown theme: ${choice}`);
     return `document.querySelector('[data-theme-choice="${choice}"]')?.click()`;
 }
+
+/** Script that presses the page's own control for its Sidebar settings sheet. */
+const OPEN_SIDEBAR_SETTINGS = `document.querySelector('#sidebar-settings')?.click()`;
 
 /** What the title bar and the dialogs are told: the forced theme, or null to follow the system like the page does. */
 const forcedTheme = (choice) => (choice === 'light' || choice === 'dark' ? choice : null);
@@ -80,4 +84,4 @@ class ThemeFeed {
     }
 }
 
-module.exports = { CHOICES, READ_THEME, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed };
+module.exports = { CHOICES, READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed };

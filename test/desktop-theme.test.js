@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const vm = require('node:vm');
-const { READ_THEME, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require(path.join(__dirname, '..', 'packaging', 'desktop', 'lib', 'page-theme'));
+const { READ_THEME, OPEN_SIDEBAR_SETTINGS, parsePageTheme, chooseThemeScript, forcedTheme, ThemeFeed } = require(path.join(__dirname, '..', 'packaging', 'desktop', 'lib', 'page-theme'));
 
 // A stand-in page: <html> with a data-theme, and the Theme control's buttons.
 function fakePage(theme) {
@@ -32,6 +32,12 @@ test('a choice is made by pressing the page\'s own button, and only for the thre
     for (const choice of ['system', 'light', 'dark']) page.run(chooseThemeScript(choice));
     assert.deepEqual(page.pressed, ['[data-theme-choice="system"]', '[data-theme-choice="light"]', '[data-theme-choice="dark"]']);
     for (const bad of ['sepia', '"]; alert(1); ["', '', undefined, null]) assert.throws(() => chooseThemeScript(bad), /unknown theme/);
+});
+
+test('Sidebar settings is opened by pressing the page\'s own control, and nothing else', () => {
+    const page = fakePage();
+    page.run(OPEN_SIDEBAR_SETTINGS);
+    assert.deepEqual(page.pressed, ['#sidebar-settings']);
 });
 
 test('the title bar is told to force Light or Dark, and to follow the system otherwise', () => {
