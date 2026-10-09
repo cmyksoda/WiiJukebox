@@ -1597,7 +1597,7 @@ $('#search').oninput = (e) => {
     try {
         const settings = await api('/settings');
         state.mount = settings.mount;
-        $('#wii-address').textContent = `If it can't find the server, give it this address: ${settings.hostIp}:${settings.port}`;
+        $('#wii-address').textContent = `If it can't find the server, press HOME on the Wii, choose Server address and type this address: ${settings.hostIp}:${settings.port}`;
         $('#stream-addr').textContent = `Other music players can open http://${settings.hostIp}:${settings.port}${settings.mount}`;
     } catch {
         /* non-fatal; the setup panel just shows less */
