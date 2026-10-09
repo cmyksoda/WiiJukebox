@@ -135,10 +135,11 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .g-next::after { clip-path: inset(14% 11% 14% 79% round 2px); }
 .g-prev::before { clip-path: polygon(89% 14%, 35% 50%, 89% 86%); }
 .g-prev::after { clip-path: inset(14% 79% 14% 11% round 2px); }
-/* Shuffle is one arrow mirrored top to bottom; repeat is one half-loop turned half way round. */
+/* Shuffle is one arrow mirrored top to bottom, crossing at the center so the X reads centered;
+   repeat is one half-loop turned half way round. */
 .g-shuffle::before, .g-shuffle::after, .g-repeat::before, .g-repeat::after { content: ""; position: absolute; inset: 0; background: currentColor; }
 .g-shuffle::before, .g-shuffle::after {
-    clip-path: polygon(2% 67%, 25.5% 67%, 57.5% 23%, 76% 23%, 76% 14%, 98% 28%, 76% 42%, 76% 33%, 62.5% 33%, 30.5% 77%, 2% 77%);
+    clip-path: polygon(2% 67%, 31.5% 67%, 63.5% 23%, 76% 23%, 76% 14%, 98% 28%, 76% 42%, 76% 33%, 68.5% 33%, 36.5% 77%, 2% 77%);
 }
 .g-shuffle::after { transform: scaleY(-1); }
 .g-repeat::before, .g-repeat::after {
