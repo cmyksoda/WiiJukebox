@@ -731,7 +731,8 @@ async function checkBarMenu(app, bar, page) {
     const focused = () => bar.evaluate("document.activeElement.querySelector?.('.label')?.textContent ?? document.activeElement.id");
     const mouse = (type, x, y) => bar.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
     const settingsFile = path.join(app.userData, 'settings.json');
-    const savedMode = () => JSON.parse(fs.readFileSync(settingsFile, 'utf8')).onClose;
+    // The app rewrites the file in place, so a read can land halfway through; that just means "not yet".
+    const savedMode = () => { try { return JSON.parse(fs.readFileSync(settingsFile, 'utf8')).onClose; } catch { return null; } };
 
     await bar.evaluate("document.querySelector('#menu').click(); true");
     check('the menu button opens the menu', await opened());
@@ -1078,7 +1079,8 @@ async function checkSystemTitleBar() {
 async function checkCloseDialog() {
     console.log('\n== close card: asking what closing does ==');
     const settingsFile = (app) => path.join(app.userData, 'settings.json');
-    const saved = (app) => JSON.parse(fs.readFileSync(settingsFile(app), 'utf8')).onClose;
+    // The app rewrites the file in place, so a read can land halfway through; that just means "not yet".
+    const saved = (app) => { try { return JSON.parse(fs.readFileSync(settingsFile(app), 'utf8')).onClose; } catch { return null; } };
     const mainWindow = "electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow())";
     const record = () => inMain(`
         const window = ${mainWindow};
