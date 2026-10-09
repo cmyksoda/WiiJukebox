@@ -170,6 +170,10 @@ function showMainWindow() {
     themeFeed?.resume();
     if (win.isMinimized()) win.restore();
     win.show();
+    // Views hidden with their window can come back unpainted until something invalidates them.
+    relayout?.();
+    content.webContents.invalidate();
+    bar?.webContents.invalidate();
     win.focus();
     content.webContents.focus();
 }
@@ -233,7 +237,8 @@ function createWindow(geometry) {
     view.webContents.on('enter-html-full-screen', fullScreenChanged(true));
     view.webContents.on('leave-html-full-screen', fullScreenChanged(false));
     window.contentView.on('bounds-changed', layout);
-    for (const event of ['enter-full-screen', 'leave-full-screen']) window.on(event, layout);
+    // A window created hidden can report a 0x0 content area on Linux, and showing it fires no bounds change.
+    for (const event of ['enter-full-screen', 'leave-full-screen', 'show', 'restore', 'resize', 'maximize', 'unmaximize']) window.on(event, layout);
     layout();
     relayout = layout;
 
