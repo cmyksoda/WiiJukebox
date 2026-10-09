@@ -845,8 +845,8 @@ static void expanded_art(const struct wj_session *s, long long now) {
 }
 
 static void toast_and_volume(const struct wj_session *s, long long now) {
-    // The finding-server panel already shows the whole message.
-    if (s->message[0] && !(s->view == WJ_VIEW_SERVERS && !s->count) && !s->entry.open) {
+    // The finding-server panel already shows the whole message, and the cover view's hint sits in the toast's place.
+    if (s->message[0] && !(s->view == WJ_VIEW_SERVERS && !s->count) && !s->entry.open && !art_open) {
         snprintf(toast, sizeof(toast), "%s", s->message);
         toast_alpha += (1 - toast_alpha) * 0.25f;
     } else toast_alpha *= 0.85f;

@@ -316,6 +316,15 @@ static void album(struct wj_session *s, struct wj_pointer *none) {
         hint_bottom = y + 1;
     }
     assert(hint_top > zone_top + 6 && hint_bottom < valley - 2 && hint_top + hint_bottom == zone_top + valley);
+    // A toast would print over the hint, so a message leaves the zone as it was while the cover is open.
+    static unsigned char quiet[640 * 480 * 3], noisy[640 * 480 * 3];
+    draw(s, none, 30);
+    gx_soft_frame(quiet);
+    snprintf(s->message, sizeof(s->message), "%s", "Audio ready");
+    draw(s, none, 15);
+    gx_soft_frame(noisy);
+    for (int y = zone_top; y < valley; y++) assert(!memcmp(quiet + (y * 640 + 200) * 3, noisy + (y * 640 + 200) * 3, 240 * 3));
+    s->message[0] = 0;
     assert(wj_ui_hit(art_x, WJ_PANEL_TOP + 12 + 54).target == WJ_TARGET_NONE);
     pixel(4, 470, c);
     assert(c[0] < 90 && c[1] < 90 && c[2] < 100);
