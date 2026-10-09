@@ -57,7 +57,8 @@ Homebrew Channel. Do not put upstream service passwords on the SD card.
 Allow port 4005 on the host's LAN interface, both TCP (the web UI and audio) and
 UDP (discovery). Guest Wi-Fi/client isolation or different subnets can block discovery.
 The prototype supports IPv4. For networks that block broadcast discovery,
-pass an IPv4 address and HTTP port as a launch argument, for example:
+type the address on the Wii (see "Typing the server's address" below) or pass an IPv4
+address and HTTP port as a launch argument, for example:
 
 ```sh
 WIILOAD=tcp:192.168.0.8 wiiload client/dist/apps/wiijukebox/boot.dol 192.168.0.3:4280
@@ -69,24 +70,6 @@ initialization errors and the Wii's assigned IP are shown on screen; failed
 discovery retries automatically. During initialization, `1` cancels and restarts
 the attempt. The screen shows the attempt number and elapsed seconds; a
 30-second initialization deadline requests network cleanup before retrying.
-
-### Typing the server's address
-
-When discovery cannot reach the server, press **HOME** and choose **Server address…**. The server screen's
-**Enter address** button, shown when no server answers and above the server list, opens the same numpad. The
-field starts with the Wii's own network prefix, such as `192.168.0.`, so usually only the last number is left to
-type. Keys are the digits, `.`, `:`, backspace, **Clear** and **Connect**. Point at a key and press A, or move the
-focus with the D-pad and press A. B deletes the last character (hold it to repeat); with nothing typed, or only
-the prefix, B closes the numpad, as does the dock's back button. An address is `a.b.c.d` or `a.b.c.d:port`; the
-port is 4005, the server default, unless you type one. The field refuses text no address could become (at most
-four numbers of three digits, one colon, a port of five digits), and Connect says under the field why an address
-is not valid.
-
-Connect verifies the server with `/api/wii/info`, the same check a launch argument gets, then selects it. The
-address is saved in `sd:/apps/wiijukebox/server.addr` and used on later launches like a launch argument, which
-still wins when both are present. An address that stops answering falls back to discovery, and the numpad's
-**Forget it** button, shown while an address is saved, removes it. Without a writable SD card the address works
-for that run only.
 
 For alternate ports, set `port` and `discoveryPort` in the server's `config.json`
 and rebuild with the matching discovery port, for example
@@ -129,6 +112,24 @@ seek-to-audible time from about 4.3 s to 0.3 s, measured with real-time playout;
 a Wii adds its Wi-Fi round trip and decoder restart. Navigation movement stays responsive during
 requests; open/back and transport presses wait for the current request to
 finish.
+
+### Typing the server's address
+
+When discovery cannot reach the server, press **HOME** and choose **Server address…**. The server screen's
+**Enter address** button, shown when no server answers and above the server list, opens the same numpad. The
+field starts with the Wii's own network prefix, such as `192.168.0.`, so usually only the last number is left to
+type. Keys are the digits, `.`, `:`, backspace, **Clear** and **Connect**. Point at a key and press A, or move the
+focus with the D-pad and press A. B deletes the last character (hold it to repeat); with nothing typed, or only
+the prefix, B closes the numpad, as does the dock's back button. An address is `a.b.c.d` or `a.b.c.d:port`; the
+port is 4005, the server default, unless you type one. The field refuses text no address could become (at most
+four numbers of three digits, one colon, a port of five digits), and Connect says under the field why an address
+is not valid.
+
+Connect verifies the server with `/api/wii/info`, the same check a launch argument gets, then selects it. The
+address is saved in `sd:/apps/wiijukebox/server.addr` and used on later launches like a launch argument, which
+still wins when both are present. An address that stops answering falls back to discovery, and the numpad's
+**Forget it** button, shown while an address is saved, removes it. Without a writable SD card the address works
+for that run only.
 
 ## Controls
 
