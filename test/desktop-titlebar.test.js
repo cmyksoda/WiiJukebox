@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const lib = path.join(__dirname, '..', 'packaging', 'desktop', 'lib');
 const { windowTitle, TitleFeed } = require(path.join(lib, 'window-title'));
@@ -103,4 +104,14 @@ test('the system title bar is off until chosen, and a mistyped value is ignored'
     assert.equal(new Settings(file).get('systemTitleBar'), true);
     require('node:fs').writeFileSync(file, JSON.stringify({ systemTitleBar: 'yes' }));
     assert.equal(new Settings(file).get('systemTitleBar'), false);
+});
+
+test('the bar draws the sidebar logo\'s jukebox, not a second drawing of it', () => {
+    const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', ...parts), 'utf8');
+    const drawing = (svg) => ({ path: svg.match(/ d="([^"]+)"/)[1], box: svg.match(/viewBox="([^"]+)"/)[1] });
+    const logo = read('public', 'images', 'jukebox.svg');
+    const bar = read('packaging', 'desktop', 'ui', 'titlebar.html');
+    assert.deepEqual(drawing(bar), drawing(logo));
+    assert.match(logo, /translate\(0\.000000,1440\.000000\) scale\(0\.100000,-0\.100000\)/);
+    assert.match(bar, /translate\(0 1440\) scale\(\.1 -\.1\)/, 'the same flip and scale as the source');
 });
