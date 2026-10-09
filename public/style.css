@@ -438,7 +438,8 @@ body.viz #viz-fullscreen { display: inline-grid; }
 .channel.error .dot { background: var(--danger); }
 .channel.playing { border-color: var(--accent); }
 
-.card-wrap { position: relative; }
+/* Own stacking context, so a card's play button can't paint over the sticky toolbar. */
+.card-wrap { position: relative; isolation: isolate; }
 .card {
     display: flex;
     flex-direction: column;
