@@ -31,6 +31,7 @@ class SourceRegistry {
 
     /** Every source type known, with enough detail for the WebUI to list them. */
     describe() {
+        const hidden = new Set(this.hidden());
         return REGISTRY.map((Cls) => {
             const instance = this._instances.get(Cls.id);
             return {
@@ -40,9 +41,33 @@ class SourceRegistry {
                 suggests: Cls.suggests,
                 state: instance ? instance.state : 'idle',
                 configured: this._isConfigured(Cls.id),
+                hidden: hidden.has(Cls.id),
                 capabilities: instance ? instance.capabilities : {},
             };
         });
+    }
+
+    /** Ids left out of navigation, in registry order. Ids this build does not know are ignored. */
+    hidden() {
+        const saved = this.config.data.ui?.hiddenSources;
+        const ids = new Set(Array.isArray(saved) ? saved : []);
+        return REGISTRY.filter((Cls) => ids.has(Cls.id)).map((Cls) => Cls.id);
+    }
+
+    /** Hiding only changes what menus offer: a hidden service keeps its settings, and keeps playing. */
+    setHidden(change) {
+        const { hide = [], show = [] } = change ?? {};
+        const invalid = (list) => !Array.isArray(list) || list.some((id) => !REGISTRY.some((Cls) => Cls.id === id));
+        if (invalid(hide) || invalid(show)) {
+            throw Object.assign(new Error('hide and show take lists of known service ids'), { code: 400 });
+        }
+        const next = new Set(this.hidden());
+        for (const id of hide) next.add(id);
+        for (const id of show) next.delete(id);
+        const hiddenSources = REGISTRY.filter((Cls) => next.has(Cls.id)).map((Cls) => Cls.id);
+        this.config.data.ui = { ...this.config.data.ui, hiddenSources };
+        this.config.save();
+        return this.hidden();
     }
 
     _isConfigured(id) {

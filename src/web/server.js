@@ -331,6 +331,19 @@ class WebServer {
             return this._json(res, 200, { ok: true });
         }
 
+        if (section === 'ui' && rest[0] === 'hidden-sources' && rest.length === 1) {
+            if (req.method === 'GET') return this._json(res, 200, { hidden: this.registry.hidden() });
+            if (req.method === 'POST') {
+                try {
+                    const hidden = this.registry.setHidden(await this._readBody(req));
+                    this._broadcast('sources', { hidden });
+                    return this._json(res, 200, { hidden });
+                } catch (err) {
+                    return this._json(res, err instanceof SyntaxError ? 400 : err.code || 500, { error: err.message });
+                }
+            }
+        }
+
         if (section === 'art' && req.method === 'GET' && rest.length === 1) {
             return this.art.serve(rest[0], res);
         }

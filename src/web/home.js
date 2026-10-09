@@ -38,18 +38,18 @@ class HomeService {
 
     /** Local data only, so it answers at once: recent plays, which rows each service has and who is primary. */
     overview() {
-        const configured = this._configured();
+        const shown = this._shown();
         const primary = this.primary();
-        const services = [...configured.values()]
+        const services = [...shown.values()]
             .filter((source) => this._hasRows(source.id, primary))
             .sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id))
             .map((source) => ({
                 id: source.id, label: source.label,
                 rows: classFor(source.id).homeRows.map(({ id, title }) => ({ id, title })),
             }));
-        const recent = this.history.list().filter((entry) => configured.has(entry.source)).slice(0, RECENT_LIMIT)
+        const recent = this.history.list().filter((entry) => shown.has(entry.source)).slice(0, RECENT_LIMIT)
             .map((entry) => ({
-                id: entry.id, source: entry.source, sourceLabel: configured.get(entry.source).label, type: entry.type,
+                id: entry.id, source: entry.source, sourceLabel: shown.get(entry.source).label, type: entry.type,
                 title: entry.title, subtitle: entry.subtitle, artwork: this.art.link(entry.art), at: entry.at,
                 item: this._publish({ ...entry.item, artwork: entry.art || entry.item.artwork }),
             }));
@@ -57,12 +57,12 @@ class HomeService {
     }
 
     /**
-     * The library service whose suggestions fill the page: the saved choice while it is still set up,
-     * else the first one that is. `auto` says nobody has chosen (or the choice has gone).
+     * The library service whose suggestions fill the page: the saved choice while it is still set up and
+     * shown, else the first one that is. `auto` says nobody has chosen (or the choice has gone).
      */
     primary() {
-        const configured = this._configured();
-        const eligible = REGISTRY.filter((cls) => cls.suggests && configured.has(cls.id))
+        const shown = this._shown();
+        const eligible = REGISTRY.filter((cls) => cls.suggests && shown.has(cls.id))
             .map((cls) => ({ id: cls.id, label: cls.label }));
         const chosen = eligible.find((entry) => entry.id === this.config.data.home?.primary);
         return { id: (chosen || eligible[0])?.id ?? null, auto: !chosen, eligible };
@@ -74,6 +74,9 @@ class HomeService {
             const cls = typeof id === 'string' ? classFor(id) : null;
             if (!cls?.suggests) throw Object.assign(new Error('that service has no suggestions to put on the home screen'), { code: 400 });
             if (!this._configured().has(id)) throw Object.assign(new Error(`${cls.label} is not set up yet`), { code: 400 });
+            if (!this._shown().has(id)) {
+                throw Object.assign(new Error(`${cls.label} is hidden; show it in Sidebar settings first`), { code: 400 });
+            }
         }
         this.config.data.home = { ...this.config.data.home, primary: id };
         this.config.save();
@@ -82,7 +85,7 @@ class HomeService {
 
     /** One service's rows. A row that fails carries its own error; a service that will not connect has one. */
     async service(id) {
-        const source = this._configured().get(id);
+        const source = this._shown().get(id);
         if (!source || !this._hasRows(id, this.primary())) throw Object.assign(new Error(`no home rows for ${id}`), { code: 404 });
         const rows = classFor(id).homeRows;
         try {
@@ -114,6 +117,11 @@ class HomeService {
 
     _configured() {
         return new Map(this.registry.describe().filter((source) => source.configured).map((source) => [source.id, source]));
+    }
+
+    // What the home screen offers: a hidden service has no rows, no recent plays and cannot be primary.
+    _shown() {
+        return new Map([...this._configured()].filter(([, source]) => !source.hidden));
     }
 
     // Only rows that come from a service are cached; saved stations and recent links must show edits at once.

@@ -84,6 +84,7 @@ test('no browser-facing response carries a service link or credential, and every
         await get('/api/status');
         await get('/api/settings');
         await get('/api/sources');
+        await get('/api/ui/hidden-sources');
         for (const id of ['subsonic', 'jellyfin', 'plex', 'podcasts']) {
             await get(`/api/sources/${id}/settings`);
             await get(`/api/sources/${id}/info`);

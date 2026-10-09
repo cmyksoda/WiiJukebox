@@ -102,3 +102,20 @@ test('Wii tracks retain their full album context across pages; the album ref sta
     const status = await (await fetch(`${url}/api/wii/status`)).text();
     assert.match(status, /progress\t1000\t120000/);
 }));
+
+test('the Wii source list leaves out hidden services, and the ones still listed browse as before', () => fixture(async ({ url, registry }) => {
+    const listed = async () => (await (await fetch(`${url}/api/wii/sources`)).text()).trim().split('\n').slice(1)
+        .map((line) => line.split('\t')[1]);
+    const everything = registry.describe().filter((source) => source.configured).map((source) => source.id);
+    assert.ok(everything.includes('podcasts') && everything.includes('radio'));
+    assert.deepEqual(await listed(), everything);
+
+    registry.setHidden({ hide: ['podcasts', 'ytdlp', 'airplay'] });
+    assert.deepEqual(await listed(), everything.filter((id) => !['podcasts', 'ytdlp', 'airplay'].includes(id)),
+        'hidden ones are gone, and hiding one that was not listed anyway changes nothing');
+    assert.equal((await fetch(`${url}/api/wii/browse?source=radio`)).status, 200);
+    assert.equal((await fetch(`${url}/api/wii/browse?source=podcasts`)).status, 200, 'a hidden one can still be browsed');
+
+    registry.setHidden({ show: ['podcasts', 'ytdlp', 'airplay'] });
+    assert.deepEqual(await listed(), everything);
+}));

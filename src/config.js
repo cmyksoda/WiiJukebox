@@ -68,6 +68,9 @@ const DEFAULTS = {
     // leaves it to the first one that is set up.
     home: { primary: null },
 
+    // Services left out of the web sidebar and home, and off the Wii's source list.
+    ui: { hiddenSources: [] },
+
     // Shuffle and repeat ('off', 'all' or 'one'), kept across restarts.
     playModes: { shuffle: false, repeat: 'off' },
 

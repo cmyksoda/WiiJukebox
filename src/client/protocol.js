@@ -53,7 +53,7 @@ class WiiProtocol {
             if (req.method === 'GET' && action === 'info') {
                 rows = [['server', this.id, this.config.data.station.name, this.config.data.mount]];
             } else if (req.method === 'GET' && action === 'sources') {
-                rows = this.registry.describe().filter((s) => s.configured).map((s) =>
+                rows = this.registry.describe().filter((s) => s.configured && !s.hidden).map((s) =>
                     ['source', s.id, s.label, s.state]);
             } else if (req.method === 'GET' && action === 'status') {
                 let s = this.pipeline.status;
