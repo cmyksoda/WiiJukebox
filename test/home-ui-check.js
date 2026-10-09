@@ -4,6 +4,8 @@
 //
 //   CHROMIUM=/path/to/chrome node test/home-ui-check.js     (playwright-core must be resolvable)
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { chromium } = require('playwright-core');
 const { fakeSubsonic, fakeJellyfin, fakePlex, fakePodcasts } = require('./helpers/fake-services');
 const { harness } = require('./helpers/app-harness');
@@ -27,9 +29,12 @@ const check = (label, ok) => {
 
     const browser = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--no-sandbox', '--mute-audio'] });
     const errors = [];
+    const serviceOrigins = [navidrome.url, jellyfin.url, plex.url];
+    const direct = [];
     const open = async (viewport, phone) => {
-        const context = await browser.newContext({ viewport, isMobile: phone, hasTouch: phone });
+        const context = await browser.newContext({ viewport, isMobile: phone, hasTouch: phone, deviceScaleFactor: 1 });
         const page = await context.newPage();
+        page.on('request', (r) => { if (serviceOrigins.some((origin) => r.url().startsWith(origin))) direct.push(r.url()); });
         page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
         page.on('pageerror', (e) => errors.push(e.message));
         await page.goto(app.base);
@@ -54,8 +59,11 @@ const check = (label, ok) => {
 
         const page = await open({ width: 1280, height: 900 }, false);
         const titles = await page.$$eval('.home-section h3', (nodes) => nodes.map((n) => n.textContent));
-        check('every configured service has its rows', ['Recently added', 'Most played', 'Recently played', 'Latest', 'On Deck', 'New episodes', 'Saved stations']
+        check('the primary service and the other kinds have their rows', ['Recently added', 'Most played', 'Recently played', 'New episodes', 'Saved stations']
             .every((title) => titles.includes(title)));
+        check('the other library services have none', !titles.includes('Latest') && !titles.includes('On Deck'));
+        check('the row chip names the primary', (await page.$$eval('.home-from', (nodes) => nodes.map((n) => n.textContent.trim())))
+            .filter((name) => /Navidrome|Jellyfin|Plex/.test(name)).every((name) => name === 'Navidrome'));
         check('there is no Jump back in before anything was played', !titles.includes('Jump back in'));
         check('rows end with All channels', titles.at(-1) === 'All channels');
         // Covers below the fold are lazy, so only the ones in view need to have arrived.
@@ -108,11 +116,15 @@ const check = (label, ok) => {
         await page.click('#home-link');
         await page.waitForFunction(() => document.querySelector('#home-rows').textContent.includes('Could not load'));
         const text = await page.textContent('#home-rows');
-        check('a failing service shows one quiet note', (text.match(/Could not load/g) || []).length === 1 && text.includes('Latest'));
+        check('a failing service shows one quiet note', (text.match(/Could not load/g) || []).length === 1 && text.includes('New episodes'));
         navidrome.state.fail = false;
         await page.click('text=Try again');
         await page.waitForSelector('.home-section:has(h3:text("Most played")) .card');
         check('Try again loads it', true);
+
+
+        check('covers came through the proxy, never from a service', direct.length === 0
+            && await page.$$eval('img', (imgs) => imgs.every((img) => new URL(img.src).pathname.startsWith('/api/art/'))));
     } finally {
         check('no console errors', errors.length === 0);
         if (errors.length) console.log(errors.join('\n'));

@@ -46,11 +46,19 @@ const check = (label, ok) => {
     await page.click('.category:has-text("Albums")');
     await page.waitForSelector('.card');
     check('albums page shows a back button', await page.isVisible('#back'));
+    await page.waitForFunction(() => [...document.querySelectorAll('.card img')].some((img) => img.naturalWidth > 0));
+    check('covers load, and only through the art proxy', await page.$$eval('.card img', (imgs) =>
+        imgs.every((img) => new URL(img.src).pathname.startsWith('/api/art/'))));
     await page.click('.card >> nth=0');
     await page.waitForSelector('.row');
     await page.click('.row >> nth=0');
     await page.waitForFunction(() => document.querySelector('#mini-title').textContent !== 'Nothing playing', null, { timeout: 15000 });
     check('a track plays and the transport bar shows it', true);
+    await page.waitForFunction(() => {
+        const cover = document.querySelector('#mini-img');
+        return !cover.hidden && cover.naturalWidth > 0 && new URL(cover.src).pathname.startsWith('/api/art/');
+    }, null, { timeout: 15000 });
+    check('and so does its cover, through the proxy', true);
     await page.click('#mini-open');
     check('the now-playing sheet opens', await page.evaluate(() => document.body.classList.contains('np-open')));
     await page.click('#shuffle');
