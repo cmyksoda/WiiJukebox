@@ -790,9 +790,13 @@ function openBarMenu() {
     menuOpen = true;
     // Opaque keeps the bar's text subpixel-sharp, so it is clear only while it covers the page for its menu.
     bar.setBackgroundColor('#00000000');
-    relayout();
-    bar.webContents.focus();
     bar.webContents.send('titlebar:menu', { items });
+    // Growing in the same frame as the switch to clear can paint the whole view black on X11.
+    setTimeout(() => {
+        if (!menuOpen || !bar) return;
+        relayout();
+        bar.webContents.focus();
+    }, 34);
 }
 
 function closeBarMenu() {
@@ -800,7 +804,7 @@ function closeBarMenu() {
     menuOpen = false;
     menuActions = null;
     relayout();
-    bar?.setBackgroundColor(bg());
+    setTimeout(() => { if (!menuOpen) bar?.setBackgroundColor(bg()); }, 34);
     if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('titlebar:menu-closed');
     content?.webContents.focus();
 }
