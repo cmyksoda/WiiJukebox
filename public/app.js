@@ -293,7 +293,6 @@ function openSidebarSettings() {
     });
     const showAll = h('button', { type: 'button', class: 'pill quiet', text: 'Show all', onclick: () => {
         changeHidden({ show: hiddenIds() });
-        done.focus();
     } });
     const done = h('button', { type: 'button', class: 'pill primary', text: 'Done', onclick: () => dialog.close() });
     const dialog = h('dialog', { class: 'sheet', 'aria-labelledby': 'sheet-title', 'aria-describedby': 'sheet-hint' },
