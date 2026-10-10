@@ -1690,7 +1690,6 @@ const PAGE_MENU_WIDTH = 208;
 
 pageMenu.onclick = (event) => {
     const box = pageMenu.getBoundingClientRect();
-    const hiddenCount = hiddenIds().length;
     openMenu({
         label: 'Menu', trigger: pageMenu, width: PAGE_MENU_WIDTH,
         anchor: { x: box.right - PAGE_MENU_WIDTH, top: box.bottom + 4, bottom: box.top - 4, keyboard: event.detail === 0 },
@@ -1698,7 +1697,7 @@ pageMenu.onclick = (event) => {
             { heading: 'Theme' },
             ...THEMES.map(([id, label]) => ({ label, checked: themeChoice === id, run: () => chooseTheme(id) })),
             'separator',
-            { label: 'Sidebar settings…', detail: hiddenCount ? `${hiddenCount} hidden` : '', run: openSidebarSettings },
+            { label: 'Sidebar settings…', run: openSidebarSettings },
         ],
     });
 };
