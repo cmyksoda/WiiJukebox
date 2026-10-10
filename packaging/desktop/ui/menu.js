@@ -9,11 +9,13 @@
     const root = document.querySelector('#menu-root');
     const sub = document.querySelector('#menu-sub');
     // How long a pointer must rest on another entry before an open submenu closes behind it.
-    const CLOSE_DELAY = 200;
+    // How long a pointer heading for the submenu may cross other rows before they take over.
+    const AIM_GRACE = 150;
     let open = false;
     let owner = null;
     let closeTimer = null;
     let switchTimer = null;
+    let aimedAt = null;
 
     const span = (className, text) => {
         const node = document.createElement('span');
@@ -180,13 +182,13 @@
     }
 
     // The pointer is on `row` of the main list (or on nothing it can use): light it, and let go of the submenu behind
-    // it a moment later unless that is the submenu's own parent.
+    // it at once unless that is the submenu's own parent.
     function pointerOnRoot(row) {
         cancelTimers();
         if (row) light(row, 'pointer');
         else unlightPointerRows(root);
         if (row?.entries) openSub(row);
-        else if (owner && row !== owner) closeTimer = setTimeout(closeSub, CLOSE_DELAY);
+        else if (owner && row !== owner) closeSub();
     }
 
     scrim.addEventListener('pointermove', (event) => {
@@ -200,9 +202,9 @@
             if (target) light(target, 'pointer');
             else unlightPointerRows(sub);
         } else if (target !== owner && aimingAtSub()) {
-            // On the way to the submenu: leave it open, and only follow the pointer if it settles here.
-            clearTimeout(switchTimer);
-            switchTimer = setTimeout(() => pointerOnRoot(target), CLOSE_DELAY);
+            // On the way to the submenu: leave it open briefly, without restarting the wait on every move.
+            aimedAt = target;
+            if (!switchTimer) switchTimer = setTimeout(() => { switchTimer = null; pointerOnRoot(aimedAt); }, AIM_GRACE);
         } else {
             pointerOnRoot(target);
         }
