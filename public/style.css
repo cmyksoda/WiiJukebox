@@ -227,6 +227,8 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .pill:active { transform: scale(.97); }
 .pill.small { min-height: 36px; padding: 0 14px; font-size: 14px; }
 .pill.icon { width: 44px; padding: 0; color: var(--text); }
+/* The visualizer bar is always dark, so the light theme's white top highlight would show as a stray line. */
+body.viz #mini-controls .round, body.viz #mini-controls .pill { box-shadow: none; }
 /* No white top highlight: on a filled pill it reads as a stray inner line. */
 .pill.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); box-shadow: none; }
 .pill.primary:hover { background: var(--accent-strong); filter: brightness(1.1); }
