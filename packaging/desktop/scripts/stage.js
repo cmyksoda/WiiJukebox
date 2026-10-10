@@ -76,6 +76,19 @@ async function stageFfmpeg(target, destination) {
     fs.chmodSync(path.join(destination, target.exe), 0o755);
 }
 
+// librespot publishes no builds, so a cargo-built binary is passed in (see packaging/README.md).
+function stageLibrespot(destination) {
+    const binary = process.env.WIIJUKEBOX_LIBRESPOT;
+    if (!binary) return;
+    const license = process.env.WIIJUKEBOX_LIBRESPOT_LICENSE;
+    if (!license) throw new Error('WIIJUKEBOX_LIBRESPOT_LICENSE must name librespot\'s LICENSE file');
+    const exe = path.basename(binary);
+    fs.mkdirSync(destination, { recursive: true });
+    fs.copyFileSync(binary, path.join(destination, exe));
+    fs.chmodSync(path.join(destination, exe), 0o755);
+    fs.copyFileSync(license, path.join(destination, 'librespot-LICENSE.txt'));
+}
+
 async function main() {
     const name = process.argv[2] || 'linux';
     if (!TARGETS[name]) throw new Error(`unknown target ${name}; use ${Object.keys(TARGETS).join(', ')}`);
@@ -91,6 +104,7 @@ async function main() {
 
     // Everything except FFmpeg is the same on every platform.
     if (!process.env.WIIJUKEBOX_NO_FFMPEG) await stageFfmpeg(TARGETS[name], path.join(out, 'bin'));
+    stageLibrespot(path.join(out, 'bin'));
     console.log(`staged ${name} in ${out}`);
 }
 

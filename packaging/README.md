@@ -411,3 +411,17 @@ problems, port busy, crash, FFmpeg missing) was rendered and read.
   debug signature, and the discovery class (compiled on a plain JVM) found the test
   server through its real UDP discovery port. The app was not installed on a phone or
   emulator (none available).
+
+### librespot (Spotify Connect)
+
+librespot publishes no builds, so a Linux binary built with cargo can be bundled next to FFmpeg:
+
+```sh
+cargo install librespot --locked --no-default-features --features native-tls,with-libmdns --root ~/.cache/wj-librespot/out
+WIIJUKEBOX_LIBRESPOT=~/.cache/wj-librespot/out/bin/librespot \
+WIIJUKEBOX_LIBRESPOT_LICENSE=<cargo registry>/librespot-<version>/LICENSE npm run dist:linux
+```
+
+It is MIT licensed (shipped as `librespot-LICENSE.txt`) and links the system OpenSSL 3. Only the pipe
+backend is built, since WiiJukebox reads its audio from stdout. CI does not build it yet, and the
+Windows and macOS packages do not include it.
