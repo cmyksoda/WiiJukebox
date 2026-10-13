@@ -67,7 +67,7 @@ async function runProof(source, { play = false, track = null, waitMs = 30000 } =
 
     if (!play) {
         await step('Find the receiver', async () => {
-            if (!source.receiverRunning) throw new Error('The receiver is not running. Press Start receiver, then test again');
+            if (!source.receiverRunning) throw new Error('The receiver is not running. Start it from the WiiJukebox entry in the Spotify channel, or use Play a test song');
             return describe(await source.findReceiver(waitMs));
         });
         return steps;
