@@ -118,11 +118,8 @@ class SpotifySource extends ReceiverSource {
         return pipeline.command(() => pipeline.attach(this, item));
     }
 
-    _receiverItem() {
-        return {
-            id: 'receiver', type: 'station', title: this._deviceName,
-            subtitle: 'Start the receiver, then pick it in the Spotify app',
-        };
+    _receiverItem(subtitle = 'Start the receiver, then pick it in the Spotify app') {
+        return { id: 'receiver', type: 'station', title: this._deviceName, subtitle };
     }
 
     async browse({ path: where = '', offset = 0, limit = 100 } = {}) {
@@ -132,7 +129,7 @@ class SpotifySource extends ReceiverSource {
             { id: 'liked', type: 'playlist', title: 'Liked Songs', subtitle: 'Songs you saved' },
             { id: 'playlists', type: 'folder', title: 'Playlists' },
             { id: 'albums', type: 'folder', title: 'Albums' },
-            this._receiverItem(),
+            this._receiverItem('Receiver for the Spotify app'),
         ];
         return { items: roots.slice(offset, offset + limit), total: roots.length };
     }
@@ -258,6 +255,11 @@ class SpotifySource extends ReceiverSource {
 
     canReplay(item) {
         return isLibraryItem(item);
+    }
+
+    /** A restart brings the receiver back but does not start music on its own account. */
+    restoreItem(item) {
+        return isLibraryItem(item) ? this._receiverItem() : item;
     }
 
     /** Points the running receiver at another song, album or playlist and waits until it plays. */

@@ -136,6 +136,11 @@ class Source extends EventEmitter {
      */
     async connect() {}
 
+    /** What to start again at boot for the item that was playing; defaults to the item itself. */
+    restoreItem(item) {
+        return item;
+    }
+
     /** Tear down whatever connect() established. */
     async disconnect() {}
 

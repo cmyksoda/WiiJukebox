@@ -79,7 +79,7 @@ async function main() {
         try {
             await pipeline.command(async () => {
                 const source = await registry.connect(id);
-                await pipeline.attach(source, item);
+                await pipeline.attach(source, source.restoreItem(item));
             });
             console.log(`resumed ${id}`);
         } catch (err) {
