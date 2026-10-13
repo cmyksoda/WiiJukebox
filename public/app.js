@@ -366,6 +366,9 @@ function renderHome() {
 }
 
 /** The tile grid at the bottom of home; repainted alone when a source's state changes. */
+// A Spotify with an account connected is a library, not just a receiver.
+const kindOf = (src) => (src.id === 'spotify' && src.capabilities?.search ? 'Library' : KINDS[src.id] || '');
+
 function paintChannels() {
     const grid = homeVisible() && $('#home-channels');
     if (!grid) return;
@@ -384,7 +387,7 @@ function paintChannels() {
             class: `channel ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
             'data-source': src.id,
             onclick: () => openSource(src),
-        }, h('span', { class: 'kind', text: KINDS[src.id] || '' }),
+        }, h('span', { class: 'kind', text: kindOf(src) }),
         h('span', { class: 'name', text: src.label }),
         h('span', { class: 'state' }, h('span', { class: 'dot' }), label));
     }));
@@ -604,7 +607,10 @@ async function openSource(src) {
         const problem = await connect();
         if (problem) return renderSettings(src, { problem });
         // With an account signed in, Spotify opens its library; the receiver is one of its entries.
-        if (src.id === 'spotify' && (await api('/sources/spotify/info').catch(() => null))?.web?.state === 'connected') return browse('');
+        if (src.id === 'spotify') {
+            const info = await api('/sources/spotify/info').catch(() => null);
+            if (info?.web?.state === 'connected') return browse('');
+        }
         return renderReceiver(src);
     }
 
@@ -657,7 +663,9 @@ async function browse(path, label, offset = 0, container = null) {
         setPager(result.total, offset, items.length, (to) => browse(path, label, to, container));
         if (result.unavailable) {
             // Spotify keeps this playlist's tracks from the app, which is not the same as having none.
-            content.replaceChildren(h('div', { class: 'panel' }, h('h3', { text: items[0].title }), h('p', { class: 'hint', text: items[0].subtitle })));
+            content.replaceChildren(h('div', { class: 'panel' },
+                h('h3', { text: items[0].title }),
+                h('p', { class: 'hint', text: items[0].subtitle })));
             return;
         }
         renderItems(items, path, label, offset, container);
@@ -672,7 +680,8 @@ async function browse(path, label, offset = 0, container = null) {
 function spotifyProblem(src, message) {
     return h('div', { class: 'panel' },
         h('p', { class: 'notice error', text: message }),
-        h('div', { class: 'buttons' }, h('button', { class: 'pill small primary', text: 'Spotify settings', onclick: () => renderSettings(src) })));
+        h('div', { class: 'buttons' },
+            h('button', { class: 'pill small primary', text: 'Spotify settings', onclick: () => renderSettings(src) })));
 }
 
 // A library channel says whether its suggestions fill the home screen, and offers to make them.
@@ -1146,9 +1155,11 @@ function spotifyInvite(src, web) {
         'no-client-id': 'Add your own free Spotify app to browse your library and control playback from here and the Wii.',
         'not-connected': 'Connect your Spotify account to browse your library and control playback from here and the Wii.',
     }[web.state] || web.message;
-    return h('div', { class: 'notice' }, h('p', { text }),
+    return h('div', { class: 'notice' },
+        h('p', { text }),
         h('div', { class: 'buttons' }, h('button', {
-            class: 'pill small primary', text: web.state === 'reconnect' ? 'Reconnect Spotify' : 'Set up Spotify account', onclick: () => renderSettings(src),
+            class: 'pill small primary', onclick: () => renderSettings(src),
+            text: web.state === 'reconnect' ? 'Reconnect Spotify' : 'Set up Spotify account',
         })));
 }
 
@@ -1166,7 +1177,10 @@ const SETTINGS = {
         f('username', 'Username'), f('password', 'Password', 'password', { secret: true }),
     ],
     spotify: [
-        f('clientId', 'Client ID', 'text', { account: true, placeholder: '32 letters and digits', hint: 'From your own free app at developer.spotify.com/dashboard.' }),
+        f('clientId', 'Client ID', 'text', {
+            account: true, placeholder: '32 letters and digits',
+            hint: 'From your own free app at developer.spotify.com/dashboard.',
+        }),
         f('deviceName', 'Device name', 'text', { hint: 'What the Spotify app shows in its device list.' }),
         f('bitrate', 'Stream quality', 'select', { number: true, options: [[96, 'Low (96 kbps)'], [160, 'Normal (160 kbps)'], [320, 'High (320 kbps)']] }),
         f('normalise', 'Even out volume between tracks', 'checkbox'),
@@ -1268,8 +1282,10 @@ async function renderSettings(src, { problem } = {}) {
 
     content.replaceChildren(...kids([h('div', { class: 'form' },
         problem ? h('p', { class: 'notice error', text: problem }) : null,
-        web ? spotifyAccount({ web, field: account, input: inputs.get('clientId'), saved: current.values.clientId || '',
-            onSaved: (id) => { current.values.clientId = id; } }) : null,
+        web ? spotifyAccount({
+            web, field: account, input: inputs.get('clientId'), saved: current.values.clientId || '',
+            onSaved: (id) => { current.values.clientId = id; },
+        }) : null,
         basic,
         advanced.length ? h('details', { class: 'advanced', open: problem ? true : null },
             h('summary', { text: 'Advanced' }), h('div', { class: 'form' }, advanced)) : null,
@@ -1280,18 +1296,23 @@ async function renderSettings(src, { problem } = {}) {
 // --- Spotify account -------------------------------------------------------------
 
 const ACCOUNT_CHIPS = {
-    connected: ['Connected', 'live'], 'not-connected': ['Not connected', ''],
-    'no-client-id': ['Needs a Client ID', ''], reconnect: ['Reconnect needed', 'bad'],
+    connected: ['Connected', 'live'],
+    'not-connected': ['Not connected', ''],
+    'no-client-id': ['Needs a Client ID', ''],
+    reconnect: ['Reconnect needed', 'bad'],
 };
 
 const SETUP_STEPS = [
-    ['Create a free app at ', h('a', { href: 'https://developer.spotify.com/dashboard', target: '_blank', rel: 'noopener', text: 'developer.spotify.com/dashboard' }), '. The app owner needs Spotify Premium.'],
-    ['Under Redirect URIs, add the address below exactly as shown.'],
-    ['Under User Management, add your Spotify account (an app in development mode allows 5 people).'],
-    ['Paste the app\u2019s Client ID here, then press Connect.'],
+    () => ['Create a free app at ', h('a', {
+        href: 'https://developer.spotify.com/dashboard', target: '_blank', rel: 'noopener',
+        text: 'developer.spotify.com/dashboard',
+    }), '. The app owner needs Spotify Premium.'],
+    () => ['Under Redirect URIs, add the address below exactly as shown.'],
+    () => ['Under User Management, add your Spotify account (an app in development mode allows 5 people).'],
+    () => ['Paste the app’s Client ID here, then press Connect.'],
 ];
 
-/** Puts text on the clipboard; browsers keep the clipboard API for secure pages, so a plain-HTTP address needs the old route. */
+/** Puts text on the clipboard. Only secure pages get the clipboard API, so a plain-HTTP address needs the old route. */
 async function copyText(text) {
     try {
         await navigator.clipboard.writeText(text);
@@ -1308,13 +1329,18 @@ async function copyText(text) {
 }
 
 function proofList(steps) {
-    const label = { true: ['Pass', 'live'], false: ['Fail', 'bad'], null: ['Skipped', ''] };
-    return h('ul', { class: 'proof' }, steps.map((step) => h('li', {},
-        h('span', { class: `chip ${label[step.ok][1]}`.trim(), text: label[step.ok][0] }),
-        h('span', { class: 'meta' }, h('strong', { text: step.name }), step.detail ? h('span', { class: 'hint', text: step.detail }) : null))));
+    const verdict = { true: ['Pass', 'live'], false: ['Fail', 'bad'], null: ['Skipped', ''] };
+    return h('ul', { class: 'proof' }, steps.map((step) => {
+        const [text, tone] = verdict[step.ok];
+        return h('li', {},
+            h('span', { class: `chip ${tone}`.trim(), text }),
+            h('span', { class: 'meta' },
+                h('strong', { text: step.name }),
+                step.detail ? h('span', { class: 'hint', text: step.detail }) : null));
+    }));
 }
 
-/** The account half of Spotify's settings: Client ID, the address to register, signing in, and the connection test. */
+/** The account half of Spotify's settings: the Client ID, the address to register, signing in and the connection test. */
 function spotifyAccount({ web: first, field, input, saved, onSaved }) {
     let web = first;
     let busy = false;
@@ -1325,6 +1351,8 @@ function spotifyAccount({ web: first, field, input, saved, onSaved }) {
         web = (await api('/sources/spotify/info')).web;
         paint();
     };
+
+    // Spotify signs in on the computer's own browser; the desktop app hands the link to it.
     const connect = async () => {
         const id = input.value.trim();
         if (!id) {
@@ -1340,13 +1368,14 @@ function spotifyAccount({ web: first, field, input, saved, onSaved }) {
                 await refresh();
             }
             if (!web.loginUrl) throw new Error('The server address is not known yet.');
-            // Spotify signs in on the computer's own browser; the desktop app hands this link to it.
             window.open(web.loginUrl, '_blank', 'noopener');
             stopPanelTimer();
             state.panelTimer = setInterval(async () => {
                 try {
                     await refresh();
-                } catch { return; }
+                } catch {
+                    return;
+                }
                 if (web.state === 'connected') {
                     stopPanelTimer();
                     toast(`Connected to Spotify as ${web.account}`);
@@ -1356,22 +1385,36 @@ function spotifyAccount({ web: first, field, input, saved, onSaved }) {
             toast(err.message, true);
         }
     };
+
     const test = async (play) => {
-        if (play && !await confirmDialog({
-            question: 'Play a test song?', detail: 'This starts the receiver and plays your first Liked Song into the stream, so the Wii will hear it.', confirm: 'Play',
-        })) return;
+        if (play) {
+            const yes = await confirmDialog({
+                question: 'Play a test song?',
+                detail: 'This starts the receiver and plays your first Liked Song into the stream, ' +
+                    'so the Wii will hear it.',
+                confirm: 'Play',
+            });
+            if (!yes) return;
+        }
         busy = play ? 'song' : 'check';
         paint();
         try {
-            results = (await api('/sources/spotify/action/proof', { method: 'POST', body: { play, wait: 30 } })).steps;
+            const body = { play, wait: 30 };
+            results = (await api('/sources/spotify/action/proof', { method: 'POST', body })).steps;
         } catch (err) {
             results = [{ name: 'Test', ok: false, detail: err.message }];
         }
         busy = false;
         paint();
     };
+
     const disconnect = async () => {
-        if (!await confirmDialog({ question: 'Disconnect Spotify?', detail: 'WiiJukebox forgets this sign-in. You can connect again at any time.', confirm: 'Disconnect' })) return;
+        const yes = await confirmDialog({
+            question: 'Disconnect Spotify?',
+            detail: 'WiiJukebox forgets this sign-in. You can connect again at any time.',
+            confirm: 'Disconnect',
+        });
+        if (!yes) return;
         try {
             await api('/sources/spotify/action/disconnect-account', { method: 'POST', body: {} });
             results = null;
@@ -1381,27 +1424,50 @@ function spotifyAccount({ web: first, field, input, saved, onSaved }) {
             toast(err.message, true);
         }
     };
-    const copy = async () => toast((await copyText(web.redirectUri)) ? 'Copied the redirect address' : 'Select the address and copy it', false);
+
+    const copy = async () => {
+        const copied = await copyText(web.redirectUri);
+        toast(copied ? 'Copied the redirect address' : 'Select the address and copy it');
+    };
 
     function paint() {
         const connected = web.state === 'connected';
-        const [chipText, chipClass] = ACCOUNT_CHIPS[web.state] || ACCOUNT_CHIPS['not-connected'];
+        const [chipText, chipTone] = ACCOUNT_CHIPS[web.state] || ACCOUNT_CHIPS['not-connected'];
+        const button = (props) => h('button', { type: 'button', ...props });
         box.replaceChildren(...kids([
-            h('div', { class: 'status-line' }, h('h3', { text: 'Spotify account' }), h('span', { class: `chip ${chipClass}`.trim(), text: chipText })),
-            connected ? h('p', { class: 'hint', text: `Signed in as ${web.account || 'your account'}. Browsing and playing use it.` }) : null,
+            h('div', { class: 'status-line' },
+                h('h3', { text: 'Spotify account' }),
+                h('span', { class: `chip ${chipTone}`.trim(), text: chipText })),
+            connected ? h('p', {
+                class: 'hint', text: `Signed in as ${web.account || 'your account'}. Browsing and playing use it.`,
+            }) : null,
             web.state === 'reconnect' ? h('p', { class: 'notice error', text: web.message }) : null,
-            connected ? null : h('ol', { class: 'steps' }, SETUP_STEPS.map((parts) => h('li', {}, ...parts.map((part) => (part instanceof Node ? part.cloneNode(true) : part))))),
+            connected || web.state === 'reconnect' ? null
+                : h('ol', { class: 'steps' }, SETUP_STEPS.map((step) => h('li', {}, ...step()))),
             field,
             h('div', { class: 'field' }, 'Redirect address',
                 h('div', { class: 'copy-row' },
                     h('code', { class: 'addr', text: web.redirectUri || 'Not known until the server is running' }),
-                    h('button', { class: 'pill small', type: 'button', text: 'Copy', disabled: !web.redirectUri, onclick: copy })),
-                h('span', { class: 'field-hint', text: 'Spotify only returns to 127.0.0.1, so connect from a browser on the computer that runs WiiJukebox.' })),
+                    button({ class: 'pill small', text: 'Copy', disabled: !web.redirectUri, onclick: copy })),
+                h('span', {
+                    class: 'field-hint',
+                    text: 'Spotify only returns to 127.0.0.1, so connect from a browser on the computer ' +
+                        'that runs WiiJukebox.',
+                })),
             h('div', { class: 'buttons' },
-                connected ? null : h('button', { class: 'pill primary', type: 'button', text: web.state === 'reconnect' ? 'Reconnect Spotify' : 'Connect Spotify account', onclick: connect }),
-                connected ? h('button', { class: 'pill', type: 'button', disabled: Boolean(busy), text: busy === 'check' ? 'Testing\u2026' : 'Test connection', onclick: () => test(false) }) : null,
-                connected ? h('button', { class: 'pill', type: 'button', disabled: Boolean(busy), text: busy === 'song' ? 'Playing\u2026' : 'Play a test song', onclick: () => test(true) }) : null,
-                connected ? h('button', { class: 'pill quiet', type: 'button', text: 'Disconnect', onclick: disconnect }) : null),
+                connected ? null : button({
+                    class: 'pill primary', onclick: connect,
+                    text: web.state === 'reconnect' ? 'Reconnect Spotify' : 'Connect Spotify account',
+                }),
+                connected ? button({
+                    class: 'pill', disabled: Boolean(busy), onclick: () => test(false),
+                    text: busy === 'check' ? 'Testing…' : 'Test connection',
+                }) : null,
+                connected ? button({
+                    class: 'pill', disabled: Boolean(busy), onclick: () => test(true),
+                    text: busy === 'song' ? 'Playing…' : 'Play a test song',
+                }) : null,
+                connected ? button({ class: 'pill quiet', text: 'Disconnect', onclick: disconnect }) : null),
             results ? proofList(results) : null,
         ]));
     }
