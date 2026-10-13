@@ -20,6 +20,7 @@ const REPEAT_STATE = { off: 'off', all: 'context', one: 'track' };
 const LOGIN_TTL_MS = 10 * 60 * 1000;
 const DEVICE_TTL_MS = 5 * 60 * 1000;
 const MIN_PCM_BYTES = 8192;
+const PLAY_ATTEMPTS = 3;
 const TIMING = {
     pollMs: 3000,
     confirmPollMs: 600,
@@ -332,14 +333,17 @@ class SpotifySource extends ReceiverSource {
         const wait = starting ? this._timing.deviceStartWaitMs : this._timing.deviceWaitMs;
         let device = await this._findDevice(wait);
         const mark = this._pcmBytes;
-        try {
-            await this._api.startPlayback(device.id, target.body);
-        } catch (err) {
-            if (err.kind !== 'no-device') throw err;
-            // Device ids can change, so look the receiver up again once.
-            this._receiver = null;
-            device = await this._findDevice(wait);
-            await this._api.startPlayback(device.id, target.body);
+        // A receiver can be listed a moment before it takes commands, and device ids can change.
+        for (let attempt = 1; ; attempt++) {
+            try {
+                await this._api.startPlayback(device.id, target.body);
+                break;
+            } catch (err) {
+                if (err.kind !== 'no-device' || attempt >= PLAY_ATTEMPTS) throw err;
+                this._receiver = null;
+                await sleep(this._timing.deviceRetryMs);
+                device = await this._findDevice(wait);
+            }
         }
         if (!starting) this.emit('discontinuity');
         // A relinked track is reported under the uri it was relinked from.

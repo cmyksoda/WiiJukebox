@@ -275,7 +275,7 @@ class SpotifyApi {
         if (response.status === 401) return new SpotifyError('reconnect', '', extra);
         if (response.status === 403) {
             if (reason === 'PREMIUM_REQUIRED' || text.includes('premium')) return new SpotifyError('premium', '', extra);
-            if (/not registered|developer dashboard|user management|allowlist/.test(text)) {
+            if (/registered|\/dashboard|developer dashboard|user management|allowlist/.test(text)) {
                 return new SpotifyError('not-allowlisted', '', extra);
             }
             if (text.includes('scope')) return new SpotifyError('reconnect', '', extra);

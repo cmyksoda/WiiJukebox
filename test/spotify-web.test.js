@@ -61,6 +61,18 @@ test('declining the sign-in shows a clear page and stores nothing', async () => 
     } finally { await r.close(); }
 });
 
+test('an account the development-mode app does not allow is told so at sign-in and is not kept', async () => {
+    const r = await rig({ signedIn: false, fake: { allowlisted: false } });
+    try {
+        const login = await fetch(`${r.app.base}/api/spotify/login`, { redirect: 'manual' });
+        const done = await fetch(r.fake.authorize(login.headers.get('location')));
+        assert.equal(done.status, 400);
+        assert.match(await done.text(), /User Management/);
+        assert.equal(r.app.config.sourceConfig('spotify').refreshToken, null);
+        assert.equal(r.source().auth, 'not-connected');
+    } finally { await r.close(); }
+});
+
 test('only a browser on the server computer can start or finish a sign-in', () => {
     assert.equal(fromThisComputer({ remoteAddress: '127.0.0.1', localAddress: '127.0.0.1' }), true);
     assert.equal(fromThisComputer({ remoteAddress: '::ffff:127.0.0.1', localAddress: '::ffff:192.168.1.5' }), true);
@@ -398,6 +410,14 @@ test('failures say what is wrong: no receiver, Premium, development mode, rate l
         await late.play({ id: 'liked', type: 'playlist' });
         assert.equal(late.fake.player.playing, true, 'a receiver that registers a moment late is waited for');
     } finally { await late.close(); }
+
+    const slow = await rig();
+    try {
+        slow.fake.knobs.notReady = 2;
+        await slow.play({ id: 'liked', type: 'playlist' });
+        assert.equal(plays(slow.fake).length, 3, 'a receiver that is listed before it takes commands is tried again');
+        assert.equal(slow.fake.player.playing, true);
+    } finally { await slow.close(); }
 
     const free = await rig({ fake: { premium: false } });
     try {

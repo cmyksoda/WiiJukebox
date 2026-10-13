@@ -26,7 +26,7 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
     const refreshTokens = new Set();
     const accessTokens = new Set();
     let hiddenUntil = Date.now() + deviceDelayMs;
-    const knobs = { premium, allowlisted, extended, relink: false, injected: [], limited: 0, retryAfter: 1 };
+    const knobs = { premium, allowlisted, extended, relink: false, notReady: 0, injected: [], limited: 0, retryAfter: 1 };
     let counter = 0;
     // The address is needed for the cover links in the data, so the server starts first and gets its handler below.
     let handle = () => {};
@@ -167,7 +167,9 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
             const { status, message, reason } = knobs.injected.shift();
             return apiError(res, status, message, reason);
         }
-        if (!knobs.allowlisted) return apiError(res, 403, 'User not registered in the Developer Dashboard');
+        if (!knobs.allowlisted) {
+            return apiError(res, 403, 'Check settings on developer.spotify.com/dashboard, the user may not be registered.');
+        }
         const route = record.path;
         const send = (data) => (data ? json(res, data) : apiError(res, 400, 'Invalid limit'));
 
@@ -208,6 +210,10 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
 
         // Player commands
         if (!knobs.premium) return apiError(res, 403, 'Player command failed: Premium required', 'PREMIUM_REQUIRED');
+        if (knobs.notReady > 0) {
+            knobs.notReady--;
+            return apiError(res, 404, 'Device not found', 'NO_ACTIVE_DEVICE');
+        }
         const device = devices.find((d) => d.id === (record.query.device_id || player.deviceId));
         if (!device || !deviceVisible()) return apiError(res, 404, 'Device not found', 'NO_ACTIVE_DEVICE');
         const done = () => { res.writeHead(204); res.end(); };
