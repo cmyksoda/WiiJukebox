@@ -6,7 +6,7 @@ decrypts DRM (Widevine, FairPlay, PlayReady) or shares accounts.
 
 | Service | Path | You need | Browse on the Wii | Status |
 |---|---|---|---|---|
-| Spotify | Spotify Connect receiver (librespot) | Premium, `librespot` binary | Start entry; the Spotify app controls playback | Built. Receiver starts and advertises over zeroconf; no real Spotify session was tested |
+| Spotify | Spotify Connect receiver (librespot) for audio, plus the Spotify Web API for your library and remote control | Premium, `librespot` binary, your own free Spotify developer app | Liked Songs, Playlists, Albums; pick a song or playlist and play, pause and skip from the Wii or web | Built and tested against a fake Spotify and a fake librespot; no real Spotify account was tested. Without the developer app it stays a plain receiver |
 | Apple Music | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac, `shairport-sync` binary | Start entry; the sender controls playback | Built. Receiver, metadata pipe and cover art parsed against the real program; no Apple sender was tested |
 | YouTube Music | music.youtube.com search plus yt-dlp | `yt-dlp` (and your browser cookies for Premium or your library) | Saved links, Liked Music with cookies | Built. Search, albums and playback were run live |
 | Podcasts | Apple's iTunes search and chart, then each show's own RSS feed | Nothing | Subscriptions, Top shows | Built. Search, the chart, a feed and one episode with seeking were run live |
@@ -23,13 +23,14 @@ sees one unbroken stream.
 
 Receivers are push sources: the phone decides what plays. The web UI and the
 Wii show now-playing text and cover art, and **Stop** ends the receiver (the
-speaker disappears from the phone). Play, pause and skip stay on the phone.
-Because the server does not know a receiver's position in the track, no seek
-bar is drawn for them.
+speaker disappears from the phone). Play, pause and skip stay on the phone,
+except for Spotify with a developer app connected (see below). Because the
+server does not know a receiver's position in the track, no seek bar is drawn
+for them.
 
 The Wii source browser lists a single "start" entry per receiver. Choosing it
 starts the receiver and shows "Waiting for Spotify" (or AirPlay) until a phone
-connects.
+connects. Spotify with an account connected lists that entry beside its library.
 
 ### Spotify Connect (librespot)
 
@@ -48,6 +49,106 @@ binary on `PATH` or set its full path under Spotify settings (`binary`).
 - The first connection from the Spotify app signs librespot in with that
   account. Credentials are cached under `<config dir>/spotify/` (mode 0700).
 - Zeroconf needs multicast DNS on the LAN. It works alongside Avahi.
+
+### Spotify library and remote control (Spotify Web API)
+
+Connect your own Spotify developer app and WiiJukebox can show your library on
+the Wii and the web page, start what you pick on the receiver, and send play,
+pause, next and previous to Spotify. Audio still comes from librespot, so the
+receiver above is required. Spotify's own player owns the queue: WiiJukebox
+sends the selection and mirrors what Spotify reports, and never advances a
+second queue of its own.
+
+**Set up (once):**
+
+1. At [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+   create a free app. The app owner needs Spotify Premium. Any name and
+   description will do; tick Web API.
+2. Under the app's **Redirect URIs** add the address WiiJukebox shows in
+   Settings, Spotify Connect, exactly as shown (use its Copy button). It has the
+   form `http://127.0.0.1:<server port>/api/spotify/callback`, where the port is
+   the one WiiJukebox runs on (4005 by default). Spotify accepts only the literal
+   `127.0.0.1`, not `localhost`. If you change the server's port, add the new
+   address too.
+3. Under **User Management** add the Spotify account you will sign in with (a
+   development-mode app allows up to five people).
+4. Copy the app's **Client ID** into Settings, Spotify Connect, and press
+   **Connect Spotify account**. Your browser on the computer that runs WiiJukebox
+   opens Spotify's sign-in; approve it and the page says Spotify is connected.
+   The desktop app hands the link to your system browser. Sign in from the
+   computer that runs the server, since Spotify only returns to 127.0.0.1.
+5. Start the receiver once (the WiiJukebox entry in the Spotify channel) and, the
+   first time only, open Spotify and pick it in the device list. librespot signs
+   in to Spotify's servers after a Spotify app has selected it once, keeps the
+   credentials under `<config dir>/spotify/` and signs in by itself on later
+   starts. The Web API can only control a receiver that has signed in this way.
+6. Press **Test connection** in Settings, or run the proof tool below.
+
+**What you get:**
+
+- Roots: **Liked Songs**, **Playlists** (yours, collaborative and followed) and
+  **Albums** (saved), plus the receiver entry. The web page also searches Spotify
+  (ten results per kind, Spotify's limit). The Wii browses the same lists in
+  12-item pages; a track keeps its absolute position in the playlist or album.
+- Choosing a song starts the playlist or album at that song. Liked Songs, which
+  Spotify has no playlist address for, queue the song and the next 99. Choosing
+  a playlist or album itself starts it from the beginning.
+- Selecting something while the receiver is running re-aims it; the receiver is
+  not restarted and the Spotify app's own connection to it is left alone.
+- Play, pause, next, previous, shuffle and repeat go to Spotify. A command
+  finishes (the Wii's "Audio ready", "Paused") only when Spotify reports the
+  change and audio is flowing, not when Spotify accepts the request. Pausing or
+  skipping in the Spotify app on your phone shows up here within a few seconds.
+- Stop still ends the receiver. After a server restart the receiver comes back,
+  but no music starts by itself; pick something again.
+- There is no seek bar or song length for Spotify, as before.
+
+**Development-mode limits.** Spotify only returns the tracks of playlists you
+own or collaborate on to a development-mode app. A followed playlist (Spotify's
+own, or someone else's) still lists, and **Play** starts it whole, but opening
+it says its tracks are not shared with the app, which is not the same as empty.
+Liked Songs, saved albums and your own playlists are unaffected.
+
+**Messages and what they mean:**
+
+| Message | Meaning |
+|---|---|
+| Add your Spotify Client ID | No Client ID is saved yet |
+| Spotify is not connected | A Client ID is saved but nobody signed in |
+| Reconnect Spotify | Spotify revoked or no longer accepts the saved sign-in; press Reconnect Spotify |
+| Spotify cannot see "WiiJukebox" on this account | The receiver is not signed in to the account you connected: pick it once in the Spotify app (step 5), and check both use the same account |
+| Spotify Premium is required | Spotify only lets Premium accounts be controlled through the API |
+| ...User Management... | Development mode refused the account; add it in the dashboard |
+| Spotify is rate limiting this app; try again in N s | Spotify answered 429; nothing is sent until the wait is over |
+| Tracks are not shared with this app | A followed playlist in development mode |
+
+The Client ID is not secret. The sign-in (a refresh token) is kept in
+`config.json` (mode 0600) like other service secrets and never reaches the web
+page, the Wii, the log or the SD card. Scopes requested: `user-library-read`,
+`playlist-read-private`, `playlist-read-collaborative`,
+`user-read-playback-state`, `user-modify-playback-state`. Sign-in uses
+Authorization Code with PKCE; no client secret is involved.
+
+**Checking it against your account.** With WiiJukebox running (new build) and
+signed in, run the same steps the first real test needs:
+
+```bash
+node tools/spotify-proof.js                    # server on http://127.0.0.1:4005
+node tools/spotify-proof.js --url http://127.0.0.1:4005 --track spotify:track:ID --wait 90
+node tools/spotify-proof.js --no-play          # read-only: no sound
+```
+
+It prints PASS, FAIL or SKIP for authenticating, reading Liked Songs, reading
+one playlist you own, finding the receiver, playing a song (into the stream, so
+the Wii hears it) and pausing and resuming it. Messages contain no tokens.
+Settings has the same check as **Test connection** (read-only) and **Play a test
+song**.
+
+Spotify's [Developer Policy](https://developer.spotify.com/policy) applies to
+the app you create; a five-person development app is for personal use. Whether
+relaying a stream to a Wii, converting it to MP3 or the visualizer fit its
+terms has not been reviewed here, and librespot's maintainers warn that Spotify
+may forbid it.
 
 ### AirPlay (shairport-sync)
 
@@ -177,6 +278,7 @@ Reports never block playback; a failure appears only as a warning in the log.
 | Item | Use | License |
 |---|---|---|
 | [librespot](https://github.com/librespot-org/librespot) | Spawned as a separate program, not bundled | MIT |
+| [Spotify Web API](https://developer.spotify.com/documentation/web-api) | Library, search and playback commands with your own developer app; no Spotify code or artwork bundled | Spotify's Developer Terms and Policy |
 | [shairport-sync](https://github.com/mikebrady/shairport-sync) | Spawned as a separate program, not bundled | MIT and BSD-style (see its LICENSES folder) |
 | [iTunes Search API](https://performance-partners.apple.com/search-api) and Apple's top-podcasts chart | Show search, feed lookup and the chart; keyless web requests, no Apple code or artwork bundled | Apple's API terms |
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Search request format followed; no code copied | MIT |
@@ -188,4 +290,8 @@ Reports never block playback; a failure appears only as a warning in the log.
 
 `test/spotify.test.js`, `test/airplay.test.js`, `test/ytmusic.test.js` and `test/podcasts.test.js` use small fake programs and fixture HTTP servers, so
 `npm test` never contacts a streaming service. `test/helpers/fake-binary.js`
-writes the fakes.
+writes the fakes. `test/spotify-web.test.js` and `test/spotify-proof.test.js` run
+the Spotify sign-in, library and remote control against `test/helpers/fake-spotify.js`,
+a fake accounts service and Web API with a player behind it, and a fake librespot
+that follows that player. `node test/spotify-ui-check.js` (Chromium and
+playwright-core) drives the web screens over the same fake and takes screenshots.

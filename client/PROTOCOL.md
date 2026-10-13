@@ -45,7 +45,8 @@ not authorization tokens. Source IDs remain strings, and provider IDs never need
 to fit Wii integer types.
 
 Track references from inside an album/playlist retain their parent and absolute
-track position. Playing one fetches the complete container and starts there;
+track position. Playing one fetches the complete container and starts there
+(Spotify instead sends the container and position to Spotify, which keeps the queue);
 playing the container reference starts at the beginning. Repeated playlist tracks
 prefer the saved position. If the list changed, the server finds the selected ID
 again or reports that it disappeared. Standalone tracks keep a single-item queue.
@@ -76,10 +77,11 @@ Shuffle and repeat are player-wide and saved by the server, so they survive
 restarts and carry over from one source to the next; the `modes` row always
 reports them. The `shuffle` and `repeat` controls appear in the controls list
 while the source can honor them (queue-based sources: Navidrome/Subsonic,
-Jellyfin, Plex, yt-dlp and YouTube Music) and while nothing is playing, so the
-modes can be chosen ahead of the next album or playlist. Radio, podcasts,
-Spotify Connect, AirPlay and desktop audio omit them, and asking anyway ends in
-a failed command. Shuffle keeps a picked track first and shuffles the
+Jellyfin, Plex, yt-dlp and YouTube Music; Spotify while its receiver runs with
+an account connected, where Spotify applies them) and while nothing is playing,
+so the modes can be chosen ahead of the next album or playlist. Radio, podcasts,
+Spotify Connect without an account, AirPlay and desktop audio omit them, and
+asking anyway ends in a failed command. Shuffle keeps a picked track first and shuffles the
 rest; repeat `one` replays a track that ends on its own, while Next and
 Previous still move on.
 
