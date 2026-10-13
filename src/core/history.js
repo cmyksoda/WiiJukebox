@@ -38,7 +38,7 @@ class PlayHistory {
     /** Records whatever the pipeline starts, from every entry point (web, Wii, restart). */
     listen(pipeline) {
         pipeline.on('attached', ({ source, item }) => {
-            if (source.constructor.replayable === false) return;
+            if (!(source.canReplay ? source.canReplay(item) : source.constructor.replayable !== false)) return;
             const now = pipeline.nowPlaying;
             // A pasted link has no title of its own; the source learns it while opening.
             this.record(source.id, item, {

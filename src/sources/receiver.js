@@ -144,17 +144,24 @@ class ReceiverSource extends Source {
         this._setState('ready');
     }
 
-    async open() {
+    async open(_item) {
+        return this._openReceiver();
+    }
+
+    /** `primed: false` leaves out the silence and idle label that stand in until a sender plays. */
+    async _openReceiver({ primed = true } = {}) {
         if (this.state === 'idle' || this.state === 'error') await this.connect();
         await this._stopChild();
         this._stopping = false;
         this._starts = [];
         this._stream = new FrameAligner();
-        // A little silence marks the stream as producing audio, so "Audio ready"
-        // does not wait for someone to press play on the sending device.
-        this._stream.write(Buffer.alloc(bytesForMs(100)));
-        const idle = this._idleMetadata();
-        if (idle) this._emitMetadata(idle);
+        if (primed) {
+            // A little silence marks the stream as producing audio, so "Audio ready"
+            // does not wait for someone to press play on the sending device.
+            this._stream.write(Buffer.alloc(bytesForMs(100)));
+            const idle = this._idleMetadata();
+            if (idle) this._emitMetadata(idle);
+        }
         try {
             await this._start();
         } catch (err) {

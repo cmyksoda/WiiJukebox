@@ -19,7 +19,11 @@ function control(pipeline, config, action, { position, value } = {}) {
         if (!pipeline.status.capabilities[action]) {
             return { code: 400, error: `${source.label} does not support ${action}` };
         }
-        if (action === 'stop') {
+        if (source.constructor.remoteControl && ['play', 'pause', 'next', 'previous'].includes(action)) {
+            // The service owns playback, so the local pacer is not touched; its own state flows back as events.
+            const result = await source[action]();
+            if (result?.endOfQueue) return { ok: true, endOfQueue: true };
+        } else if (action === 'stop') {
             await pipeline.detach();
             pipeline.markJump({ audio: false });
             config.data.lastPlayed = null;

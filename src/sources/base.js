@@ -68,6 +68,14 @@ class Source extends EventEmitter {
     static replayable = true;
 
     /**
+     * True for a service that runs its own queue and player (Spotify): play, pause, next and previous go to
+     * its play(), pause(), next() and previous(), which return once the audio has changed. Optionally
+     * canRetarget(item) and retarget(item) re-aim a running source without a restart, and it may emit
+     * `paused` (boolean) and `discontinuity` (the audio before now belongs to the previous selection).
+     */
+    static remoteControl = false;
+
+    /**
      * True for library services whose server suggests music (recently added, on deck), which
      * is what lets one of them be the primary service behind the home screen's suggestions.
      */

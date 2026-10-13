@@ -176,9 +176,17 @@ class Pipeline extends EventEmitter {
 
     /** Sets `shuffle` (a boolean) or `repeat` ('off', 'all' or 'one') and tells the active source. */
     async setMode(name, value) {
+        const before = this._modes[name];
         this._modes[name] = value;
-        if (name === 'shuffle') await this._source?.setShuffle?.(value);
-        else await this._source?.setRepeat?.(value);
+        try {
+            if (name === 'shuffle') await this._source?.setShuffle?.(value);
+            else await this._source?.setRepeat?.(value);
+        } catch (err) {
+            // A service that refused the change keeps its old mode, and so does the player.
+            this._modes[name] = before;
+            this.emit('status', this.status);
+            throw err;
+        }
         this.emit('status', this.status);
     }
 
@@ -265,6 +273,8 @@ class Pipeline extends EventEmitter {
      * @param {object} [item]  source-specific item to start with
      */
     async attach(source, item) {
+        // A receiver that is already feeding the stream is re-aimed rather than restarted.
+        if (this._source === source && source.canRetarget?.(item)) return this._retarget(source, item);
         await this.detach();
 
         this._source = source;
@@ -274,6 +284,8 @@ class Pipeline extends EventEmitter {
         source.on('warning', this._onSourceWarning);
         source.on('state', this._onSourceState);
         source.on('ended', this._onSourceEnded);
+        source.on('paused', this._onSourcePaused);
+        source.on('discontinuity', this._onSourceDiscontinuity);
 
         try {
             await source.setShuffle?.(this._modes.shuffle);
@@ -288,6 +300,17 @@ class Pipeline extends EventEmitter {
             // which is a far better failure mode than tearing the mount down and
             // making the user re-select the station on the Wii.
             source._setState?.('error', err.message);
+            this.emit('status', this.status);
+            throw err;
+        }
+        this.emit('attached', { source, item });
+    }
+
+    async _retarget(source, item) {
+        try {
+            await source.retarget(item);
+        } catch (err) {
+            this.emit('warning', `${source.id}: ${err.message}`);
             this.emit('status', this.status);
             throw err;
         }
@@ -425,6 +448,16 @@ class Pipeline extends EventEmitter {
         this.emit('source-state', info);
     };
 
+    // A service-run player reports its own pause, so the stream holds still with it.
+    _onSourcePaused = (paused) => this.setPaused(Boolean(paused));
+
+    // Audio buffered before a skip or new selection belongs to the old one: drop it and mark the jump.
+    _onSourceDiscontinuity = () => {
+        this.pacer.reset();
+        this.markJump();
+        this.emit('status', this.status);
+    };
+
     _onSourceEnded = () => {
         if (!this._audioReady && !this._audioError) this._audioFailed(new Error('source ended before producing audio'));
         if (this._endTimer) return;
@@ -468,6 +501,8 @@ class Pipeline extends EventEmitter {
             source.off('warning', this._onSourceWarning);
             source.off('state', this._onSourceState);
             source.off('ended', this._onSourceEnded);
+            source.off('paused', this._onSourcePaused);
+            source.off('discontinuity', this._onSourceDiscontinuity);
             this._source = null;
             try {
                 await source.close();
