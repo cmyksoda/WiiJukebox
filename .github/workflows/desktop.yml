@@ -145,6 +145,13 @@ jobs:
                   done
                   exit 1
 
+            # A URL that names a host makes FFmpeg resolve it; the old static Linux build crashed there.
+            - name: Decode a stream by host name with the included FFmpeg
+              if: runner.os == 'Linux'
+              env:
+                  WIIJUKEBOX_FFMPEG: ${{ github.workspace }}/packaging/desktop/app/bin/ffmpeg
+              run: node --test test/decoder-hostname.test.js
+
             - name: List what was built
               shell: bash
               run: ls -lh packaging/dist/desktop

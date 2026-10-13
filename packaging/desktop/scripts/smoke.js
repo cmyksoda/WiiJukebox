@@ -186,6 +186,21 @@ const run = (file, fileArgs, timeout = 30000) => new Promise((resolve) => {
     execFile(file, fileArgs, { timeout, maxBuffer: 64 * 1024 * 1024, encoding: 'buffer' }, (err, stdout, stderr) => resolve({ err, stdout, stderr }));
 });
 
+// FFmpeg resolves a host name through the system itself, and the old static Linux build crashed doing that.
+async function decodeByHostname(ffmpegPath, audio) {
+    const server = http.createServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': audio.length });
+        res.end(audio);
+    });
+    await new Promise((resolve) => server.listen(0, resolve));
+    try {
+        return await run(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-i', `http://localhost:${server.address().port}/tone.mp3`, '-f', 's16le', '-ar', '44100', '-ac', '2', '-']);
+    } finally {
+        server.closeAllConnections();
+        server.close();
+    }
+}
+
 function probeDiscovery(port) {
     return new Promise((resolve) => {
         const socket = dgram.createSocket('udp4');
@@ -273,6 +288,8 @@ async function checkReturningUser() {
             check('bundled FFmpeg is licensed GPL (redistributable)', /GNU General Public License/i.test(String(license.stdout)) && !/nonfree/i.test(String(license.stdout) + String(license.stderr)));
             const encoded = await run(ffmpeg.path, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libmp3lame', '-f', 'mp3', '-']);
             check('bundled FFmpeg encodes a tone to MP3', !encoded.err && encoded.stdout.length > 4000, `${encoded.stdout.length} bytes`);
+            const named = await decodeByHostname(ffmpeg.path, encoded.stdout);
+            check('bundled FFmpeg decodes a stream addressed by host name', !named.err && named.stdout.length > 100000, `${named.stdout.length} bytes${named.err ? `, ${named.err.signal || `code ${named.err.code}`}` : ''}`);
         }
 
         const status = await get(`${state.serverUrl}api/status`);
