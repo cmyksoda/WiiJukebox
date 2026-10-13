@@ -6,12 +6,12 @@ const { WebServer } = require('../../src/web/server');
 const { tempDir } = require('./fake-binary');
 
 /** A real web server, registry and pipeline over a throwaway config; only the audio output is silent. */
-async function harness(sources = {}, { port = 0 } = {}) {
+async function harness(sources = {}, { port = 0, deps = {} } = {}) {
     const dir = tempDir('wiijukebox-home-');
     const config = new Config(dir);
     for (const [id, patch] of Object.entries(sources)) config.updateSource(id, patch);
-    const registry = new SourceRegistry(config, {});
     const pipeline = new Pipeline();
+    const registry = new SourceRegistry(config, { configDir: dir, pipeline, ...deps });
     pipeline.pacer._write = () => true;
     pipeline.pacer.start();
     pipeline.on('warning', () => {});
