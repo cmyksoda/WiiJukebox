@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Spotify Web API access (https://developer.spotify.com/documentation/web-api): sign-in with
-// Authorization Code + PKCE, token refresh and the few endpoints WiiJukebox needs. The refresh token
-// stays inside this object and the server's config; every message thrown from here is safe to show.
+// Spotify Web API access: sign-in with Authorization Code + PKCE, token refresh and the few endpoints
+// WiiJukebox needs. The refresh token stays inside this object and the server's config, and every
+// message thrown from here is safe to show.
 
 const crypto = require('node:crypto');
 
 const ACCOUNTS_BASE = 'https://accounts.spotify.com';
 const API_BASE = 'https://api.spotify.com/v1';
 const CALLBACK_PATH = '/api/spotify/callback';
-const SCOPES = ['user-library-read', 'playlist-read-private', 'playlist-read-collaborative',
-    'user-read-playback-state', 'user-modify-playback-state'];
+const SCOPES = [
+    'user-library-read',
+    'playlist-read-private',
+    'playlist-read-collaborative',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+];
 
 const REQUEST_TIMEOUT_MS = 15000;
 const EXPIRY_MARGIN_MS = 60 * 1000;
@@ -28,7 +33,10 @@ const MESSAGES = {
 };
 
 class SpotifyError extends Error {
-    /** @param {string} kind  a key of MESSAGES, or 'forbidden', 'rate-limited', 'not-found', 'network', 'api', 'login' */
+    /**
+     * @param {string} kind  a key of MESSAGES, or 'forbidden', 'restricted', 'rate-limited', 'not-found',
+     *   'network', 'api', 'login', 'timeout' or 'device-not-found'
+     */
     constructor(kind, detail = '', extra = {}) {
         super(MESSAGES[kind] || detail);
         this.name = 'SpotifyError';
@@ -46,18 +54,30 @@ function pkcePair() {
 function authorizeUrl({ clientId, redirectUri, state, challenge, base = ACCOUNTS_BASE }) {
     const url = new URL('/authorize', base);
     url.search = new URLSearchParams({
-        client_id: clientId, response_type: 'code', redirect_uri: redirectUri, state,
-        scope: SCOPES.join(' '), code_challenge_method: 'S256', code_challenge: challenge,
+        client_id: clientId,
+        response_type: 'code',
+        redirect_uri: redirectUri,
+        state,
+        scope: SCOPES.join(' '),
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
     }).toString();
     return url.toString();
 }
 
 /** Spotify only accepts a loopback redirect written as the literal 127.0.0.1. */
-const redirectUriFor = (port) => (Number.isInteger(port) && port > 0 ? `http://127.0.0.1:${port}${CALLBACK_PATH}` : null);
+function redirectUriFor(port) {
+    return Number.isInteger(port) && port > 0 ? `http://127.0.0.1:${port}${CALLBACK_PATH}` : null;
+}
+
+const rateLimited = (seconds) =>
+    new SpotifyError('rate-limited', `Spotify is rate limiting this app; try again in ${seconds} s.`, { retryAfter: seconds });
 
 class SpotifyApi {
-    constructor({ clientId = '', refreshToken = null, onRefreshToken = () => {}, onRevoked = () => {}, fetchImpl = fetch,
-        accountsBase = ACCOUNTS_BASE, apiBase = API_BASE, now = Date.now, sleep } = {}) {
+    constructor({
+        clientId = '', refreshToken = null, onRefreshToken = () => {}, onRevoked = () => {},
+        fetchImpl = fetch, accountsBase = ACCOUNTS_BASE, apiBase = API_BASE, now = Date.now, sleep,
+    } = {}) {
         this.clientId = clientId;
         this.refreshToken = refreshToken;
         this._onRefreshToken = onRefreshToken;
@@ -86,8 +106,12 @@ class SpotifyApi {
 
     /** Text that came from outside, with anything shaped like a token or one of ours removed. */
     clean(text) {
-        let out = String(text ?? '').replace(/Bearer\s+\S+/gi, 'Bearer …').replace(/[A-Za-z0-9._~+/-]{40,}/g, '…');
-        for (const secret of [this.refreshToken, this._access]) if (secret) out = out.replaceAll(secret, '…');
+        let out = String(text ?? '')
+            .replace(/Bearer\s+\S+/gi, 'Bearer …')
+            .replace(/[A-Za-z0-9._~+/-]{40,}/g, '…');
+        for (const secret of [this.refreshToken, this._access]) {
+            if (secret) out = out.replaceAll(secret, '…');
+        }
         return out.slice(0, 200);
     }
 
@@ -103,20 +127,24 @@ class SpotifyApi {
         return body.refresh_token;
     }
 
-    async get(path, query) {
+    get(path, query) {
         return this.request('GET', path, { query });
     }
 
     /** Calls the Web API. A 401 refreshes the token once; a 429 backs off and is reported with its wait. */
     async request(method, path, { query, body, attempt = 0 } = {}) {
-        const wait = Math.ceil((this._blockedUntil - this._now()) / 1000);
-        if (wait > 0) throw new SpotifyError('rate-limited', `Spotify is rate limiting this app; try again in ${wait} s.`, { retryAfter: wait });
+        const waiting = Math.ceil((this._blockedUntil - this._now()) / 1000);
+        if (waiting > 0) throw rateLimited(waiting);
+
         const url = new URL(`${this._api}${path}`);
-        for (const [key, value] of Object.entries(query || {})) if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
-        const token = await this._accessToken();
-        const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+        for (const [key, value] of Object.entries(query || {})) {
+            if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+        }
+        const headers = { Authorization: `Bearer ${await this._accessToken()}`, Accept: 'application/json' };
         if (body !== undefined) headers['Content-Type'] = 'application/json';
-        const response = await this._send(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+        const response = await this._send(url, {
+            method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+        });
 
         if (response.status === 401 && attempt === 0) {
             this._access = null;
@@ -126,10 +154,11 @@ class SpotifyApi {
             const seconds = Math.max(1, Number(response.headers.get('retry-after')) || DEFAULT_RETRY_S);
             this._blockedUntil = this._now() + seconds * 1000;
             if (attempt === 0 && seconds <= MAX_INLINE_RETRY_S) {
+                // A little over the wait, so the retry never lands inside it.
                 await this._sleep(seconds * 1000 + 50);
                 return this.request(method, path, { query, body, attempt: 1 });
             }
-            throw new SpotifyError('rate-limited', `Spotify is rate limiting this app; try again in ${seconds} s.`, { retryAfter: seconds });
+            throw rateLimited(seconds);
         }
         if (response.ok) {
             const text = await response.text();
@@ -187,7 +216,9 @@ class SpotifyApi {
     }
 
     async _refresh() {
-        const body = await this._token({ grant_type: 'refresh_token', refresh_token: this.refreshToken, client_id: this.clientId });
+        const body = await this._token({
+            grant_type: 'refresh_token', refresh_token: this.refreshToken, client_id: this.clientId,
+        });
         if (body.refresh_token && body.refresh_token !== this.refreshToken) {
             this.refreshToken = body.refresh_token;
             this._onRefreshToken(body.refresh_token);
@@ -198,12 +229,14 @@ class SpotifyApi {
     /** Posts a token request and keeps the access token it returns. */
     async _token(form) {
         const response = await this._send(new URL('/api/token', this._accounts), {
-            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
             body: new URLSearchParams(form).toString(),
         });
         const text = await response.text();
         let body = {};
         try { body = text ? JSON.parse(text) : {}; } catch { /* reported below */ }
+
         if (!response.ok) {
             // A revoked or expired refresh token cannot recover; the user has to sign in again.
             if (body.error === 'invalid_grant' && form.grant_type === 'refresh_token') {
@@ -211,7 +244,9 @@ class SpotifyApi {
                 this._onRevoked();
                 throw new SpotifyError('reconnect');
             }
-            if (response.status === 429) throw new SpotifyError('rate-limited', 'Spotify is rate limiting sign-in; try again shortly.');
+            if (response.status === 429) {
+                throw new SpotifyError('rate-limited', 'Spotify is rate limiting sign-in; try again shortly.');
+            }
             const reason = body.error_description || body.error || `HTTP ${response.status}`;
             throw new SpotifyError('login', `Spotify refused the sign-in: ${this.clean(reason)}`);
         }
@@ -225,7 +260,8 @@ class SpotifyApi {
         try {
             return await this._fetch(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
         } catch (err) {
-            throw new SpotifyError('network', `Could not reach Spotify (${this.clean(err.cause?.code || err.message)}).`);
+            const reason = this.clean(err.cause?.code || err.message);
+            throw new SpotifyError('network', `Could not reach Spotify (${reason}).`);
         }
     }
 
@@ -237,22 +273,26 @@ class SpotifyApi {
         const message = this.clean(typeof error === 'string' ? error : error.message);
         const reason = String(error.reason || '').toUpperCase();
         const text = `${message} ${reason}`.toLowerCase();
-        const status = response.status;
-        const extra = { status };
-        if (status === 401) return new SpotifyError('reconnect', '', extra);
-        if (status === 403) {
+        const extra = { status: response.status };
+
+        if (response.status === 401) return new SpotifyError('reconnect', '', extra);
+        if (response.status === 403) {
             if (reason === 'PREMIUM_REQUIRED' || text.includes('premium')) return new SpotifyError('premium', '', extra);
-            if (/not registered|developer dashboard|user management|allowlist/.test(text)) return new SpotifyError('not-allowlisted', '', extra);
+            if (/not registered|developer dashboard|user management|allowlist/.test(text)) {
+                return new SpotifyError('not-allowlisted', '', extra);
+            }
             if (text.includes('scope')) return new SpotifyError('reconnect', '', extra);
             // Pausing what is already paused is refused this way; callers that only want the state ignore it.
-            if (text.includes('restriction violated')) return new SpotifyError('restricted', 'Spotify cannot do that right now.', extra);
+            if (text.includes('restriction violated')) {
+                return new SpotifyError('restricted', 'Spotify cannot do that right now.', extra);
+            }
             return new SpotifyError('forbidden', `Spotify refused the request${message ? `: ${message}` : ''}.`, extra);
         }
-        if (status === 404) {
-            if (reason === 'NO_ACTIVE_DEVICE' || /device/.test(text)) return new SpotifyError('no-device', '', extra);
+        if (response.status === 404) {
+            if (reason === 'NO_ACTIVE_DEVICE' || text.includes('device')) return new SpotifyError('no-device', '', extra);
             return new SpotifyError('not-found', 'Spotify could not find that.', extra);
         }
-        return new SpotifyError('api', `Spotify: ${message || 'request failed'} (HTTP ${status}).`, extra);
+        return new SpotifyError('api', `Spotify: ${message || 'request failed'} (HTTP ${response.status}).`, extra);
     }
 }
 

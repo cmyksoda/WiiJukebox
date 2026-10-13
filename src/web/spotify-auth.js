@@ -4,8 +4,10 @@
 
 const MAX_PARAM = 2048;
 
-const isLoopback = (address) => address === '::1' || address === '127.0.0.1' || String(address).startsWith('::ffff:127.');
-const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (char) => ESCAPES[char]);
+const isLoopback = (address) =>
+    address === '::1' || address === '127.0.0.1' || String(address).startsWith('::ffff:127.');
 
 /** True for a request from this machine, by its loopback address or by its own LAN address. */
 function fromThisComputer(socket) {
@@ -22,11 +24,25 @@ function page(title, message, ok) {
 <meta name="referrer" content="no-referrer">
 <title>${escapeHtml(title)}</title>
 <style>
-:root { --bg: #f3f6f9; --surface: #fff; --edge: #ccd5de; --text: #263340; --dim: #647383; --mark: ${ok ? '#2e9e5e' : '#c8423d'}; }
-@media (prefers-color-scheme: dark) { :root { --bg: #0d141c; --surface: #141d27; --edge: #2c3d4e; --text: #e3ebf2; --dim: #8ea1b3; --mark: ${ok ? '#4cbf7e' : '#ef7772'}; } }
+:root {
+    --bg: #f3f6f9; --surface: #fff; --edge: #ccd5de; --text: #263340; --dim: #647383;
+    --mark: ${ok ? '#2e9e5e' : '#c8423d'};
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0d141c; --surface: #141d27; --edge: #2c3d4e; --text: #e3ebf2; --dim: #8ea1b3;
+        --mark: ${ok ? '#4cbf7e' : '#ef7772'};
+    }
+}
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text); font: 16px/1.5 "Nunito", system-ui, sans-serif; }
-main { max-width: 440px; padding: 24px; border: 1px solid var(--edge); border-radius: 14px; background: var(--surface); border-top: 4px solid var(--mark); }
+body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+    background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif;
+}
+main {
+    max-width: 440px; padding: 24px; border: 1px solid var(--edge); border-top: 4px solid var(--mark);
+    border-radius: 14px; background: var(--surface);
+}
 h1 { margin: 0 0 8px; font-size: 20px; }
 p { margin: 0; color: var(--dim); }
 </style>
@@ -55,7 +71,8 @@ async function handleSpotifyAuth(req, res, url, registry) {
     if (req.method !== 'GET') return send(res, 405, 'Not allowed', 'Open this address in a browser.');
     if (!fromThisComputer(req.socket)) {
         return send(res, 403, 'Open WiiJukebox on this computer',
-            'Spotify only sends you back to 127.0.0.1, so sign in from a browser on the computer that runs WiiJukebox.');
+            'Spotify only sends you back to 127.0.0.1, so sign in from a browser on the computer ' +
+            'that runs WiiJukebox.');
     }
     const source = registry.get('spotify');
     if (url.pathname.endsWith('/login')) {

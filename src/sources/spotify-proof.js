@@ -2,7 +2,9 @@
 // The first real-account checks for Spotify, step by step: sign-in, library, receiver, a played song.
 // Each step reports pass, fail or skipped with a message that is safe to show.
 
-const TRACK = /^(?:spotify:track:|https?:\/\/open\.spotify\.com\/(?:intl-[a-z]+\/)?track\/)?([A-Za-z0-9]{1,40})(?:[?#].*)?$/;
+const TRACK = new RegExp(
+    '^(?:spotify:track:|https?://open\\.spotify\\.com/(?:intl-[a-z]+/)?track/)?([A-Za-z0-9]{1,40})(?:[?#].*)?$',
+);
 
 /** Accepts a track URI, an open.spotify.com link or a bare id. */
 function parseTrack(text) {
@@ -11,7 +13,8 @@ function parseTrack(text) {
 
 /**
  * @param {import('./spotify').SpotifySource} source
- * @param {{play?: boolean, track?: string, waitMs?: number}} [options]  `play` also starts the receiver and plays a song
+ * @param {{play?: boolean, track?: string, waitMs?: number}} [options]
+ *   `play` also starts the receiver and plays a song
  */
 async function runProof(source, { play = false, track = null, waitMs = 30000 } = {}) {
     const steps = [];
@@ -36,7 +39,9 @@ async function runProof(source, { play = false, track = null, waitMs = 30000 } =
         me = await api.me();
         return `Signed in as ${me.display_name || me.id}`;
     })) {
-        for (const name of ['Read Liked Songs', 'Read one owned playlist', 'Find the receiver']) skip(name, 'Needs a signed-in account');
+        for (const name of ['Read Liked Songs', 'Read one owned playlist', 'Find the receiver']) {
+            skip(name, 'Needs a signed-in account');
+        }
         if (play) skip('Play a chosen track', 'Needs a signed-in account');
         return steps;
     }
@@ -44,7 +49,8 @@ async function runProof(source, { play = false, track = null, waitMs = 30000 } =
     let liked = null;
     await step('Read Liked Songs', async () => {
         liked = await library.browse({ path: 'liked', offset: 0, limit: 5 });
-        return liked.total ? `${liked.total} songs; the first is ${named(first(liked))}` : 'Liked Songs is empty (like a song to test playing it)';
+        if (!liked.total) return 'Liked Songs is empty (like a song to test playing it)';
+        return `${liked.total} songs; the first is ${named(first(liked))}`;
     });
 
     const lists = await api.get('/me/playlists', { limit: 50 }).then((page) => page.items || [], () => []);
@@ -60,14 +66,18 @@ async function runProof(source, { play = false, track = null, waitMs = 30000 } =
         await step('Read a followed playlist (information only)', async () => {
             const page = await library.browse({ path: `playlist/${followed.id}`, offset: 0, limit: 5 });
             return page.unavailable
-                ? `"${followed.name}": Spotify hides its tracks from development-mode apps (expected); it can still be played whole`
+                ? `"${followed.name}": Spotify hides its tracks from development-mode apps (expected); ` +
+                    'it can still be played whole'
                 : `"${followed.name}": readable (this app has wider access than development mode)`;
         });
     }
 
     if (!play) {
         await step('Find the receiver', async () => {
-            if (!source.receiverRunning) throw new Error('The receiver is not running. Start it from the WiiJukebox entry in the Spotify channel, or use Play a test song');
+            if (!source.receiverRunning) {
+                throw new Error('The receiver is not running. Start it from the WiiJukebox entry in the ' +
+                    'Spotify channel, or use Play a test song');
+            }
             return describe(await source.findReceiver(waitMs));
         });
         return steps;
@@ -92,7 +102,8 @@ async function runProof(source, { play = false, track = null, waitMs = 30000 } =
         const state = await api.playerState();
         const bytes = source.pcmBytes;
         if (!state?.is_playing) throw new Error('Spotify does not report it playing');
-        return `Playing "${state.item?.name}"; Spotify says it is on ${state.device?.name}, and ${bytes} bytes of audio reached WiiJukebox`;
+        return `Playing "${state.item?.name}"; Spotify says it is on ${state.device?.name}, ` +
+            `and ${bytes} bytes of audio reached WiiJukebox`;
     });
     await step('Pause and resume', async () => {
         await source.pause();

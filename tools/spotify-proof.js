@@ -7,7 +7,7 @@
 //
 // The server does the work with its own saved sign-in, so nothing secret passes through here.
 
-const USAGE = `usage: node tools/spotify-proof.js [--url http://127.0.0.1:4005] [--track spotify:track:ID | link] [--no-play] [--wait SECONDS]
+const USAGE = `usage: node tools/spotify-proof.js [--url ADDRESS] [--track URI_OR_LINK] [--no-play] [--wait SECONDS]
 
   --url      the WiiJukebox server (default http://127.0.0.1:4005)
   --track    a song to play; by default your first Liked Song
@@ -60,7 +60,8 @@ async function main() {
             signal: AbortSignal.timeout((options.wait + 90) * 1000),
         });
     } catch (err) {
-        console.error(`Could not reach WiiJukebox at ${base} (${err.cause?.code || err.message}). Start it, or pass --url.`);
+        const why = err.cause?.code || err.message;
+        console.error(`Could not reach WiiJukebox at ${base} (${why}). Start it, or pass --url.`);
         return 2;
     }
     const body = await response.json().catch(() => ({}));

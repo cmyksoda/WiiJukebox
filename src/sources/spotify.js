@@ -95,7 +95,9 @@ class SpotifySource extends ReceiverSource {
         const caps = { stop: true, browse: true };
         if (this.auth !== 'connected') return caps;
         caps.search = true;
-        if (this._attached) Object.assign(caps, { play: true, pause: true, next: true, previous: true, shuffle: true, repeat: true });
+        if (this._attached) {
+            Object.assign(caps, { play: true, pause: true, next: true, previous: true, shuffle: true, repeat: true });
+        }
         return caps;
     }
 
@@ -167,16 +169,21 @@ class SpotifySource extends ReceiverSource {
         const state = crypto.randomBytes(16).toString('hex');
         const { verifier, challenge } = pkcePair();
         this._logins.set(state, { verifier, redirectUri, expires: now + LOGIN_TTL_MS });
-        return authorizeUrl({ clientId: this._api.clientId, redirectUri, state, challenge, base: this.deps.spotify?.accountsBase });
+        const base = this.deps.spotify?.accountsBase;
+        return authorizeUrl({ clientId: this._api.clientId, redirectUri, state, challenge, base });
     }
 
     /** Finishes a sign-in from the query Spotify sent back; throws a message fit for the callback page. */
     async completeLogin({ code, state, error }) {
         const entry = this._logins.get(state);
         this._logins.delete(state);
-        if (!entry || entry.expires < Date.now()) throw new Error('This sign-in link expired or was already used. Start again from the Spotify settings.');
-        if (error) throw new Error(error === 'access_denied' ? 'Spotify access was declined.' : `Spotify sign-in failed (${this._api.clean(error)}).`);
-        if (!code) throw new Error('Spotify sent no sign-in code. Start again from the Spotify settings.');
+        const again = 'Start again from the Spotify settings.';
+        if (!entry || entry.expires < Date.now()) throw new Error(`This sign-in link expired or was already used. ${again}`);
+        if (error) {
+            throw new Error(error === 'access_denied'
+                ? 'Spotify access was declined.' : `Spotify sign-in failed (${this._api.clean(error)}).`);
+        }
+        if (!code) throw new Error(`Spotify sent no sign-in code. ${again}`);
         const refreshToken = await this._api.exchange(code, entry.verifier, entry.redirectUri);
         try {
             const me = await this._api.me();
@@ -221,7 +228,8 @@ class SpotifySource extends ReceiverSource {
         }
         if (name === 'proof') {
             const { play, track, wait } = body;
-            return { steps: await require('./spotify-proof').runProof(this, { play: play === true, track, waitMs: Math.min(Number(wait) || 30, 300) * 1000 }) };
+            const waitMs = Math.min(Number(wait) || 30, 300) * 1000;
+            return { steps: await require('./spotify-proof').runProof(this, { play: play === true, track, waitMs }) };
         }
         throw new Error(`${this.label} has no such action`);
     }
@@ -300,7 +308,9 @@ class SpotifySource extends ReceiverSource {
 
     async setRepeat(mode) {
         this._modes.repeat = mode;
-        if (this._attached) await this._command(async () => this._api.setRepeat(REPEAT_STATE[mode] || 'off', (await this._findDevice()).id));
+        if (this._attached) {
+            await this._command(async () => this._api.setRepeat(REPEAT_STATE[mode] || 'off', (await this._findDevice()).id));
+        }
     }
 
     async _skip(direction) {
@@ -316,7 +326,8 @@ class SpotifySource extends ReceiverSource {
             // Previous deep into a song starts it over instead of moving back.
             const moved = (state) => state.item?.uri !== was ||
                 (direction === 'previous' && state.progress_ms < (before?.progress_ms ?? 0) - 1500);
-            await this._confirm(device, (state) => state.is_playing && moved(state) && this._flowing(mark), direction === 'next' ? 'skip to the next song' : 'go back');
+            const what = direction === 'next' ? 'skip to the next song' : 'go back';
+            await this._confirm(device, (state) => state.is_playing && moved(state) && this._flowing(mark), what);
             return {};
         });
     }
@@ -339,15 +350,19 @@ class SpotifySource extends ReceiverSource {
         if (!starting) this.emit('discontinuity');
         // A relinked track is reported under the uri it was relinked from.
         const isTarget = (now) => (target.itemUri
-            ? [now.item?.uri, now.item?.linked_from?.uri].includes(target.itemUri) : now.context?.uri === target.contextUri);
-        const state = await this._confirm(device, (now) => now.is_playing && this._flowing(mark) && isTarget(now), 'start playing that');
+            ? [now.item?.uri, now.item?.linked_from?.uri].includes(target.itemUri)
+            : now.context?.uri === target.contextUri);
+        const accept = (now) => now.is_playing && this._flowing(mark) && isTarget(now);
+        const state = await this._confirm(device, accept, 'start playing that');
         await this._syncModes(device, state);
     }
 
     // Shuffle and repeat are applied once playing; an idle receiver refuses them.
     async _syncModes(device, state) {
         try {
-            if (state.shuffle_state !== this._modes.shuffle) await this._api.setShuffle(this._modes.shuffle, device.id);
+            if (state.shuffle_state !== this._modes.shuffle) {
+                await this._api.setShuffle(this._modes.shuffle, device.id);
+            }
             const repeat = REPEAT_STATE[this._modes.repeat] || 'off';
             if (state.repeat_state !== repeat) await this._api.setRepeat(repeat, device.id);
         } catch (err) {
@@ -355,7 +370,7 @@ class SpotifySource extends ReceiverSource {
         }
     }
 
-    /** Polls the player until `accept(state)` holds for the receiver; a command is done when the audio is, not when Spotify says OK. */
+    /** Polls the player until `accept(state)` holds for the receiver: a command is done when the audio is. */
     async _confirm(device, accept, what) {
         const deadline = Date.now() + this._timing.confirmMs;
         for (;;) {
@@ -364,7 +379,8 @@ class SpotifySource extends ReceiverSource {
             this._mirror(state);
             if (state && here && accept(state)) return state;
             if (Date.now() >= deadline) {
-                throw new SpotifyError('timeout', `Spotify did not ${what} on "${device.name}" in time. Check the Spotify app, and that the receiver uses this Spotify account.`);
+                throw new SpotifyError('timeout', `Spotify did not ${what} on "${device.name}" in time. ` +
+                    'Check the Spotify app, and that the receiver uses this Spotify account.');
             }
             await sleep(this._timing.confirmPollMs);
         }
@@ -378,19 +394,24 @@ class SpotifySource extends ReceiverSource {
         if (this._receiver && Date.now() - this._receiver.at < DEVICE_TTL_MS) return this._receiver.device;
         const deadline = Date.now() + wait;
         for (;;) {
-            const named = (await this._api.devices()).filter((device) => device.id && device.name === this._deviceName);
+            const devices = await this._api.devices();
+            const named = devices.filter((device) => device.id && device.name === this._deviceName);
             const usable = named.filter((device) => !device.is_restricted);
             if (usable.length) {
                 const device = usable.find((candidate) => candidate.is_active) || usable[0];
                 this._receiver = { device, at: Date.now() };
                 return device;
             }
-            if (named.length) throw new SpotifyError('device-not-found', `Spotify lists "${this._deviceName}" but does not allow it to be controlled.`);
+            if (named.length) {
+                throw new SpotifyError('device-not-found',
+                    `Spotify lists "${this._deviceName}" but does not allow it to be controlled.`);
+            }
             if (Date.now() >= deadline) break;
             await sleep(this._timing.deviceRetryMs);
         }
         throw new SpotifyError('device-not-found', `Spotify cannot see "${this._deviceName}" on this account. ` +
-            `The first time, open Spotify, pick "${this._deviceName}" in the device list so the receiver can sign in, then try again.`);
+            `The first time, open Spotify, pick "${this._deviceName}" in the device list so the receiver can ` +
+            'sign in, then try again.');
     }
 
     // Polling stands aside while a command runs, so a stale answer cannot undo what it just confirmed.
@@ -409,7 +430,7 @@ class SpotifySource extends ReceiverSource {
         this._schedulePoll();
     }
 
-    // Checking is less urgent while paused, which keeps an idle receiver cheap on the API's rate limit.
+    // Checking is less urgent while nothing is playing, which keeps an idle receiver cheap on the API's rate limit.
     _schedulePoll() {
         clearTimeout(this._poller);
         if (!this._attached) return;
