@@ -28,7 +28,10 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
     let hiddenUntil = Date.now() + deviceDelayMs;
     const knobs = { premium, allowlisted, extended, injected: [], limited: 0, retryAfter: 1 };
     let counter = 0;
-    let origin = '';
+    // The address is needed for the cover links in the data, so the server starts first and gets its handler below.
+    let handle = () => {};
+    const server = await listen((req, res, url) => handle(req, res, url));
+    const origin = server.url;
 
     const cover = (seed) => [640, 300, 64].map((width) => ({ url: `${origin}/img/${seed}.png`, width, height: width }));
     const artist = (name) => ({ id: id('art', name.length), name, uri: `spotify:artist:${name.length}` });
@@ -258,7 +261,7 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
         return apiError(res, 404, 'Not found.');
     }
 
-    const server = await listen(async (req, res, url) => {
+    handle = async (req, res, url) => {
         if (url.pathname === '/api/token' && req.method === 'POST') return token(req, res);
         if (url.pathname.startsWith('/v1/')) return api(req, res, url);
         const image = url.pathname.match(/^\/img\/(\w+)\.png$/);
@@ -268,8 +271,7 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
         }
         res.writeHead(404);
         return res.end();
-    });
-    origin = server.url;
+    };
     publish();
 
     return {

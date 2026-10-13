@@ -6,7 +6,7 @@ const { harness } = require('./app-harness');
 const { tempDir, fakeBinary } = require('./fake-binary');
 
 /** The app over a fake Spotify, signed in unless `signedIn` is false, with a fake librespot that follows the fake player. */
-async function rig({ spotify = {}, fake: fakeOptions = {}, signedIn = true } = {}) {
+async function rig({ spotify = {}, fake: fakeOptions = {}, signedIn = true, port = 0 } = {}) {
     const dir = tempDir('wj-spot-');
     const stateFile = path.join(dir, 'player.json');
     const fake = await fakeSpotify({ stateFile, ...fakeOptions });
@@ -14,7 +14,7 @@ async function rig({ spotify = {}, fake: fakeOptions = {}, signedIn = true } = {
     const app = await harness({ spotify: {
         binary: path.join(dir, 'librespot'), deviceName: 'WiiJukebox', clientId: fake.clientId,
         refreshToken: signedIn ? fake.signedIn() : null, account: signedIn ? 'Jaxi' : '', ...spotify,
-    } }, { deps: fake.deps });
+    } }, { deps: fake.deps, port });
     const warnings = [];
     app.pipeline.on('warning', (message) => warnings.push(message));
     const runs = () => (fs.existsSync(path.join(dir, 'runs.json'))

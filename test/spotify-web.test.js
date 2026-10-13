@@ -166,6 +166,7 @@ test('playlists keep every position, tell empty from unavailable, and albums car
         assert.equal(trip.items[9].title, 'Road Trip 10', 'so the songs after it keep their positions');
         assert.equal(trip.items[10].unavailable, true, 'a local file cannot be played from Connect');
         assert.equal(trip.items[4].id, trip.items[6].id, 'the same song twice stays twice');
+        assert.match(trip.items[0].artwork, /\/img\/alb002\.png$/, 'a track in a playlist shows its album cover');
         assert.equal((await source.browse({ path: 'playlist/plRoadTrip', offset: 120, limit: 12 })).items.length, 10);
 
         const empty = await source.browse({ path: 'playlist/plEmpty', limit: 12 });
@@ -349,6 +350,16 @@ test('without an account the receiver keeps its old, Stop-only controls', async 
         assert.deepEqual(r.source().capabilities, { stop: true, browse: true });
         assert.deepEqual(r.app.pipeline.status.capabilities.pause, undefined);
         assert.equal((await control(r.app.pipeline, r.app.config, 'pause')).code, 400);
+    } finally { await r.close(); }
+});
+
+test('a restart brings the receiver back and does not start music by itself', async () => {
+    const r = await rig();
+    try {
+        const source = r.source();
+        assert.deepEqual(source.restoreItem({ id: 'playlist/plRoadTrip', type: 'playlist', startIndex: 3 }), { id: 'receiver', type: 'station', title: 'WiiJukebox', subtitle: 'Start the receiver, then pick it in the Spotify app' });
+        const station = { id: 'receiver', type: 'station', title: 'WiiJukebox' };
+        assert.equal(source.restoreItem(station), station);
     } finally { await r.close(); }
 });
 
