@@ -711,6 +711,17 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 .notice { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--tile); font-size: 14px; }
 .notice.error { border: 1px solid var(--danger); color: var(--danger); background: transparent; }
 
+/* The Spotify account panel: the redirect address to register, and the connection test's results. */
+.copy-row { display: flex; align-items: center; gap: 8px; }
+.copy-row .addr { flex: 1; min-width: 0; padding: 11px 12px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 400; overflow-wrap: anywhere; user-select: all; }
+.chip.bad { background: transparent; box-shadow: inset 0 0 0 1px var(--danger); color: var(--danger); }
+.proof { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.proof li { display: flex; align-items: flex-start; gap: 10px; }
+.proof .chip { flex: none; min-width: 64px; justify-content: center; }
+.proof .meta { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
+.proof .hint { margin: 0; overflow-wrap: anywhere; }
+.steps a { color: var(--accent-text); }
+
 .favorites { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
 .favorites-heading { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .favorites-count { background: var(--tile); border-radius: 999px; padding: 0 9px; min-width: 24px; text-align: center; font-size: 12px; }
