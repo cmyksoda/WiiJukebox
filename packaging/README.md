@@ -178,12 +178,25 @@ ship next to it in `resources/bin` (`ffmpeg-LICENSE.txt`, `ffmpeg-README.txt`).
 
 | System | Build | Source |
 |---|---|---|
-| Linux x64 | FFmpeg 7.0.2 static | johnvansickle.com, through eugeneware/ffmpeg-static `b6.1.1` |
+| Linux x64 | FFmpeg 8.1.3 (Jellyfin portable GPL build, glibc 2.28 or newer) | jellyfin/jellyfin-ffmpeg `v8.1.3-1` |
 | Windows x64 | FFmpeg 6.1.1 essentials | gyan.dev, through eugeneware/ffmpeg-static `b6.1.1` |
 | macOS x64 and arm64 | FFmpeg 8.1.3 (Jellyfin portable GPL build) | jellyfin/jellyfin-ffmpeg `v8.1.3-1` (needs macOS 12 or later) |
 
 macOS does not use eugeneware's builds: its arm64 binary is configured
 `--enable-nonfree`, reports "nonfree and unredistributable" and must not be shipped.
+
+Linux used eugeneware's build (johnvansickle's FFmpeg 7.0.2) until it turned out to crash on any
+URL that names a host. That build is linked fully statically, glibc included, and a static glibc
+resolves names by loading the computer's NSS modules (`libnss_files.so.2` and the like) with
+`dlopen`; another glibc's modules cannot be loaded into a static program, so the program dies with
+SIGSEGV inside `getaddrinfo` (the server logged `decode failed: code null signal SIGSEGV`). It
+failed the same way on glibc 2.35, 2.41 and 2.43, for radio stations, podcasts, yt-dlp links and a
+library server reached by name; a literal address such as `http://127.0.0.1:4533` resolves nothing,
+which is why a local Navidrome and the smoke test never showed it. Jellyfin's Linux build links
+glibc dynamically and everything else statically, so the computer's own libc does the lookup, and
+it is the same release as the macOS builds. It does include libfdk-aac, which the macOS builds
+leave out. `test/decoder-hostname.test.js` decodes a stream from `http://localhost:<port>`; it runs
+in `npm test`, and against the included FFmpeg in CI and in the smoke test.
 
 yt-dlp is optional and not bundled. The first-run page (or Install or update yt-dlp
 in the menu) downloads the standalone release into the app's own `bin` folder, and
@@ -251,9 +264,9 @@ node scripts/smoke.js ../dist/desktop/linux-unpacked/wiijukebox --port 4680
 
 It starts the app hidden on ports 4680 (web), 4681 (discovery), 4690 (debugging) and
 4691 (inspector), and checks: the server URL, that the bundled FFmpeg is the one in use,
-has MP3 and is GPL, `/api/status`, `/`, a packaged vendor file, 8 KiB of MP3 from
-`/stream`, a discovery reply, a clean `--quit`, and that the ports are free afterwards.
-Then it runs:
+has MP3, is GPL and decodes a stream addressed by host name (`http://localhost:<port>`),
+`/api/status`, `/`, a packaged vendor file, 8 KiB of MP3 from `/stream`, a discovery reply,
+a clean `--quit`, and that the ports are free afterwards. Then it runs:
 
 - the server with web and discovery on one port number (the default configuration);
 - the first-run flow by clicking the real setup page, including that the audio engine

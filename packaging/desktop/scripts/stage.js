@@ -15,12 +15,13 @@ const cache = path.join(os.homedir(), '.cache', 'wiijukebox-desktop');
 
 // Every build is GPL v3 with the MP3 encoder (libmp3lame) the stream needs. Each download is pinned
 // by checksum. eugeneware's macOS arm64 build is configured --enable-nonfree and may not be
-// redistributed, so macOS uses Jellyfin's builds, which are open and GPL.
+// redistributed, so macOS uses Jellyfin's builds, which are open and GPL. Linux uses them too: a
+// fully static glibc build (eugeneware's) segfaults in getaddrinfo as soon as a URL names a host.
 const EUGENE = 'https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1';
 const JELLYFIN = 'https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v8.1.3-1';
 const JELLYFIN_TAG = 'https://raw.githubusercontent.com/jellyfin/jellyfin-ffmpeg/v8.1.3-1';
 const TARGETS = {
-    linux: { exe: 'ffmpeg', eugene: 'linux-x64', sha256: 'bfe8a8fc511530457b528c48d77b5737527b504a3797a9bc4866aeca69c2dffa' },
+    linux: { exe: 'ffmpeg', jellyfin: 'linux64', sha256: 'b86dc023c64a5a9a410e6e3a938a970460214fae78f31c1553c9f88f1c289b6a' },
     win: { exe: 'ffmpeg.exe', eugene: 'win32-x64', sha256: '8883a3dffbd0a16cf4ef95206ea05283f78908dbfb118f73c83f4951dcc06d77' },
     'mac-x64': { exe: 'ffmpeg', jellyfin: 'mac64', sha256: 'cb2b5c154d49a6b6bfe29fa6c16510e85dcbf60b805764121a167b093d4bb6fb' },
     'mac-arm64': { exe: 'ffmpeg', jellyfin: 'macarm64', sha256: '22445d7299742749ad2eeb9ce87963d50def0357e45b3e6c7b69987c8365dbf6' },
