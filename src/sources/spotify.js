@@ -191,13 +191,20 @@ class SpotifySource extends ReceiverSource {
         this._reconnect = false;
         this._library.forget();
         this.emit('credentials', { refreshToken, account: this._account, reconnect: false });
+        this._authChanged();
     }
 
     _revoked() {
         this._reconnect = true;
         this._library.forget();
         this.emit('credentials', { refreshToken: null, reconnect: true });
+        this._authChanged();
         this._warn(new SpotifyError('reconnect').message);
+    }
+
+    // The controls on offer follow the sign-in, so whoever shows them is told to look again.
+    _authChanged() {
+        this.emit('state', { state: this.state });
     }
 
     _requireAuth() {
@@ -212,6 +219,7 @@ class SpotifySource extends ReceiverSource {
             this._account = '';
             this._reconnect = false;
             this.emit('credentials', { refreshToken: null, account: '', reconnect: false });
+            this._authChanged();
             return { ok: true };
         }
         if (name === 'proof') {
