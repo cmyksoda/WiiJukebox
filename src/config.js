@@ -56,9 +56,12 @@ const DEFAULTS = {
         // elsewhere, `format` overrides the selector, and `extraArgs` passes
         // flags straight through (--cookies-from-browser, --proxy).
         ytdlp: { binary: '', format: '', extraArgs: [], links: [] },
-        // Receivers: `binary` points at librespot / shairport-sync when they are
-        // not on PATH.
-        spotify: { binary: '', deviceName: 'WiiJukebox', bitrate: 320, normalise: false, extraArgs: [] },
+        // Receivers: `binary` points at librespot / shairport-sync when they are not on PATH.
+        // `clientId` is the user's own Spotify developer app; `refreshToken` is the sign-in it granted (never sent out).
+        spotify: {
+            binary: '', deviceName: 'WiiJukebox', bitrate: 320, normalise: false, extraArgs: [],
+            clientId: '', refreshToken: null, account: '', reconnect: false,
+        },
         airplay: { binary: '', deviceName: 'WiiJukebox', port: 0, password: '', extraArgs: [] },
         // Same knobs as ytdlp; add --cookies-from-browser to extraArgs for Premium.
         ytmusic: { binary: '', format: '', extraArgs: [], links: [] },

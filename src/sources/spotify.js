@@ -1,24 +1,42 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Spotify Connect receiver, using librespot (https://github.com/librespot-org/librespot).
-//
-// librespot appears in the Spotify app's device list as a speaker. It signs in
-// with the account that selects it (zeroconf), decodes with the user's own
-// Premium subscription and writes raw PCM to stdout, which feeds the pipeline.
-// Nothing here touches Spotify's web API or any DRM; playback is controlled
-// from the Spotify app itself.
+// Spotify through librespot (https://github.com/librespot-org/librespot) as the audio receiver, plus the
+// Spotify Web API for browsing the library and for play, pause and skip. Spotify owns the queue.
 
 const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { ReceiverSource } = require('./receiver');
+const { SpotifyApi, SpotifyError, authorizeUrl, pkcePair, redirectUriFor, CALLBACK_PATH } = require('./spotify-api');
+const { SpotifyLibrary } = require('./spotify-library');
 const { configDir } = require('../config');
 const { BYTES_PER_SECOND } = require('../core/format');
 
 const EVENT_SCRIPT = path.join(__dirname, 'receiver-event.js');
 const MAX_EVENT_BYTES = 64 * 1024;
 
+const REPEAT_STATE = { off: 'off', all: 'context', one: 'track' };
+const LOGIN_TTL_MS = 10 * 60 * 1000;
+const DEVICE_TTL_MS = 5 * 60 * 1000;
+const MIN_PCM_BYTES = 8192;
+const TIMING = {
+    pollMs: 3000,
+    confirmPollMs: 600,
+    confirmMs: 15000,
+    deviceRetryMs: 1000,
+    // A receiver that is already running shows up fast; a fresh one is still signing in.
+    deviceWaitMs: 4000,
+    deviceStartWaitMs: 25000,
+};
+
 const shellQuote = (text) => `'${String(text).replaceAll("'", "'\\''")}'`;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** The receiver entry starts librespot alone; anything else is something in the library to play. */
+const isLibraryItem = (item) => Boolean(item) && item.type !== 'station' && item.id !== 'receiver';
+const ignoreRestricted = (err) => {
+    if (err.kind !== 'restricted') throw err;
+};
 
 class SpotifySource extends ReceiverSource {
     static id = 'spotify';
@@ -26,6 +44,8 @@ class SpotifySource extends ReceiverSource {
     static binaryName = 'librespot';
     static installHint = 'Install librespot ("cargo install librespot", or your package manager) ' +
         'or set its full path in the Spotify settings.';
+    // Play, pause, next and previous go to Spotify, which owns the queue; nothing here advances a local one.
+    static remoteControl = true;
 
     constructor(config = {}, deps = {}) {
         super(config, deps);
@@ -33,30 +53,349 @@ class SpotifySource extends ReceiverSource {
         this._eventServer = null;
         this._session = { user: null, playing: false, track: null };
         this._metadataTimer = null;
+
+        this._timing = { ...TIMING, ...deps.spotify?.timing };
+        this._account = config.account || '';
+        this._reconnect = Boolean(config.reconnect);
+        this._api = new SpotifyApi({
+            clientId: String(config.clientId || '').trim(), refreshToken: config.refreshToken || null,
+            onRefreshToken: (refreshToken) => this.emit('credentials', { refreshToken }),
+            onRevoked: () => this._revoked(),
+            fetchImpl: deps.fetch, accountsBase: deps.spotify?.accountsBase, apiBase: deps.spotify?.apiBase,
+        });
+        this._library = new SpotifyLibrary(this._api);
+        this._logins = new Map();
+
+        // Set once the receiver is wired to the pipeline and Spotify may be commanded.
+        this._attached = false;
+        this._receiver = null;
+        this._paused = null;
+        this._busy = 0;
+        this._poller = null;
+        this._pcmBytes = 0;
+        this._modes = { shuffle: false, repeat: 'off' };
     }
 
     get _deviceName() {
         return String(this.config.deviceName || 'WiiJukebox').slice(0, 50);
     }
 
-    async browse() {
+    /** 'connected' once an account is signed in; otherwise why not, for the settings screen. */
+    get auth() {
+        if (!this._api.clientId) return 'no-client-id';
+        if (this._reconnect) return 'reconnect';
+        return this._api.hasToken ? 'connected' : 'not-connected';
+    }
+
+    get redirectUri() {
+        return redirectUriFor(this.deps.serverPort);
+    }
+
+    get capabilities() {
+        const caps = { stop: true, browse: true };
+        if (this.auth !== 'connected') return caps;
+        caps.search = true;
+        if (this._attached) Object.assign(caps, { play: true, pause: true, next: true, previous: true, shuffle: true, repeat: true });
+        return caps;
+    }
+
+    _receiverItem() {
         return {
-            items: [{
-                id: 'receiver', type: 'station', title: this._deviceName,
-                subtitle: 'Start the receiver, then pick it in the Spotify app',
-            }],
-            total: 1,
+            id: 'receiver', type: 'station', title: this._deviceName,
+            subtitle: 'Start the receiver, then pick it in the Spotify app',
         };
     }
 
+    async browse({ path: where = '', offset = 0, limit = 100 } = {}) {
+        if (this.auth !== 'connected') return { items: [this._receiverItem()], total: 1 };
+        if (where) return this._library.browse({ path: where, offset, limit });
+        const roots = [
+            { id: 'liked', type: 'playlist', title: 'Liked Songs', subtitle: 'Songs you saved' },
+            { id: 'playlists', type: 'folder', title: 'Playlists' },
+            { id: 'albums', type: 'folder', title: 'Albums' },
+            this._receiverItem(),
+        ];
+        return { items: roots.slice(offset, offset + limit), total: roots.length };
+    }
+
+    async search(query) {
+        if (this.auth !== 'connected' || !String(query).trim()) return { items: [], total: 0 };
+        return this._library.search(String(query).trim());
+    }
+
     info() {
+        const redirectUri = this.redirectUri;
         return {
             ...super.info(),
             deviceName: this._deviceName,
             user: this._session.user,
             playing: this._session.playing,
             track: this._session.track,
+            web: {
+                state: this.auth, account: this._account, redirectUri,
+                loginUrl: redirectUri && redirectUri.replace(CALLBACK_PATH, '/api/spotify/login'),
+                message: this.auth === 'connected' ? '' : new SpotifyError(this.auth).message,
+            },
         };
+    }
+
+    // --- signing in ---------------------------------------------------------------
+
+    /** The Spotify page to send the user to; the way back is {@link completeLogin}. */
+    beginLogin() {
+        if (!this._api.clientId) throw new SpotifyError('no-client-id');
+        const redirectUri = this.redirectUri;
+        if (!redirectUri) throw new Error('the server address is not known yet');
+        const now = Date.now();
+        for (const [key, entry] of this._logins) if (entry.expires < now) this._logins.delete(key);
+        const state = crypto.randomBytes(16).toString('hex');
+        const { verifier, challenge } = pkcePair();
+        this._logins.set(state, { verifier, redirectUri, expires: now + LOGIN_TTL_MS });
+        return authorizeUrl({ clientId: this._api.clientId, redirectUri, state, challenge, base: this.deps.spotify?.accountsBase });
+    }
+
+    /** Finishes a sign-in from the query Spotify sent back; throws a message fit for the callback page. */
+    async completeLogin({ code, state, error }) {
+        const entry = this._logins.get(state);
+        this._logins.delete(state);
+        if (!entry || entry.expires < Date.now()) throw new Error('This sign-in link expired or was already used. Start again from the Spotify settings.');
+        if (error) throw new Error(error === 'access_denied' ? 'Spotify access was declined.' : `Spotify sign-in failed (${this._api.clean(error)}).`);
+        if (!code) throw new Error('Spotify sent no sign-in code. Start again from the Spotify settings.');
+        const refreshToken = await this._api.exchange(code, entry.verifier, entry.redirectUri);
+        try {
+            const me = await this._api.me();
+            this._account = me.display_name || me.id || 'Spotify account';
+        } catch (err) {
+            this._api.forget();
+            throw err;
+        }
+        this._reconnect = false;
+        this._library.forget();
+        this.emit('credentials', { refreshToken, account: this._account, reconnect: false });
+    }
+
+    _revoked() {
+        this._reconnect = true;
+        this._library.forget();
+        this.emit('credentials', { refreshToken: null, reconnect: true });
+        this._warn(new SpotifyError('reconnect').message);
+    }
+
+    _requireAuth() {
+        if (this.auth !== 'connected') throw new SpotifyError(this.auth);
+    }
+
+    /** One-off steps the settings screen asks for. */
+    async action(name) {
+        if (name === 'disconnect-account') {
+            this._api.forget();
+            this._library.forget();
+            this._account = '';
+            this._reconnect = false;
+            this.emit('credentials', { refreshToken: null, account: '', reconnect: false });
+            return { ok: true };
+        }
+        if (name === 'test') return { steps: await require('./spotify-proof').runProof(this) };
+        throw new Error(`${this.label} has no such action`);
+    }
+
+    // --- playing and controlling ----------------------------------------------------
+
+    async open(item) {
+        if (!isLibraryItem(item)) {
+            const handle = await super.open(item);
+            // With an account signed in, the receiver started by hand can also be commanded from here.
+            if (this.auth === 'connected') this._wire();
+            return handle;
+        }
+        this._requireAuth();
+        this._attached = false;
+        const handle = await this._openReceiver({ primed: false });
+        try {
+            await this._command(() => this._select(item, { starting: true }));
+        } catch (err) {
+            await this.close();
+            throw err;
+        }
+        this._wire();
+        return handle;
+    }
+
+    /** True when the receiver already feeds the stream, so a new selection needs no restart. */
+    canRetarget(item) {
+        return this._attached && Boolean(this._child) && isLibraryItem(item);
+    }
+
+    canReplay(item) {
+        return isLibraryItem(item);
+    }
+
+    /** Points the running receiver at another song, album or playlist and waits until it plays. */
+    async retarget(item) {
+        this._requireAuth();
+        await this._command(() => this._select(item, { starting: false }));
+    }
+
+    async play() {
+        return this._command(async () => {
+            const device = await this._findDevice();
+            const mark = this._pcmBytes;
+            await this._api.startPlayback(device.id).catch(ignoreRestricted);
+            await this._confirm(device, (state) => state.is_playing && this._flowing(mark), 'resume playing');
+        });
+    }
+
+    async pause() {
+        return this._command(async () => {
+            const device = await this._findDevice();
+            await this._api.pause(device.id).catch(ignoreRestricted);
+            await this._confirm(device, (state) => !state.is_playing, 'pause');
+        });
+    }
+
+    next() {
+        return this._skip('next');
+    }
+
+    previous() {
+        return this._skip('previous');
+    }
+
+    async setShuffle(on) {
+        this._modes.shuffle = Boolean(on);
+        if (this._attached) await this._command(async () => this._api.setShuffle(on, (await this._findDevice()).id));
+    }
+
+    async setRepeat(mode) {
+        this._modes.repeat = mode;
+        if (this._attached) await this._command(async () => this._api.setRepeat(REPEAT_STATE[mode] || 'off', (await this._findDevice()).id));
+    }
+
+    async _skip(direction) {
+        return this._command(async () => {
+            const device = await this._findDevice();
+            const before = await this._api.playerState();
+            const blocked = before?.actions?.disallows?.[direction === 'next' ? 'skipping_next' : 'skipping_prev'];
+            if (blocked) return { endOfQueue: true };
+            const mark = this._pcmBytes;
+            await this._api.skip(direction, device.id);
+            this.emit('discontinuity');
+            const was = before?.item?.uri;
+            // Previous deep into a song starts it over instead of moving back.
+            const moved = (state) => state.item?.uri !== was ||
+                (direction === 'previous' && state.progress_ms < (before?.progress_ms ?? 0) - 1500);
+            await this._confirm(device, (state) => state.is_playing && moved(state) && this._flowing(mark), direction === 'next' ? 'skip to the next song' : 'go back');
+            return {};
+        });
+    }
+
+    /** Sends the selection to Spotify and returns once the player reports it playing. */
+    async _select(item, { starting }) {
+        const target = await this._library.target(item);
+        const wait = starting ? this._timing.deviceStartWaitMs : this._timing.deviceWaitMs;
+        let device = await this._findDevice(wait);
+        const mark = this._pcmBytes;
+        try {
+            await this._api.startPlayback(device.id, target.body);
+        } catch (err) {
+            if (err.kind !== 'no-device') throw err;
+            // Device ids can change, so look the receiver up again once.
+            this._receiver = null;
+            device = await this._findDevice(wait);
+            await this._api.startPlayback(device.id, target.body);
+        }
+        if (!starting) this.emit('discontinuity');
+        const state = await this._confirm(device, (now) => now.is_playing && this._flowing(mark) &&
+            (target.itemUri ? now.item?.uri === target.itemUri : now.context?.uri === target.contextUri), 'start playing that');
+        await this._syncModes(device, state);
+    }
+
+    // Shuffle and repeat are applied once playing; an idle receiver refuses them.
+    async _syncModes(device, state) {
+        try {
+            if (state.shuffle_state !== this._modes.shuffle) await this._api.setShuffle(this._modes.shuffle, device.id);
+            const repeat = REPEAT_STATE[this._modes.repeat] || 'off';
+            if (state.repeat_state !== repeat) await this._api.setRepeat(repeat, device.id);
+        } catch (err) {
+            this._warn(`could not set shuffle or repeat: ${err.message}`);
+        }
+    }
+
+    /** Polls the player until `accept(state)` holds for the receiver; a command is done when the audio is, not when Spotify says OK. */
+    async _confirm(device, accept, what) {
+        const deadline = Date.now() + this._timing.confirmMs;
+        for (;;) {
+            const state = await this._api.playerState();
+            const here = state?.device?.name === this._deviceName;
+            this._mirror(state);
+            if (state && here && accept(state)) return state;
+            if (Date.now() >= deadline) {
+                throw new SpotifyError('timeout', `Spotify did not ${what} on "${device.name}" in time. Check the Spotify app, and that the receiver uses this Spotify account.`);
+            }
+            await sleep(this._timing.confirmPollMs);
+        }
+    }
+
+    _flowing(mark) {
+        return this._pcmBytes - mark >= MIN_PCM_BYTES;
+    }
+
+    async _findDevice(wait = this._timing.deviceWaitMs) {
+        if (this._receiver && Date.now() - this._receiver.at < DEVICE_TTL_MS) return this._receiver.device;
+        const deadline = Date.now() + wait;
+        for (;;) {
+            const named = (await this._api.devices()).filter((device) => device.id && device.name === this._deviceName);
+            const usable = named.filter((device) => !device.is_restricted);
+            if (usable.length) {
+                const device = usable.find((candidate) => candidate.is_active) || usable[0];
+                this._receiver = { device, at: Date.now() };
+                return device;
+            }
+            if (named.length) throw new SpotifyError('device-not-found', `Spotify lists "${this._deviceName}" but does not allow it to be controlled.`);
+            if (Date.now() >= deadline) break;
+            await sleep(this._timing.deviceRetryMs);
+        }
+        throw new SpotifyError('device-not-found', `Spotify cannot see "${this._deviceName}" on this account. ` +
+            `The first time, open Spotify, pick "${this._deviceName}" in the device list so the receiver can sign in, then try again.`);
+    }
+
+    // Polling stands aside while a command runs, so a stale answer cannot undo what it just confirmed.
+    async _command(work) {
+        this._busy++;
+        try {
+            return await work();
+        } finally {
+            this._busy--;
+        }
+    }
+
+    _wire() {
+        this._attached = true;
+        this._paused = null;
+        clearInterval(this._poller);
+        this._poller = setInterval(() => this._poll(), this._timing.pollMs);
+        this._poller.unref?.();
+    }
+
+    async _poll() {
+        if (this._busy || !this._attached) return;
+        try {
+            const state = await this._api.playerState();
+            if (this._attached && !this._busy) this._mirror(state);
+        } catch (err) {
+            if (err.kind === 'reconnect') this._warn(err.message);
+        }
+    }
+
+    /** Spotify's word on whether the receiver is paused; anything else leaves the stream running. */
+    _mirror(state) {
+        this._setPaused(state?.device?.name === this._deviceName && !state.is_playing);
+    }
+
+    _setPaused(paused) {
+        if (this._paused === paused) return;
+        this._paused = paused;
+        if (this._attached) this.emit('paused', paused);
     }
 
     _idleMetadata() {
@@ -147,9 +486,11 @@ class SpotifySource extends ReceiverSource {
             break;
         case 'playing':
             this._session.playing = true;
+            this._setPaused(false);
             break;
         case 'paused':
             this._session.playing = false;
+            this._setPaused(true);
             break;
         case 'stopped':
         case 'session_disconnected':
@@ -192,12 +533,20 @@ class SpotifySource extends ReceiverSource {
         }
     }
 
+    _onStarted(child) {
+        child.stdout.on('data', (chunk) => { this._pcmBytes += chunk.length; });
+    }
+
     _onStopped() {
         this._session = { user: null, playing: false, track: null };
+        this._receiver = null;
     }
 
     async close() {
         clearTimeout(this._metadataTimer);
+        clearInterval(this._poller);
+        this._poller = null;
+        this._attached = false;
         await super.close();
         await new Promise((resolve) => (this._eventServer ? this._eventServer.close(resolve) : resolve()));
         this._eventServer = null;

@@ -11,6 +11,7 @@ const { PlayHistory } = require('../core/history');
 const { WiiProtocol } = require('../client/protocol');
 const { ArtProxy } = require('./art');
 const { HomeService } = require('./home');
+const { handleSpotifyAuth } = require('./spotify-auth');
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -62,7 +63,12 @@ class WebServer {
     listen(port, host = '0.0.0.0') {
         return new Promise((resolve, reject) => {
             this.server.once('error', reject);
-            this.server.listen(port, host, () => resolve(this.server.address()));
+            this.server.listen(port, host, () => {
+                const address = this.server.address();
+                // Spotify's sign-in returns to this port, so the receiver source needs to know it.
+                if (this.registry?.deps) this.registry.deps.serverPort = address.port;
+                resolve(address);
+            });
         });
     }
 
@@ -94,6 +100,9 @@ class WebServer {
             if (pathname.startsWith('/api/wii/')) return await this.wii.handle(req, res, url);
             if (pathname === '/events') return this._events(req, res);
             if (pathname === '/playlist.pls') return this._playlist(req, res);
+            if (pathname === '/api/spotify/login' || pathname === '/api/spotify/callback') {
+                return await handleSpotifyAuth(req, res, url, this.registry);
+            }
             if (pathname.startsWith('/api/')) return await this._api(req, res, url);
             return this._static(req, res, pathname);
         } catch (err) {

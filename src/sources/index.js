@@ -125,6 +125,7 @@ class SourceRegistry {
 
     async configure(id, patch) {
         this.get(id); // Validate before persisting anything.
+        if (id === 'spotify') patch = this._spotifyPatch(patch);
         const previous = this._instances.get(id);
         await previous.disconnect();
         this._instances.delete(id);
@@ -136,6 +137,18 @@ class SourceRegistry {
             patch = { ...patch, token: null, salt: null };
         }
         this.config.updateSource(id, patch);
+    }
+
+    // The sign-in is only ever written by the server; a new Client ID invalidates the account tied to the old one.
+    _spotifyPatch(patch) {
+        const { refreshToken, account, reconnect, ...rest } = patch;
+        if ('clientId' in rest) {
+            rest.clientId = String(rest.clientId ?? '').trim();
+            if (rest.clientId !== this.config.sourceConfig('spotify').clientId) {
+                Object.assign(rest, { refreshToken: null, account: '', reconnect: false });
+            }
+        }
+        return rest;
     }
 
     async disconnectAll() {
