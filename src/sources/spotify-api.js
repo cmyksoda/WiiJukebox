@@ -97,7 +97,6 @@ class SpotifyApi {
         return Boolean(this.refreshToken);
     }
 
-    /** Drops the saved sign-in, for disconnecting or after Spotify revoked it. */
     forget() {
         this.refreshToken = null;
         this._access = null;
@@ -115,7 +114,6 @@ class SpotifyApi {
         return out.slice(0, 200);
     }
 
-    /** Trades the code from the sign-in redirect for tokens. */
     async exchange(code, verifier, redirectUri) {
         this._requireClient();
         const body = await this._token({
@@ -226,7 +224,6 @@ class SpotifyApi {
         return this._access;
     }
 
-    /** Posts a token request and keeps the access token it returns. */
     async _token(form) {
         const response = await this._send(new URL('/api/token', this._accounts), {
             method: 'POST',

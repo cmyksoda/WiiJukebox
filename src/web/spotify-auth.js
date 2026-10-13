@@ -9,7 +9,6 @@ const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (char) => ESCAPES[
 const isLoopback = (address) =>
     address === '::1' || address === '127.0.0.1' || String(address).startsWith('::ffff:127.');
 
-/** True for a request from this machine, by its loopback address or by its own LAN address. */
 function fromThisComputer(socket) {
     return isLoopback(socket.remoteAddress) || socket.remoteAddress === socket.localAddress;
 }
@@ -66,7 +65,6 @@ function send(res, status, title, message, ok = false) {
     res.end(body);
 }
 
-/** Handles GET /api/spotify/login (sends the browser to Spotify) and /api/spotify/callback (where it returns). */
 async function handleSpotifyAuth(req, res, url, registry) {
     if (req.method !== 'GET') return send(res, 405, 'Not allowed', 'Open this address in a browser.');
     if (!fromThisComputer(req.socket)) {

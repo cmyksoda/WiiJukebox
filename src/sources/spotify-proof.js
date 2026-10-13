@@ -6,7 +6,6 @@ const TRACK = new RegExp(
     '^(?:spotify:track:|https?://open\\.spotify\\.com/(?:intl-[a-z]+/)?track/)?([A-Za-z0-9]{1,40})(?:[?#].*)?$',
 );
 
-/** Accepts a track URI, an open.spotify.com link or a bare id. */
 function parseTrack(text) {
     return TRACK.exec(String(text || '').trim())?.[1] || null;
 }

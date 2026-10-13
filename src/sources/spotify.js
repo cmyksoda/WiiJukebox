@@ -32,7 +32,6 @@ const TIMING = {
 
 const shellQuote = (text) => `'${String(text).replaceAll("'", "'\\''")}'`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-/** The receiver entry starts librespot alone; anything else is something in the library to play. */
 const isLibraryItem = (item) => Boolean(item) && item.type !== 'station' && item.id !== 'receiver';
 const ignoreRestricted = (err) => {
     if (err.kind !== 'restricted') throw err;
@@ -80,7 +79,6 @@ class SpotifySource extends ReceiverSource {
         return String(this.config.deviceName || 'WiiJukebox').slice(0, 50);
     }
 
-    /** 'connected' once an account is signed in; otherwise why not, for the settings screen. */
     get auth() {
         if (!this._api.clientId) return 'no-client-id';
         if (this._reconnect) return 'reconnect';
@@ -113,7 +111,6 @@ class SpotifySource extends ReceiverSource {
         return this._findDevice(waitMs);
     }
 
-    /** Plays through the stream like the web page does, starting the receiver when it is not running. */
     playItem(item) {
         const pipeline = this.deps.pipeline;
         if (!pipeline) throw new Error('the stream is not running');
@@ -159,7 +156,6 @@ class SpotifySource extends ReceiverSource {
 
     // --- signing in ---------------------------------------------------------------
 
-    /** The Spotify page to send the user to; the way back is {@link completeLogin}. */
     beginLogin() {
         if (!this._api.clientId) throw new SpotifyError('no-client-id');
         const redirectUri = this.redirectUri;
@@ -215,7 +211,6 @@ class SpotifySource extends ReceiverSource {
         if (this.auth !== 'connected') throw new SpotifyError(this.auth);
     }
 
-    /** One-off steps the settings screen asks for. */
     async action(name, body = {}) {
         if (name === 'disconnect-account') {
             this._api.forget();
@@ -256,7 +251,6 @@ class SpotifySource extends ReceiverSource {
         return handle;
     }
 
-    /** True when the receiver already feeds the stream, so a new selection needs no restart. */
     canRetarget(item) {
         return this._attached && Boolean(this._child) && isLibraryItem(item);
     }
@@ -451,7 +445,6 @@ class SpotifySource extends ReceiverSource {
         this._schedulePoll();
     }
 
-    /** Spotify's word on whether the receiver is paused; anything else leaves the stream running. */
     _mirror(state) {
         this._setPaused(state?.device?.name === this._deviceName && !state.is_playing);
     }

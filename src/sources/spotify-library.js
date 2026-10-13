@@ -147,7 +147,6 @@ class SpotifyLibrary {
         return this._me;
     }
 
-    /** Fills `limit` entries from `offset` with as many provider requests as that takes. */
     async _window(path, offset, limit, map) {
         const items = [];
         let total = 0;
