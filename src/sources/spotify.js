@@ -406,19 +406,28 @@ class SpotifySource extends ReceiverSource {
     _wire() {
         this._attached = true;
         this._paused = null;
-        clearInterval(this._poller);
-        this._poller = setInterval(() => this._poll(), this._timing.pollMs);
+        this._schedulePoll();
+    }
+
+    // Checking is less urgent while paused, which keeps an idle receiver cheap on the API's rate limit.
+    _schedulePoll() {
+        clearTimeout(this._poller);
+        if (!this._attached) return;
+        const wait = this._paused === true ? this._timing.pollMs * 3 : this._timing.pollMs;
+        this._poller = setTimeout(() => this._poll(), wait);
         this._poller.unref?.();
     }
 
     async _poll() {
-        if (this._busy || !this._attached) return;
-        try {
-            const state = await this._api.playerState();
-            if (this._attached && !this._busy) this._mirror(state);
-        } catch (err) {
-            if (err.kind === 'reconnect') this._warn(err.message);
+        if (!this._busy) {
+            try {
+                const state = await this._api.playerState();
+                if (this._attached && !this._busy) this._mirror(state);
+            } catch (err) {
+                if (err.kind === 'reconnect') this._warn(err.message);
+            }
         }
+        this._schedulePoll();
     }
 
     /** Spotify's word on whether the receiver is paused; anything else leaves the stream running. */
@@ -578,7 +587,7 @@ class SpotifySource extends ReceiverSource {
 
     async close() {
         clearTimeout(this._metadataTimer);
-        clearInterval(this._poller);
+        clearTimeout(this._poller);
         this._poller = null;
         this._attached = false;
         await super.close();
