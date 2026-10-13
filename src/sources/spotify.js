@@ -99,6 +99,25 @@ class SpotifySource extends ReceiverSource {
         return caps;
     }
 
+    // What the connection test needs to see.
+    get api() { return this._api; }
+    get library() { return this._library; }
+    get deviceName() { return this._deviceName; }
+    get receiverRunning() { return Boolean(this._child); }
+    get pcmBytes() { return this._pcmBytes; }
+
+    findReceiver(waitMs) {
+        this._receiver = null;
+        return this._findDevice(waitMs);
+    }
+
+    /** Plays through the stream like the web page does, starting the receiver when it is not running. */
+    playItem(item) {
+        const pipeline = this.deps.pipeline;
+        if (!pipeline) throw new Error('the stream is not running');
+        return pipeline.command(() => pipeline.attach(this, item));
+    }
+
     _receiverItem() {
         return {
             id: 'receiver', type: 'station', title: this._deviceName,
@@ -186,7 +205,7 @@ class SpotifySource extends ReceiverSource {
     }
 
     /** One-off steps the settings screen asks for. */
-    async action(name) {
+    async action(name, body = {}) {
         if (name === 'disconnect-account') {
             this._api.forget();
             this._library.forget();
@@ -195,7 +214,10 @@ class SpotifySource extends ReceiverSource {
             this.emit('credentials', { refreshToken: null, account: '', reconnect: false });
             return { ok: true };
         }
-        if (name === 'test') return { steps: await require('./spotify-proof').runProof(this) };
+        if (name === 'proof') {
+            const { play, track, wait } = body;
+            return { steps: await require('./spotify-proof').runProof(this, { play: play === true, track, waitMs: Math.min(Number(wait) || 30, 300) * 1000 }) };
+        }
         throw new Error(`${this.label} has no such action`);
     }
 
