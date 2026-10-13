@@ -337,8 +337,10 @@ class SpotifySource extends ReceiverSource {
             await this._api.startPlayback(device.id, target.body);
         }
         if (!starting) this.emit('discontinuity');
-        const state = await this._confirm(device, (now) => now.is_playing && this._flowing(mark) &&
-            (target.itemUri ? now.item?.uri === target.itemUri : now.context?.uri === target.contextUri), 'start playing that');
+        // A relinked track is reported under the uri it was relinked from.
+        const isTarget = (now) => (target.itemUri
+            ? [now.item?.uri, now.item?.linked_from?.uri].includes(target.itemUri) : now.context?.uri === target.contextUri);
+        const state = await this._confirm(device, (now) => now.is_playing && this._flowing(mark) && isTarget(now), 'start playing that');
         await this._syncModes(device, state);
     }
 

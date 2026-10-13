@@ -26,7 +26,7 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
     const refreshTokens = new Set();
     const accessTokens = new Set();
     let hiddenUntil = Date.now() + deviceDelayMs;
-    const knobs = { premium, allowlisted, extended, injected: [], limited: 0, retryAfter: 1 };
+    const knobs = { premium, allowlisted, extended, relink: false, injected: [], limited: 0, retryAfter: 1 };
     let counter = 0;
     // The address is needed for the cover links in the data, so the server starts first and gets its handler below.
     let handle = () => {};
@@ -101,7 +101,8 @@ async function fakeSpotify({ clientId = 'test-client-id', deviceName = 'WiiJukeb
         return {
             device: devices.find((d) => d.id === player.deviceId) || null,
             repeat_state: player.repeat, shuffle_state: player.shuffle, timestamp: Date.now(), progress_ms: player.progressMs,
-            is_playing: player.playing, item: now, currently_playing_type: 'track',
+            is_playing: player.playing, currently_playing_type: 'track',
+            item: knobs.relink ? { ...now, uri: `${now.uri}-relinked`, linked_from: { uri: now.uri } } : now,
             context: player.contextUri ? { type: player.contextUri.split(':')[1], uri: player.contextUri } : null,
             actions: { disallows: { ...(last && player.repeat === 'off' ? { skipping_next: true } : {}), ...(player.index === 0 ? { skipping_prev: true } : {}) } },
         };

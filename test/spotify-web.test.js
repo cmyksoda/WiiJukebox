@@ -283,6 +283,8 @@ test('pause, resume, next and previous go to Spotify and finish only when the au
         assert.equal(r.fake.player.playing, false);
         assert.equal(pipeline.status.paused, true, 'the stream holds with what Spotify reports');
         assert.ok(r.fake.paths('PUT').includes('/me/player/pause'));
+        await send('pause');
+        assert.equal(pipeline.status.paused, true, 'pausing what is already paused is not an error');
 
         await send('play');
         assert.equal(r.fake.player.playing, true);
@@ -303,6 +305,16 @@ test('pause, resume, next and previous go to Spotify and finish only when the au
 
         r.fake.player.index = r.fake.player.queue.length - 1;
         assert.deepEqual(await send('next'), { ok: true, endOfQueue: true });
+    } finally { await r.close(); }
+});
+
+test('a track Spotify reports under its relinked uri still counts as the one selected', async () => {
+    const r = await rig();
+    try {
+        r.fake.knobs.relink = true;
+        await r.play({ id: 'album/alb001', type: 'album', startId: 'track/al001004', startIndex: 3 });
+        assert.equal(r.fake.player.index, 3);
+        assert.equal(r.app.pipeline.activeSource, r.source());
     } finally { await r.close(); }
 });
 
