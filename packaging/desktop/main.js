@@ -441,13 +441,16 @@ function presentCloseDialog(height) {
     const dialog = closeDialog;
     if (!dialog || dialog.isVisible() || !Number.isFinite(height)) return;
     const content = Math.min(400, Math.max(120, Math.ceil(height / 2) * 2));
+    // Windows kept this non-resizable card at 344x170 whatever it was asked, so it is resizable just while sized,
+    // and grown by any gap Windows still leaves between the size asked for and the page it gives.
+    dialog.setResizable(true);
     dialog.setContentSize(CLOSE_DIALOG_WIDTH, content);
-    // Windows gives this frameless card a smaller content area than asked (344x170 for 376x186), so grow it by the gap.
     const [gotWidth, gotHeight] = dialog.getContentSize();
     if (gotWidth !== CLOSE_DIALOG_WIDTH || gotHeight !== content) {
         const [outerWidth, outerHeight] = dialog.getSize();
         dialog.setSize(outerWidth + CLOSE_DIALOG_WIDTH - gotWidth, outerHeight + content - gotHeight);
     }
+    dialog.setResizable(false);
     const parent = win?.getBounds();
     const [width, tall] = dialog.getSize();
     if (parent) dialog.setPosition(Math.round(parent.x + (parent.width - width) / 2), Math.round(parent.y + (parent.height - tall) / 2));

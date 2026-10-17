@@ -1305,7 +1305,8 @@ async function checkCloseDialog() {
         return true;`);
     const calls = async () => JSON.parse(await inMain('return JSON.stringify(globalThis.calls);'));
     const cards = async () => JSON.parse(await inMain(`return JSON.stringify(electron.BaseWindow.getAllWindows().filter((w) => w.getParentWindow()).map((w) => ({
-        modal: w.isModal(), parent: w.getParentWindow() === ${mainWindow}, size: w.getContentSize() })));`));
+        modal: w.isModal(), parent: w.getParentWindow() === ${mainWindow}, size: w.getContentSize(), outer: w.getSize(),
+        bounds: w.getBounds(), resizable: w.isResizable(), min: w.getMinimumSize(), max: w.getMaximumSize() })));`));
     const cardGone = () => until('the card to close', async () => (await cards()).length === 0, 8000).then(() => true, () => false);
     // The window hides a moment after the card is gone.
     const hid = (times) => until('the window to hide', async () => (await calls()).filter((c) => c === 'hide').length === times, 5000).then(() => true, () => false);
@@ -1358,7 +1359,7 @@ async function checkCloseDialog() {
         check('the choice is remembered unless unticked, and the safe default has focus', look.remember === true && look.focus === 'background');
         // The card reports its height as the page's last step, and the window is sized when main hears it.
         const sized = await until('the card to be sized', async () => (await cards())[0]?.size.join() === `376,${look.card.height}`, 5000).then(() => true, () => false);
-        check('the card is the size of its content', sized, JSON.stringify({ window: (await cards())[0]?.size, viewport: look.viewport }));
+        check('the card is the size of its content', sized, JSON.stringify({ ...(await cards())[0], viewport: look.viewport }));
 
         // Only the card may answer, and only with a real choice.
         await inMain(`electron.ipcMain.emit('close-dialog:answer', { sender: electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow()).contentView.children[0].webContents }, { choice: 'quit', remember: true }); return true;`);
