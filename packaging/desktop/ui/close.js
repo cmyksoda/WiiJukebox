@@ -32,5 +32,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 document.querySelector('#background').focus();
-// Main sizes the window to the card, so it never shows too tall or cut off.
-api.ready(Math.ceil(document.querySelector('main').getBoundingClientRect().height));
+// Main sizes the window to the card. The first measure starts the font loading, and the font decides where the text wraps.
+const cardHeight = () => Math.ceil(document.querySelector('main').getBoundingClientRect().height);
+cardHeight();
+document.fonts.ready.then(() => api.ready(cardHeight()));

@@ -292,7 +292,8 @@ a clean `--quit`, and that the ports are free afterwards. Then it runs:
 - the live title bar, in a window shown on Chromium's headless platform (Linux only, since a window
   that is never shown renders nothing): a theme chosen in the web UI or the menu reaches the bar within
   100 ms of the page, and the menu's hover (the light following the pointer and clearing, the submenu
-  closing after a rest and staying through a slow diagonal);
+  closing as soon as another entry is hovered, unless the pointer is heading for it and gets a short
+  grace);
 - the title bar: the bar view above the page, the window title while a stand-in Subsonic server
   (`scripts/fake-subsonic.js`) plays a five-track album (count, paused, next, stopped), the bar
   buttons reaching the window (with the window's maximize, minimize and hide recorded, since

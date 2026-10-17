@@ -8,12 +8,10 @@
     const scrim = document.querySelector('#menu-scrim');
     const root = document.querySelector('#menu-root');
     const sub = document.querySelector('#menu-sub');
-    // How long a pointer must rest on another entry before an open submenu closes behind it.
     // How long a pointer heading for the submenu may cross other rows before they take over.
     const AIM_GRACE = 150;
     let open = false;
     let owner = null;
-    let closeTimer = null;
     let switchTimer = null;
     let aimedAt = null;
 
@@ -79,17 +77,16 @@
         }
     }
 
-    function cancelTimers() {
-        clearTimeout(closeTimer);
+    function cancelSwitch() {
         clearTimeout(switchTimer);
-        closeTimer = switchTimer = null;
+        switchTimer = null;
     }
 
     function closeSub() {
         sub.hidden = true;
         owner?.setAttribute('aria-expanded', 'false');
         owner = null;
-        cancelTimers();
+        cancelSwitch();
     }
 
     // Beside its row, on whichever side of the menu has room, and on whole pixels.
@@ -184,7 +181,7 @@
     // The pointer is on `row` of the main list (or on nothing it can use): light it, and let go of the submenu behind
     // it at once unless that is the submenu's own parent.
     function pointerOnRoot(row) {
-        cancelTimers();
+        cancelSwitch();
         if (row) light(row, 'pointer');
         else unlightPointerRows(root);
         if (row?.entries) openSub(row);
@@ -198,7 +195,7 @@
         const row = event.target.closest('.item');
         const target = usable(row) ? row : null;
         if (menu === sub) {
-            cancelTimers();
+            cancelSwitch();
             if (target) light(target, 'pointer');
             else unlightPointerRows(sub);
         } else if (target !== owner && aimingAtSub()) {
@@ -225,7 +222,7 @@
             const next = list[(index + list.length) % list.length];
             if (next) light(next, 'key');
         };
-        cancelTimers();
+        cancelSwitch();
         switch (event.key) {
             case 'ArrowDown': move(at + 1); break;
             case 'ArrowUp': move(at < 0 ? -1 : at - 1); break;

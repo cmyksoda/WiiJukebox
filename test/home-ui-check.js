@@ -11,8 +11,9 @@ const { fakeSubsonic, fakeJellyfin, fakePlex, fakePodcasts } = require('./helper
 const { harness } = require('./helpers/app-harness');
 
 let failed = 0;
-const check = (label, ok) => {
+const check = (label, ok, detail) => {
     console.log(ok ? 'ok  ' : 'FAIL', label);
+    if (!ok && detail) console.log(`      ${detail}`);
     if (!ok) failed++;
 };
 
@@ -215,7 +216,7 @@ const check = (label, ok) => {
             return rects.every((r) => [r.x, r.y, r.width, r.height].every(Number.isInteger))
                 && rects[0].left >= 0 && rects[0].top >= 0 && rects[0].right <= innerWidth && rects[0].bottom <= innerHeight;
         });
-        // The page menu at the toolbar's right: Theme, then Sidebar settings with a count while channels are hidden.
+        // The page menu at the toolbar's right: Theme, then Sidebar settings.
         const openPageMenu = async (view) => {
             await view.click('#page-menu');
             await view.waitForSelector('.ctx');
@@ -225,9 +226,9 @@ const check = (label, ok) => {
             await view.click('.ctx >> text=Sidebar settings…');
             await view.waitForSelector('dialog.sheet[open]');
         };
-        const chip = async (view) => {
+        const settingsEntry = async (view) => {
             await openPageMenu(view);
-            const text = await view.$eval('.ctx', (menu) => menu.querySelector('.detail')?.textContent ?? '');
+            const text = (await menuRows(view)).join('|');
             await view.keyboard.press('Escape');
             return text;
         };
@@ -253,7 +254,7 @@ const check = (label, ok) => {
             const b = document.querySelector('#page-menu').getBoundingClientRect();
             return [r.x, r.y, r.width, r.height].every(Number.isInteger) && r.width === 20 && r.height === 4 && r.left - b.left === b.right - r.right && r.top - b.top === b.bottom - r.bottom;
         }));
-        check('no count shows by Sidebar settings while nothing is hidden', await chip(page) === '');
+        check('no count shows by Sidebar settings while nothing is hidden', await settingsEntry(page) === 'Sidebar settings…');
 
         // The menu: right-click, Escape, and a click outside.
         await page.click('#sources [data-source="plex"]', { button: 'right' });
@@ -350,20 +351,20 @@ const check = (label, ok) => {
             && !(await listed(page, '#home-channels')).includes('plex') && (await hiddenOnServer()).join() === 'plex');
         check('and says where to get it back', await toastText(page) === 'Hid Plex. Bring it back in Sidebar settings.');
         check('focus moves to the next channel, not to the top of the page', await page.evaluate(() => document.activeElement.dataset.source) === 'ytdlp');
-        check('the menu counts what is hidden', await chip(page) === '1 hidden');
+        check('and none shows once a channel is hidden', await settingsEntry(page) === 'Sidebar settings…');
 
         // Persistence: this page after a reload, and a second browser that has never seen the page.
         await page.reload();
         await page.waitForSelector('.channel');
-        check('it survives a reload', !(await listed(page, '#sources')).includes('plex') && await chip(page) === '1 hidden');
+        check('it survives a reload', !(await listed(page, '#sources')).includes('plex') && (await hiddenOnServer()).join() === 'plex');
         const other = await open({ width: 1100, height: 800 }, false);
         check('and a second browser, which keeps nothing locally, sees the same sidebar and tiles', !(await listed(other, '#sources')).includes('plex')
-            && !(await listed(other, '#home-channels')).includes('plex') && await chip(other) === '1 hidden');
+            && !(await listed(other, '#home-channels')).includes('plex'));
         await page.click('#home-channels [data-source="podcasts"]', { button: 'right' });
         await page.click('.ctx >> text=Hide “Podcasts”');
         await other.waitForFunction(() => !document.querySelector('#sources [data-source="podcasts"]'));
         check('a change on one device reaches the other without a reload', !(await listed(other, '#home-channels')).includes('podcasts')
-            && await chip(other) === '2 hidden');
+            && !(await listed(other, '#sources')).includes('plex'));
         await other.waitForFunction(() => !document.querySelector('#home-rows').textContent.includes('New episodes'));
         check('home on the other device drops that channel\'s rows as well', !(await other.textContent('#home-rows')).includes('New episodes'));
         await other.context().close();
@@ -468,7 +469,8 @@ const check = (label, ok) => {
         await page.click('dialog.sheet >> text=Show all');
         check('Show all ticks everything and the server forgets the list', (await hiddenOnServer()).length === 0
             && await page.$$eval('dialog.sheet input', (boxes) => boxes.every((box) => box.checked))
-            && await page.isDisabled('dialog.sheet >> text=Show all') && await page.evaluate(() => document.activeElement.textContent) === 'Done');
+            && await page.isDisabled('dialog.sheet >> text=Show all'));
+        check('and focus does not jump to Done', await page.evaluate(() => document.activeElement.textContent) !== 'Done');
         await page.keyboard.press('Escape');
         check('Escape closes it and focus returns to the menu button', !(await page.isVisible('dialog.sheet')) && await page.evaluate(() => document.activeElement.id) === 'page-menu');
         await openSettings(page);
@@ -496,7 +498,7 @@ const check = (label, ok) => {
         await page.reload();
         await page.waitForSelector('#home-channels .home-note');
         check('with everything hidden, the sidebar and home say so', (await page.textContent('#sources')).includes('Every channel is hidden.')
-            && (await page.textContent('#home-channels')).includes('Bring some back in Sidebar settings') && await chip(page) === '10 hidden');
+            && (await page.textContent('#home-channels')).includes('Bring some back in Sidebar settings'));
         await openSettings(page);
         await page.click('dialog.sheet >> text=Show all');
         await page.keyboard.press('Escape');

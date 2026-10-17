@@ -59,10 +59,18 @@ function executableOf(file) {
 }
 const executable = executableOf(target);
 
+const appDirs = [];
+process.on('exit', () => {
+    for (const dir of appDirs) {
+        try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5 }); } catch { /* a killed app may still be writing */ }
+    }
+});
+
 class App {
     /** @param {{args?: string[], settings?: object, env?: object, discoveryPort?: number, config?: object}} options `settings` is the app's saved state (none means a first run); `config` is the server's config.json; a null in `env` removes that variable. */
     constructor(name, { args: extraArgs = [], settings = null, env = {}, discoveryPort = DISCOVERY_PORT, config = { port: PORT, discoveryPort } } = {}) {
         this.dir = fs.mkdtempSync(path.join(process.env.WIIJUKEBOX_SMOKE_DIR || os.tmpdir(), `wiijukebox-smoke-${name}-`));
+        appDirs.push(this.dir);
         this.config = path.join(this.dir, 'config');
         this.configFile = path.join(this.config, 'wiijukebox', 'config.json');
         this.userData = path.join(this.dir, 'userdata');
@@ -246,8 +254,8 @@ async function devtoolsClient({ port = DEBUG_PORT, type = 'page', urlPart = 'app
     return {
         send,
         // `userGesture` lets the page do what only a click or key press may, such as going fullscreen.
-        evaluate: async (expression, { userGesture = false } = {}) => {
-            const answer = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture });
+        evaluate: async (expression, { userGesture = false, awaitPromise = true } = {}) => {
+            const answer = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise, userGesture });
             if (answer.exceptionDetails) throw new Error(answer.exceptionDetails.exception?.description || answer.exceptionDetails.text);
             return answer.result.value;
         },
@@ -718,11 +726,12 @@ async function checkSystemFfmpeg() {
 }
 
 // Runs code in the app's main process through the inspector. The connection is closed at once: with a
-// debugger still attached the app waits for it before quitting.
+// debugger still attached the app waits for it before quitting. The code runs synchronously and its result is not
+// awaited, since the inspector sometimes reports the promise it waits on as collected (a flaky "Promise was collected").
 async function inMain(expression) {
     const main = await devtoolsClient({ port: INSPECT_PORT, type: 'node', urlPart: '' });
     try {
-        return await main.evaluate(`(async () => { const electron = process.mainModule.require('electron'); ${expression} })()`);
+        return await main.evaluate(`(() => { const electron = process.mainModule.require('electron'); ${expression} })()`, { awaitPromise: false });
     } finally {
         main.close();
     }
@@ -745,6 +754,13 @@ const press = (client, key, vk) => Promise.all(['rawKeyDown', 'keyUp'].map((type
 
 const barMenuShown = (bar) => bar.evaluate("!document.querySelector('#menu-scrim').hidden");
 
+// The bar's view only grows over the window a moment after its menu shows, so the menu is usable once both have happened.
+const barMenuReady = async (bar) => {
+    if (!(await barMenuShown(bar))) return false;
+    const layout = await windowViews();
+    return viewOf(layout, 'bar').bounds.height === layout.root.height;
+};
+
 // Opens the ≡ menu and clicks down a path of entries (a submenu's parent, then its entry), as a user would.
 async function chooseFromBarMenu(bar, labels) {
     await bar.evaluate("document.querySelector('#menu').click(); true");
@@ -761,7 +777,7 @@ async function checkBarMenu(app, bar, page) {
     const BAR = 34;
     const visible = () => bar.evaluate("!document.querySelector('#menu-scrim').hidden");
     const closed = (what) => until(what, async () => !(await visible()) && (await windowViews()).views.find((v) => v.url.endsWith('titlebar.html')).bounds.height === BAR, 5000).then(() => true, () => false);
-    const opened = () => until('the menu', visible, 5000).then(() => true, () => false);
+    const opened = () => until('the menu', () => barMenuReady(bar), 5000).then(() => true, () => false);
     const key = (name) => bar.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(name)}, bubbles: true })); true`);
     const focused = () => bar.evaluate("document.activeElement.querySelector?.('.label')?.textContent ?? document.activeElement.id");
     const mouse = (type, x, y) => bar.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
@@ -1112,28 +1128,32 @@ async function checkMenuHover(bar) {
 
     await moveTo(away.x, away.y);
     await click(...Object.values(await centerOf('#menu')));
-    await until('the menu', () => barMenuShown(bar), 5000);
+    await until('the menu', () => barMenuReady(bar), 5000);
     check('a menu opened with the mouse has no entry lit until the pointer or a key moves', (await lit()).length === 0);
 
     await glide(away, await rowCenter('Theme'), 6, 20);
     await sleep(60);
     check('the entry under the pointer is lit, and a submenu entry opens its submenu', (await lit()).join() === 'Theme' && await subShown() && await subLabels() === 'System,Light,Dark');
 
-    // Straight down to another entry: the light follows at once, the submenu goes a moment later.
+    // Straight down to another entry: the light follows and takes the submenu with it.
     const theme = await rowCenter('Theme');
     const other = await rowCenter('Show server log');
     await glide(theme, other, 6, 20);
     check('moving to another entry moves the light there, one entry at a time', (await lit()).join() === 'Show server log');
-    check('while the submenu is still open for a moment', await subShown());
-    await sleep(450);
-    check('and it closes by itself once the pointer has rested elsewhere', !(await subShown()));
+    check('and the submenu closes with it at once', !(await subShown()));
 
-    // Back onto Theme, then diagonally across the entry below it to the submenu, slowly enough that a plain delay would shut it.
+    // Back onto Theme, then diagonally across the entry below it to the submenu: the entries crossed only take over
+    // after a short grace, so a slow diagonal loses the submenu and a quick one keeps it.
     await glide(other, theme, 6, 20);
     await sleep(60);
-    const dark = await rowCenter('Dark', 'sub');
-    await glide(await rowCenter('Theme'), dark, 12, 55);
-    check('a slow diagonal across other entries to the submenu does not close it', await subShown());
+    let dark = await rowCenter('Dark', 'sub');
+    await glide(theme, dark, 12, 55);
+    check('a diagonal slower than the grace lets the entries it crosses take over', !(await subShown()));
+    await glide(dark, theme, 6, 20);
+    await sleep(60);
+    dark = await rowCenter('Dark', 'sub');
+    await glide(theme, dark, 6, 10);
+    check('a quick diagonal across other entries to the submenu does not close it', await subShown());
     await sleep(350);
     check('and it stays open with its parent lit while the pointer is in it, lighting the entry under it', await subShown() && (await lit()).join() === 'Theme,Dark', (await lit()).join());
     await glide(dark, away, 6, 20);
@@ -1272,6 +1292,8 @@ async function checkCloseDialog() {
     const cards = async () => JSON.parse(await inMain(`return JSON.stringify(electron.BaseWindow.getAllWindows().filter((w) => w.getParentWindow()).map((w) => ({
         modal: w.isModal(), parent: w.getParentWindow() === ${mainWindow}, size: w.getContentSize() })));`));
     const cardGone = () => until('the card to close', async () => (await cards()).length === 0, 8000).then(() => true, () => false);
+    // The window hides a moment after the card is gone.
+    const hid = (times) => until('the window to hide', async () => (await calls()).filter((c) => c === 'hide').length === times, 5000).then(() => true, () => false);
     const cardUp = async () => {
         await until('the card', async () => (await cards()).length === 1, 15000);
         const opened = await devtoolsClient({ urlPart: 'close.html' });
@@ -1279,7 +1301,10 @@ async function checkCloseDialog() {
         await until('the card to load', () => opened.evaluate("document.activeElement?.id === 'background'").catch(() => false), 10000);
         return opened;
     };
-    const press = (card, key) => card.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true })); true`);
+    const keyEvent = (key) => `document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true })); true`;
+    const press = (card, key) => card.evaluate(keyEvent(key));
+    // These make the card answer, which closes its page, so it may be gone before it replies; the checks wait for the card to go instead.
+    const closing = (card, expression) => { card.evaluate(expression).catch(() => {}); };
 
     const app = new App('closecard', {
         args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
@@ -1315,7 +1340,9 @@ async function checkCloseDialog() {
         check('the card is compact (376px wide, even height) and its buttons sit on whole pixels',
             look.card.width === 376 && look.card.height % 2 === 0 && look.card.height < 220 && look.buttons.every((b) => [b.x, b.y, b.width, b.height].every(Number.isInteger)), JSON.stringify(look.card));
         check('the choice is remembered unless unticked, and the safe default has focus', look.remember === true && look.focus === 'background');
-        check('the card is the size of its content', (await cards())[0].size.join() === `376,${look.card.height}`, JSON.stringify((await cards())[0].size));
+        // The card reports its height as the page's last step, and the window is sized when main hears it.
+        const sized = await until('the card to be sized', async () => (await cards())[0]?.size.join() === `376,${look.card.height}`, 5000).then(() => true, () => false);
+        check('the card is the size of its content', sized, JSON.stringify((await cards())[0]?.size));
 
         // Only the card may answer, and only with a real choice.
         await inMain(`electron.ipcMain.emit('close-dialog:answer', { sender: electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow()).contentView.children[0].webContents }, { choice: 'quit', remember: true }); return true;`);
@@ -1328,7 +1355,7 @@ async function checkCloseDialog() {
         await press(card, 'ArrowLeft');
         check('arrow keys move between the buttons', await card.evaluate('document.activeElement.id') === 'quit');
         await press(card, 'ArrowRight');
-        await press(card, 'Escape');
+        closing(card, keyEvent('Escape'));
         check('Escape cancels: the card goes, nothing is remembered, and the window stays', await cardGone() && saved(app) === 'ask' && (await calls()).length === 0);
         card.close();
 
@@ -1340,9 +1367,9 @@ async function checkCloseDialog() {
         check('closing the window from the system asks too, and never twice at once', (await cards()).length === 1);
         await card.evaluate("document.querySelector('#quit').focus(); true");
         await card.evaluate("document.querySelector('#remember').focus(); true");
-        await press(card, 'Enter');
+        closing(card, keyEvent('Enter'));
         check('Enter anywhere but on another button picks Keep playing, remembers it and hides the window',
-            await cardGone() && await until('the saved choice', () => saved(app) === 'background', 5000).then(() => true, () => false) && (await calls()).at(-1) === 'hide', JSON.stringify(await calls()));
+            await cardGone() && await until('the saved choice', () => saved(app) === 'background', 5000).then(() => true, () => false) && await hid(1), JSON.stringify(await calls()));
         card.close();
         await inMain(`${mainWindow}.close(); return true;`);
         await sleep(600);
@@ -1372,8 +1399,8 @@ async function checkCloseDialog() {
         await record();
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
-        await again.evaluate("document.querySelector('#remember').click(); document.querySelector('#background').click(); true");
-        check('unticked, Keep playing hides the window this once', await cardGone() && (await calls()).at(-1) === 'hide');
+        closing(again, "document.querySelector('#remember').click(); document.querySelector('#background').click(); true");
+        check('unticked, Keep playing hides the window this once', await cardGone() && await hid(1));
         check('and is not remembered, so it asks again', saved(second) === 'ask');
         again.close();
 
@@ -1391,13 +1418,13 @@ async function checkCloseDialog() {
 
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
-        await again.evaluate("document.querySelector('#cancel').click(); true");
+        closing(again, "document.querySelector('#cancel').click(); true");
         check('the Cancel button leaves everything as it was', await cardGone() && saved(second) === 'ask' && (await calls()).filter((c) => c === 'hide').length === 1);
         again.close();
 
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
-        await again.evaluate("document.querySelector('#quit').click(); true");
+        closing(again, "document.querySelector('#quit').click(); true");
         const exit = await Promise.race([second.exited, sleep(30000).then(() => null)]);
         check('Quit remembers the choice and quits the app', exit !== null && saved(second) === 'quit', JSON.stringify(exit));
     } catch (err) {
