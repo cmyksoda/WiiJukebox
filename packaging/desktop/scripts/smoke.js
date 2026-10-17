@@ -1247,7 +1247,12 @@ async function checkSystemTitleBar() {
         check('the window was rebuilt with the page alone, still showing the web UI', layout.windows === 1 && layout.views.length === 1 && layout.views[0].url === state.serverUrl, layout.views.map((view) => view.url).join(', '));
         check('the page fills the window, with no bar view', JSON.stringify(layout.views[0].bounds) === JSON.stringify({ x: 0, y: 0, width: layout.root.width, height: layout.root.height }));
         check('the choice is saved', JSON.parse(fs.readFileSync(path.join(app.userData, 'settings.json'), 'utf8')).systemTitleBar === true);
-        check('the window title still follows playback with the system frame', layout.title.startsWith('(1 / 5) Rain on the Roof') && system.windowTitle === layout.title, layout.title);
+        // The rebuilt window takes the title as it is created, which an emulated (Rosetta) app can do a moment late.
+        const titled = await until('the rebuilt window\'s title', async () => {
+            const title = (await windowViews()).title;
+            return title.startsWith('(1 / 5) Rain on the Roof') && title;
+        }, 5000).then((title) => title, () => null);
+        check('the window title still follows playback with the system frame', Boolean(titled), titled || `${(await windowViews()).title} after 5 s; the app says ${system.windowTitle}`);
         await api('control/next');
         await app.waitState('the next title', (s) => s.windowTitle.startsWith('(2 / 5)'), 20000);
         check('and keeps following it', (await windowViews()).title.startsWith('(2 / 5) Channel Surfing'));
