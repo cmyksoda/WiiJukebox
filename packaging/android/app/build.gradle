@@ -8,6 +8,10 @@ def signingFile = file(System.getenv('WIIJUKEBOX_SIGNING') ?:
 def signing = new Properties()
 if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
 
+// One version for every app, from the server's package.json; versionCode must grow with each release.
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../../package.json')).version
+def (major, minor, patch) = appVersion.tokenize('.-')[0..2].collect { it as int }
+
 android {
     namespace 'org.wiijukebox.android'
     compileSdk 37
@@ -16,8 +20,12 @@ android {
         applicationId 'org.wiijukebox.controller'
         minSdk 26
         targetSdk 36
-        versionCode 1
-        versionName '0.1.0'
+        versionCode major * 10000 + minor * 100 + patch
+        versionName appVersion
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     compileOptions {

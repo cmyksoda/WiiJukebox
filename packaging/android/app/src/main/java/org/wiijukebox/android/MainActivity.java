@@ -380,7 +380,7 @@ public final class MainActivity extends Activity {
 
         @JavascriptInterface
         public String version() {
-            return "0.1.0";
+            return BuildConfig.VERSION_NAME;
         }
     }
 }

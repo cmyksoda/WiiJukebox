@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { QueueSource } = require('./queue');
+const { version } = require('../../package.json');
 
 class PlexSource extends QueueSource {
     static id = 'plex';
@@ -28,7 +29,7 @@ class PlexSource extends QueueSource {
 
     _headers() {
         return { Accept: 'application/json', 'X-Plex-Token': this.config.token,
-            'X-Plex-Product': 'WiiJukebox', 'X-Plex-Version': '0.1.0',
+            'X-Plex-Product': 'WiiJukebox', 'X-Plex-Version': version,
             'X-Plex-Client-Identifier': this.deps.serverId || 'wiijukebox' };
     }
 
