@@ -59,10 +59,18 @@ function executableOf(file) {
 }
 const executable = executableOf(target);
 
+const appDirs = [];
+process.on('exit', () => {
+    for (const dir of appDirs) {
+        try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5 }); } catch { /* a killed app may still be writing */ }
+    }
+});
+
 class App {
     /** @param {{args?: string[], settings?: object, env?: object, discoveryPort?: number, config?: object}} options `settings` is the app's saved state (none means a first run); `config` is the server's config.json; a null in `env` removes that variable. */
     constructor(name, { args: extraArgs = [], settings = null, env = {}, discoveryPort = DISCOVERY_PORT, config = { port: PORT, discoveryPort } } = {}) {
         this.dir = fs.mkdtempSync(path.join(process.env.WIIJUKEBOX_SMOKE_DIR || os.tmpdir(), `wiijukebox-smoke-${name}-`));
+        appDirs.push(this.dir);
         this.config = path.join(this.dir, 'config');
         this.configFile = path.join(this.config, 'wiijukebox', 'config.json');
         this.userData = path.join(this.dir, 'userdata');
