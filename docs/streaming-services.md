@@ -7,7 +7,7 @@ decrypts DRM (Widevine, FairPlay, PlayReady) or shares accounts.
 | Service | Path | You need | Browse on the Wii | Status |
 |---|---|---|---|---|
 | Spotify | Spotify Connect receiver (librespot) for audio, plus the Spotify Web API for your library and remote control | Premium, `librespot` binary, your own free Spotify developer app | Liked Songs, Playlists, Albums; pick a song or playlist and play, pause and skip from the Wii or web | Built and tested against a fake Spotify and a fake librespot; no real Spotify account was tested. Without the developer app it stays a plain receiver |
-| Apple Music | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac, `shairport-sync` binary | Start entry; the sender controls playback | Built. Receiver, metadata pipe and cover art parsed against the real program; no Apple sender was tested |
+| AirPlay (Apple Music and any other app) | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac; `shairport-sync`, which the desktop app includes on Linux and macOS | Start entry; the sender controls playback | Built. Receiver, metadata pipe and cover art parsed against the real program; no Apple sender was tested |
 | YouTube Music | music.youtube.com search plus yt-dlp | `yt-dlp` (and your browser cookies for Premium or your library) | Saved links, Liked Music with cookies | Built. Search, albums and playback were run live |
 | Podcasts | Apple's iTunes search and chart, then each show's own RSS feed | Nothing | Subscriptions, Top shows | Built. Search, the chart, a feed and one episode with seeking were run live |
 | Tidal | none | | | Not offered. See below |
@@ -32,6 +32,35 @@ The Wii source browser lists a single "start" entry per receiver. Choosing it
 starts the receiver and shows "Waiting for Spotify" (or AirPlay) until a phone
 connects. Spotify with an account connected lists that entry beside its library.
 
+### Two ways to use Spotify
+
+Both need Spotify Premium, and the phone or computer on the same network as WiiJukebox.
+
+**The easy way: a speaker, with nothing to set up.**
+
+1. On the Wii (or the web page), open **Spotify Connect** and choose **WiiJukebox**.
+   This starts the receiver.
+2. In the Spotify app on your phone or computer, tap the devices icon and pick
+   **WiiJukebox**.
+3. Music plays on the Wii, which shows the song and its cover art. You choose
+   songs, pause and skip in the Spotify app.
+
+**With browsing on the Wii: a one-time setup of about ten minutes.**
+
+Spotify only lets a program browse your library through a developer app of your
+own (free, but its owner needs Premium; Spotify allows five people per app and
+offers no shared app for projects like this one). The steps are under
+[Spotify library and remote control](#spotify-library-and-remote-control-spotify-web-api)
+below, and Settings, Spotify Connect walks through them. Afterwards the Wii's
+Spotify channel shows **Liked Songs**, **Playlists** and **Albums**, and you can
+pick a song and play, pause or skip from the Wii; the phone stays in step.
+
+**Forgetting an account.** The receiver remembers whoever first chose it in the
+Spotify app and signs in as them on every start. **Forget this Spotify account**
+on the Spotify Connect page stops the receiver, deletes that sign-in and
+disconnects browsing, so a visitor's account doesn't stay behind. Your Client ID
+stays in Settings.
+
 ### Spotify Connect (librespot)
 
 Requires Spotify Premium and [librespot](https://github.com/librespot-org/librespot).
@@ -48,7 +77,8 @@ its full path under Spotify settings (`binary`).
 - The Spotify app's own volume slider is ignored (`--volume-ctrl fixed`); the Wii
   has the volume control.
 - The first connection from the Spotify app signs librespot in with that
-  account. Credentials are cached under `<config dir>/spotify/` (mode 0700).
+  account. Credentials are cached under `<config dir>/spotify/` (mode 0700);
+  **Forget this Spotify account** deletes them.
 - Zeroconf needs multicast DNS on the LAN. It works alongside Avahi.
 
 ### Spotify library and remote control (Spotify Web API)
@@ -157,6 +187,9 @@ Requires [shairport-sync](https://github.com/mikebrady/shairport-sync) built wit
 the `stdout` audio backend and metadata support. Classic AirPlay (AirPlay 1) is
 lossless 44.1 kHz and is what the stdout backend is tested against here.
 Apple Music, Podcasts, any app's audio and macOS system audio can use it.
+The desktop app includes a build of it on Linux and macOS
+(`packaging/desktop/scripts/build-shairport.sh`); shairport-sync has no Windows
+version. Running the server on its own, build it as below.
 
 On Fedora:
 
@@ -280,7 +313,7 @@ Reports never block playback; a failure appears only as a warning in the log.
 |---|---|---|
 | [librespot](https://github.com/librespot-org/librespot) | Spawned as a separate program; the desktop app bundles a build of it (`packaging/desktop/scripts/build-librespot.sh`) | MIT; the licenses of the crates built into it ship in `librespot-LICENSE.txt` |
 | [Spotify Web API](https://developer.spotify.com/documentation/web-api) | Library, search and playback commands with your own developer app; no Spotify code or artwork bundled | Spotify's Developer Terms and Policy |
-| [shairport-sync](https://github.com/mikebrady/shairport-sync) | Spawned as a separate program, not bundled | MIT and BSD-style (see its LICENSES folder) |
+| [shairport-sync](https://github.com/mikebrady/shairport-sync) | Spawned as a separate program; the desktop app bundles a build of it on Linux and macOS (`packaging/desktop/scripts/build-shairport.sh`) | MIT and BSD-style (see its LICENSES file); the build links in popt, libconfig (LGPL 2.1), OpenSSL and FFmpeg's ALAC and AAC decoders (LGPL v3) |
 | [iTunes Search API](https://performance-partners.apple.com/search-api) and Apple's top-podcasts chart | Show search, feed lookup and the chart; keyless web requests, no Apple code or artwork bundled | Apple's API terms |
 | [ytmusicapi](https://github.com/sigma67/ytmusicapi) | Search request format followed; no code copied | MIT |
 | [Nunito](https://github.com/googlefonts/nunito) (`public/fonts/`) | Web UI typeface, latin subset | SIL OFL 1.1 (`public/fonts/OFL.txt`) |
