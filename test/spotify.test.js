@@ -104,6 +104,29 @@ test('only Stop is offered, and the Wii browser gets one start entry', async () 
     assert.equal(page.items[0].title, 'Test Speaker');
 });
 
+test('forgetting the account deletes the receiver\'s saved sign-in, but only once it is stopped', async () => {
+    const dir = tempDir();
+    fakeBinary(dir, 'librespot', FAKE_LIBRESPOT(dir));
+    const source = makeSource(dir);
+    const signIns = [];
+    source.on('credentials', (update) => signIns.push(update));
+    fs.mkdirSync(path.join(dir, 'spotify'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'spotify', 'credentials.json'), '{"username":"visitor"}');
+    assert.equal(source.info().remembered, true);
+    try {
+        await source.connect();
+        await source.open();
+        await assert.rejects(source.action('forget-account'), /Stop the receiver first/);
+        assert.ok(fs.existsSync(path.join(dir, 'spotify', 'credentials.json')));
+        await source.close();
+        assert.deepEqual(await source.action('forget-account'), { ok: true });
+        assert.equal(fs.existsSync(path.join(dir, 'spotify')), false);
+        assert.equal(source.info().remembered, false);
+        assert.equal(source.info().user, null);
+        assert.deepEqual(signIns.at(-1), { refreshToken: null, account: '', reconnect: false });
+    } finally { await source.disconnect(); }
+});
+
 test('a receiver that dies is restarted and the pipeline stream stays open', async () => {
     const dir = tempDir();
     fakeBinary(dir, 'librespot', FAKE_LIBRESPOT(dir, { crashFirst: true }));

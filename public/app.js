@@ -1143,10 +1143,32 @@ async function renderReceiver(src) {
                 running
                     ? h('button', { class: 'pill', text: 'Stop receiver', onclick: () => control('stop') })
                     : h('button', { class: 'pill primary', text: 'Start receiver',
-                        onclick: () => play({ id: 'receiver', type: 'station', title: name }) }))]));
+                        onclick: () => play({ id: 'receiver', type: 'station', title: name }) }),
+                src.id === 'spotify' && (info.remembered || info.web?.state === 'connected')
+                    ? h('button', { class: 'pill quiet', text: 'Forget this Spotify account',
+                        onclick: () => forgetSpotify(running).then(draw) })
+                    : null)]));
     };
     await draw();
     state.panelTimer = setInterval(draw, 3000);
+}
+
+async function forgetSpotify(running) {
+    const yes = await confirmDialog({
+        question: 'Forget this Spotify account?',
+        detail: 'WiiJukebox stops the receiver, forgets the account that signed in to it and disconnects ' +
+            'browsing. The next person to choose it in their Spotify app signs it in again. ' +
+            'Your Client ID stays in Settings.',
+        confirm: 'Forget',
+    });
+    if (!yes) return;
+    try {
+        if (running) await api('/control/stop', { method: 'POST', body: {} });
+        await api('/sources/spotify/action/forget-account', { method: 'POST', body: {} });
+        toast('Forgot the Spotify account');
+    } catch (err) {
+        toast(err.message, true);
+    }
 }
 
 /** What the receiver page says about signing in to Spotify, when no account is connected. */

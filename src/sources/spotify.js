@@ -145,6 +145,7 @@ class SpotifySource extends ReceiverSource {
             ...super.info(),
             deviceName: this._deviceName,
             user: this._session.user,
+            remembered: fs.existsSync(path.join(this._cacheDir(), 'credentials.json')),
             playing: this._session.playing,
             track: this._session.track,
             web: {
@@ -213,6 +214,13 @@ class SpotifySource extends ReceiverSource {
     }
 
     async action(name, body = {}) {
+        // librespot signs itself in from its cache on every start, so a visitor's account stays until this.
+        if (name === 'forget-account') {
+            if (this._child) throw new Error('Stop the receiver first');
+            fs.rmSync(this._cacheDir(), { recursive: true, force: true });
+            this._session.user = null;
+            return this.action('disconnect-account');
+        }
         if (name === 'disconnect-account') {
             this._api.forget();
             this._library.forget();
@@ -472,7 +480,7 @@ class SpotifySource extends ReceiverSource {
             this._runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiijukebox-spotify-'));
             await this._listen();
         }
-        const cacheDir = path.join(this.deps.configDir || configDir(), 'spotify');
+        const cacheDir = this._cacheDir();
         fs.mkdirSync(cacheDir, { recursive: true, mode: 0o700 });
 
         const args = [
@@ -494,6 +502,10 @@ class SpotifySource extends ReceiverSource {
             args.push(...this.config.extraArgs.filter((arg) => typeof arg === 'string' && arg));
         }
         return { args, env: {} };
+    }
+
+    _cacheDir() {
+        return path.join(this.deps.configDir || configDir(), 'spotify');
     }
 
     _ipcPath() {
