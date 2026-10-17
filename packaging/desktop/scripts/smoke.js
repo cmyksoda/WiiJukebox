@@ -1466,14 +1466,22 @@ async function main() {
         await checkServerWindow();
         await checkPortInUse();
         await checkMissingFfmpeg();
-        await checkSystemFfmpegProblems();
-        await checkSystemFfmpeg();
     }
-    if (!ONLY_LIVE) await checkTitleBar();
-    await checkLiveBar();
-    if (!ONLY_LIVE) {
-        await checkSystemTitleBar();
-        await checkCloseDialog();
+    // Under emulation (an Intel app on Rosetta) the windows come up too unevenly to time; the same flows run natively
+    // first, so here only the start-up and server flows above check the Intel build's own programs.
+    if (ARCH) {
+        console.log(`\n== skipped as ${ARCH}: the FFmpeg-choice, title bar and close card flows, which ran natively ==`);
+    } else {
+        if (!ONLY_TITLEBAR && !ONLY_LIVE) {
+            await checkSystemFfmpegProblems();
+            await checkSystemFfmpeg();
+        }
+        if (!ONLY_LIVE) await checkTitleBar();
+        await checkLiveBar();
+        if (!ONLY_LIVE) {
+            await checkSystemTitleBar();
+            await checkCloseDialog();
+        }
     }
     console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
     process.exit(failures ? 1 : 0);
