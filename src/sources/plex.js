@@ -60,7 +60,7 @@ class PlexSource extends QueueSource {
             artist: item.grandparentTitle || (type === 'album' ? item.parentTitle : ''),
             album: type === 'track' ? item.parentTitle || '' : '',
             subtitle: [item.grandparentTitle, item.parentTitle].filter(Boolean).join(' — '),
-            duration: item.duration ? item.duration / 1000 : null };
+            duration: item.duration ? item.duration / 1000 : null, artwork: this._thumb(item) };
     }
 
     async browse({ path = '', offset = 0, limit = 100 } = {}) {
@@ -92,7 +92,7 @@ class PlexSource extends QueueSource {
 
     // Plex only serves images to a token; the link stays on the server and reaches browsers through the art proxy.
     _thumb(item) {
-        const path = item.thumb || item.parentThumb || item.grandparentThumb;
+        const path = item.thumb || item.composite || item.parentThumb || item.grandparentThumb;
         if (!path) return null;
         try {
             const url = this._url(path);
@@ -113,7 +113,7 @@ class PlexSource extends QueueSource {
             metadata = pages.flatMap((page) => page.Metadata || []).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
         } else throw new Error(`unknown home row: ${row}`);
         return metadata.filter((entry) => ['album', 'track', 'playlist'].includes(entry.type)).slice(0, limit)
-            .map((entry) => ({ ...this._item(entry), artwork: this._thumb(entry) }));
+            .map((entry) => this._item(entry));
     }
 
     async search(query, { limit = 50 } = {}) {
@@ -153,7 +153,7 @@ class PlexSource extends QueueSource {
         const uri = this._url(part.key).toString();
         const meta = this._item(track);
         this._emitMetadata({ title: meta.title, artist: meta.artist, album: meta.album,
-            duration: meta.duration, artwork: null });
+            duration: meta.duration, artwork: meta.artwork });
         this._startTrack({ ...meta, ratingKey: id });
         this._setState('playing');
         return { type: 'uri', uri, headers: { 'X-Plex-Token': this.config.token }, seekable: true };
