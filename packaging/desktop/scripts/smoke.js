@@ -1176,14 +1176,16 @@ async function checkMenuHover(bar) {
 }
 
 // A window that is never shown renders no frames, so its page never reports a changed theme-color tag and its timers run
-// slowly. This one is shown on Chromium's headless platform with no display variables, so it renders and nothing reaches a screen.
+// slowly. CI shows it on the runner's virtual display; on a desktop, Chromium's headless platform keeps it off the real screen.
 async function checkLiveBar() {
     if (process.platform !== 'linux') return console.log('\n== skipped: the live title bar checks need Chromium\'s headless platform, which is Linux only ==');
     console.log('\n== title bar: the theme follows the page at once, and the menu answers the pointer ==');
+    const headless = !process.env.CI;
     const app = new App('live', {
-        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`, '--ozone-platform=headless', '--disable-gpu'],
+        args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`,
+            ...(headless ? ['--ozone-platform=headless', '--disable-gpu'] : [])],
         settings: { setupDone: true, onClose: 'background' },
-        env: { DISPLAY: null, WAYLAND_DISPLAY: null, WIIJUKEBOX_HIDDEN: null },
+        env: headless ? { DISPLAY: null, WAYLAND_DISPLAY: null, WIIJUKEBOX_HIDDEN: null } : { WIIJUKEBOX_HIDDEN: null },
     });
     app.start();
     let bar;
