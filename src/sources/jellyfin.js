@@ -1,13 +1,5 @@
-// Jellyfin source.
-//
-// Two ways in, both supported:
-//   - Browse the library here and play (this file).
-//   - Hit "Play On" in any Jellyfin client and have it land here (cast.js).
-//
-// The cast half is why this registers a real device identity rather than just
-// making anonymous API calls: Jellyfin only offers a client as a remote-control
-// target if it has announced itself as a session, so the DeviceId below is what
-// makes WiiJukebox appear in that menu.
+// Jellyfin source: browse the library and play. It signs in as a named device so its
+// sessions and plays show up in Jellyfin like any other app's.
 
 const crypto = require('crypto');
 const { QueueSource } = require('./queue');
