@@ -10,7 +10,7 @@
 
 const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
-const { FFMPEG_PCM_OUTPUT } = require('./format');
+const { CHANNELS, FFMPEG_PCM_OUTPUT, SAMPLE_RATE } = require('./format');
 
 class Decoder extends EventEmitter {
     /**
@@ -19,8 +19,9 @@ class Decoder extends EventEmitter {
      * @param {object} [opts.headers]      extra HTTP headers (auth tokens etc.)
      * @param {number} [opts.seekSeconds]  start offset for seekable inputs
      * @param {string} [opts.ffmpegPath]
+     * @param {string} [opts.parecPath]    records a PulseAudio/PipeWire `device`
      */
-    constructor({ uri, headers, device, format, seekSeconds = 0, ffmpegPath = 'ffmpeg' } = {}) {
+    constructor({ uri, headers, device, format, seekSeconds = 0, ffmpegPath = 'ffmpeg', parecPath = 'parec' } = {}) {
         super();
         this._uri = uri;
         this._device = device;
@@ -28,6 +29,7 @@ class Decoder extends EventEmitter {
         this._headers = headers;
         this._seekSeconds = seekSeconds;
         this._ffmpegPath = ffmpegPath;
+        this._parecPath = parecPath;
         this._proc = null;
         this._stopped = false;
         this._sawAudio = false;
@@ -45,9 +47,7 @@ class Decoder extends EventEmitter {
         return this._sawAudio;
     }
 
-    start() {
-        if (this._proc || this._stopped) return;
-
+    _ffmpegArgs() {
         // Audio decodes on one core; FFmpeg's default pools only add threads.
         const args = ['-hide_banner', '-loglevel', 'warning', '-threads', '1', '-filter_threads', '1'];
 
@@ -67,19 +67,30 @@ class Decoder extends EventEmitter {
 
         // Before -i, so ffmpeg seeks rather than decoding and discarding.
         if (this._seekSeconds > 0) args.push('-ss', String(this._seekSeconds));
-
-        if (this._device) {
-            if (this._format !== 'pulse') throw new Error('unsupported capture device');
-            args.push('-f', 'pulse', '-i', this._device);
-        } else args.push('-i', this._uri || 'pipe:0');
+        args.push('-i', this._uri || 'pipe:0');
 
         // Some sources are video containers (YouTube), some carry cover art as a
         // still image "video" stream. Either would make ffmpeg fail on a
         // PCM-only output, so pin the mapping to audio.
         args.push('-vn', '-map', '0:a:0?');
         args.push(...FFMPEG_PCM_OUTPUT, 'pipe:1');
+        return args;
+    }
 
-        const proc = spawn(this._ffmpegPath, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    start() {
+        if (this._proc || this._stopped) return;
+
+        let command = this._ffmpegPath;
+        let args;
+        if (this._device) {
+            if (this._format !== 'pulse') throw new Error('unsupported capture device');
+            // parec records the interchange format itself, so capture needs no FFmpeg built with PulseAudio.
+            command = this._parecPath;
+            args = [`--device=${this._device}`, '--raw', '--format=s16le', `--rate=${SAMPLE_RATE}`,
+                `--channels=${CHANNELS}`, '--latency-msec=50'];
+        } else args = this._ffmpegArgs();
+
+        const proc = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });
         this._proc = proc;
 
         proc.stdout.on('data', (chunk) => {
