@@ -11,8 +11,9 @@ const { fakeSubsonic, fakeJellyfin, fakePlex, fakePodcasts } = require('./helper
 const { harness } = require('./helpers/app-harness');
 
 let failed = 0;
-const check = (label, ok) => {
+const check = (label, ok, detail) => {
     console.log(ok ? 'ok  ' : 'FAIL', label);
+    if (!ok && detail) console.log(`      ${detail}`);
     if (!ok) failed++;
 };
 
