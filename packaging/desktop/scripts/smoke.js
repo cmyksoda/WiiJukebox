@@ -254,8 +254,8 @@ async function devtoolsClient({ port = DEBUG_PORT, type = 'page', urlPart = 'app
     return {
         send,
         // `userGesture` lets the page do what only a click or key press may, such as going fullscreen.
-        evaluate: async (expression, { userGesture = false } = {}) => {
-            const answer = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture });
+        evaluate: async (expression, { userGesture = false, awaitPromise = true } = {}) => {
+            const answer = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise, userGesture });
             if (answer.exceptionDetails) throw new Error(answer.exceptionDetails.exception?.description || answer.exceptionDetails.text);
             return answer.result.value;
         },
@@ -724,11 +724,12 @@ async function checkSystemFfmpeg() {
 }
 
 // Runs code in the app's main process through the inspector. The connection is closed at once: with a
-// debugger still attached the app waits for it before quitting.
+// debugger still attached the app waits for it before quitting. The code runs synchronously and its result is not
+// awaited, since the inspector sometimes reports the promise it waits on as collected (a flaky "Promise was collected").
 async function inMain(expression) {
     const main = await devtoolsClient({ port: INSPECT_PORT, type: 'node', urlPart: '' });
     try {
-        return await main.evaluate(`(async () => { const electron = process.mainModule.require('electron'); ${expression} })()`);
+        return await main.evaluate(`(() => { const electron = process.mainModule.require('electron'); ${expression} })()`, { awaitPromise: false });
     } finally {
         main.close();
     }
@@ -1289,6 +1290,8 @@ async function checkCloseDialog() {
     const cards = async () => JSON.parse(await inMain(`return JSON.stringify(electron.BaseWindow.getAllWindows().filter((w) => w.getParentWindow()).map((w) => ({
         modal: w.isModal(), parent: w.getParentWindow() === ${mainWindow}, size: w.getContentSize() })));`));
     const cardGone = () => until('the card to close', async () => (await cards()).length === 0, 8000).then(() => true, () => false);
+    // The window hides a moment after the card is gone.
+    const hid = (times) => until('the window to hide', async () => (await calls()).filter((c) => c === 'hide').length === times, 5000).then(() => true, () => false);
     const cardUp = async () => {
         await until('the card', async () => (await cards()).length === 1, 15000);
         const opened = await devtoolsClient({ urlPart: 'close.html' });
@@ -1364,7 +1367,7 @@ async function checkCloseDialog() {
         await card.evaluate("document.querySelector('#remember').focus(); true");
         closing(card, keyEvent('Enter'));
         check('Enter anywhere but on another button picks Keep playing, remembers it and hides the window',
-            await cardGone() && await until('the saved choice', () => saved(app) === 'background', 5000).then(() => true, () => false) && (await calls()).at(-1) === 'hide', JSON.stringify(await calls()));
+            await cardGone() && await until('the saved choice', () => saved(app) === 'background', 5000).then(() => true, () => false) && await hid(1), JSON.stringify(await calls()));
         card.close();
         await inMain(`${mainWindow}.close(); return true;`);
         await sleep(600);
@@ -1395,7 +1398,7 @@ async function checkCloseDialog() {
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
         closing(again, "document.querySelector('#remember').click(); document.querySelector('#background').click(); true");
-        check('unticked, Keep playing hides the window this once', await cardGone() && (await calls()).at(-1) === 'hide');
+        check('unticked, Keep playing hides the window this once', await cardGone() && await hid(1));
         check('and is not remembered, so it asks again', saved(second) === 'ask');
         again.close();
 
