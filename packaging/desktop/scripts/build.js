@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Finds or builds a program the app bundles (scripts/build-<tool>.sh) for one target. Linux and
 // Windows builds run in a container on a Linux computer; Mac builds run on the Mac itself.
-// Usage: node scripts/build.js <ffmpeg|librespot> <linux-x64|win-x64|mac-arm64|mac-x64>
+// Usage: node scripts/build.js <ffmpeg|librespot|shairport> <linux-x64|win-x64|mac-arm64|mac-x64>
 // WIIJUKEBOX_BUILDS names a folder to keep the builds in (CI caches it) instead of ~/.cache,
 // and WIIJUKEBOX_CONTAINER picks docker or podman.
 
@@ -27,6 +27,11 @@ const SETUP = {
     librespot: {
         'linux-x64': `${LINUX} python3`,
         'win-x64': `${DEBIAN} python3`,
+    },
+    // shairport-sync has no Windows version.
+    shairport: {
+        'linux-x64': `${LINUX} gcc-c++ perl perl-IPC-Cmd autoconf automake libtool`
+            + ' && dnf -y -q --enablerepo=powertools install libstdc++-static avahi-devel',
     },
 };
 
@@ -81,6 +86,7 @@ function build(tool, target, dir) {
 function bundledBuild(tool, target) {
     if (!SETUP[tool]) throw new Error(`unknown tool ${tool}; use ${Object.keys(SETUP).join(', ')}`);
     if (!TARGETS.includes(target)) throw new Error(`unknown target ${target}; use ${TARGETS.join(', ')}`);
+    if (!target.startsWith('mac-') && !SETUP[tool][target]) throw new Error(`${tool} has no ${target} build`);
     const dir = buildDir(tool, target);
     if (!fs.existsSync(dir)) build(tool, target, dir);
     return dir;

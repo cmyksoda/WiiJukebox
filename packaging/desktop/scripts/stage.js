@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Copies the server into app/server and the platform's FFmpeg and librespot into app/bin
+// Copies the server into app/server and the platform's FFmpeg, librespot and shairport-sync into app/bin
 // for electron-builder to pick up. Usage: node scripts/stage.js [linux|win|mac-x64|mac-arm64]
 
 const fs = require('node:fs');
@@ -10,11 +10,12 @@ const root = path.resolve(__dirname, '..', '..', '..');
 const out = path.resolve(__dirname, '..', 'app');
 
 // Our own builds (scripts/build-*.sh): FFmpeg under the LGPL v3, with nothing GPL-only or nonfree in
-// it, and librespot for Spotify Connect.
+// it, librespot for Spotify Connect and shairport-sync for AirPlay (which has no Windows version).
 const TARGETS = { linux: 'linux-x64', win: 'win-x64', 'mac-x64': 'mac-x64', 'mac-arm64': 'mac-arm64' };
 const FILES = {
     ffmpeg: ['ffmpeg', 'ffmpeg-LICENSE.txt', 'ffmpeg-README.txt'],
     librespot: ['librespot', 'librespot-LICENSE.txt'],
+    shairport: ['shairport-sync', 'shairport-sync-LICENSE.txt', 'shairport-sync-README.txt'],
 };
 
 function stageBuild(tool, target, destination) {
@@ -43,6 +44,7 @@ function main() {
     // Everything except the bundled programs is the same on every platform.
     if (!process.env.WIIJUKEBOX_NO_FFMPEG) stageBuild('ffmpeg', TARGETS[name], path.join(out, 'bin'));
     if (!process.env.WIIJUKEBOX_NO_LIBRESPOT) stageBuild('librespot', TARGETS[name], path.join(out, 'bin'));
+    if (!process.env.WIIJUKEBOX_NO_SHAIRPORT && name !== 'win') stageBuild('shairport', TARGETS[name], path.join(out, 'bin'));
     console.log(`staged ${name} in ${out}`);
 }
 

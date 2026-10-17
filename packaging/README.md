@@ -175,7 +175,7 @@ setting.
 Every bundled FFmpeg is our own build, made by `scripts/build-ffmpeg.sh` from pinned, checksummed
 sources: FFmpeg 8.1.3 under the LGPL v3, with LAME for MP3, zlib and a TLS library. Nothing GPL-only
 or nonfree is enabled (`scripts/check-ffmpeg.sh` checks a build), so it can ship with the app, and
-each release carries its exact sources as `WiiJukebox-<version>-ffmpeg-source.tar`. Its licenses and
+each release carries its exact sources in `WiiJukebox-<version>-sources.tar`. Its licenses and
 a README with its configuration ship next to it in `resources/bin` (`ffmpeg-LICENSE.txt`,
 `ffmpeg-README.txt`).
 
@@ -208,8 +208,9 @@ libfdk-aac, whose license does not allow it to be shipped with GPL code.
 yt-dlp is optional and not bundled. The first-run page (or Install or update yt-dlp
 in the menu) downloads the standalone release into the app's own `bin` folder, and
 that copy is used before one on `PATH` so updating it takes effect. The Spotify Connect
-receiver (librespot) is bundled, see [librespot](#librespot-spotify-connect); the AirPlay
-receiver (shairport-sync) is not, see `docs/streaming-services.md`.
+receiver (librespot) is bundled, see [librespot](#librespot-spotify-connect), and so is the
+AirPlay receiver (shairport-sync) on Linux and macOS, see
+[shairport-sync](#shairport-sync-airplay).
 
 ### Install notes (the builds are unsigned)
 
@@ -370,7 +371,8 @@ someone presses Publish on the Releases page.
 3. When the run finishes, the draft release has the AppImage, `.deb` and `.rpm`, the
    Windows installer and portable zip, the macOS `.dmg` and `.zip` for Apple silicon and
    Intel, the two Wii zips (`apps/wiijukebox/` for SD cards and the Open Shop Channel, and
-   the wiiload one), the signed APK, and `WiiJukebox-<version>-ffmpeg-source.tar`. Check
+   the wiiload one), the signed APK, and `WiiJukebox-<version>-sources.tar` (the source archives
+   of FFmpeg and shairport-sync and everything built into them, with the build scripts). Check
    it, then Publish.
 
 To fix the notes later, edit the release on GitHub. Re-running a failed tag run keeps the
@@ -501,3 +503,21 @@ the pipe audio backend, since WiiJukebox reads its audio from stdout. librespot 
 `librespot-LICENSE.txt` next to it also carries the license of every crate built into it, with
 where to find each crate's source (Symphonia, its audio decoder, is MPL 2.0).
 `WIIJUKEBOX_NO_LIBRESPOT=1` leaves it out of a build.
+
+### shairport-sync (AirPlay)
+
+`scripts/build-shairport.sh` builds shairport-sync 5.5.2 for Linux and macOS (it has no Windows
+version), the same way and in the same places as FFmpeg (`scripts/build.js shairport <target>`). It
+is classic AirPlay (AirPlay 1) with the stdout audio backend and the metadata pipe, which is what
+`src/sources/airplay.js` drives. Linked in: popt, libconfig (LGPL 2.1), OpenSSL's libcrypto and
+FFmpeg 8.1.3's ALAC and AAC decoders (LGPL v3). It announces itself through the system's mDNS
+service, so beyond the C library it needs Avahi's client library on Linux (`libavahi-client.so.3`,
+which desktop Linux has; the `.deb` recommends `libavahi-client3` next to electron-builder's default
+`libappindicator3-1`) and nothing extra on macOS, which has Bonjour. Its own tinysvcmdns responder is
+left out: it claims the computer's host name with every interface's address, and in testing Avahi
+then renamed the computer (`fedora.local` to `fedora-2.local`). `shairport-sync-LICENSE.txt` and
+`shairport-sync-README.txt` (sources and configuration) ship next to it, and each release's
+`WiiJukebox-<version>-sources.tar` has the source archives. `WIIJUKEBOX_NO_SHAIRPORT=1` leaves it out of a build.
+
+macOS has its own AirPlay Receiver on port 5000 (System Settings, General, AirDrop & Handoff), which
+shairport-sync also needs, so it has to be off there.

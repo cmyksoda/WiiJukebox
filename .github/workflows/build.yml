@@ -99,11 +99,12 @@ jobs:
                   echo "building: $matrix"
                   # Linux and Windows programs are built in containers on Linux; macOS builds its own.
                   bundled=$(echo "$matrix" | jq -c '[.include[].target | select(. != "")] + ["linux-x64"] | unique
-                      | [.[] as $target | ("ffmpeg", "librespot") | {tool: ., target: $target}]')
+                      | [.[] as $target | ("ffmpeg", "librespot") | {tool: ., target: $target}]
+                      + [{tool: "shairport", target: "linux-x64"}]')
                   echo "bundled=$bundled" >> "$GITHUB_OUTPUT"
 
-    # Our own FFmpeg (LGPL) and librespot builds (packaging/desktop/scripts/build-*.sh), rebuilt only
-    # when their scripts change.
+    # Our own FFmpeg (LGPL), librespot and shairport-sync builds (packaging/desktop/scripts/build-*.sh),
+    # rebuilt only when their scripts change.
     bundled:
         needs: plan
         name: ${{ matrix.tool }} ${{ matrix.target }}
@@ -192,6 +193,15 @@ jobs:
                   enableCrossOsArchive: true
                   fail-on-cache-miss: true
 
+            - name: Restore our shairport-sync build
+              if: matrix.target == 'linux-x64'
+              uses: actions/cache/restore@v6
+              with:
+                  path: bundled/shairport/linux-x64
+                  key: shairport-linux-x64-${{ hashFiles('packaging/desktop/scripts/build-shairport.sh', 'packaging/desktop/scripts/build.js') }}
+                  enableCrossOsArchive: true
+                  fail-on-cache-miss: true
+
             - name: Restore our macOS builds
               if: runner.os == 'macOS'
               id: mac-bundled
@@ -202,16 +212,19 @@ jobs:
                       bundled/ffmpeg/mac-x64
                       bundled/librespot/mac-arm64
                       bundled/librespot/mac-x64
-                  key: mac-bundled-${{ hashFiles('packaging/desktop/scripts/build-ffmpeg.sh', 'packaging/desktop/scripts/build-librespot.sh', 'packaging/desktop/scripts/build.js') }}
+                      bundled/shairport/mac-arm64
+                      bundled/shairport/mac-x64
+                  key: mac-bundled-${{ hashFiles('packaging/desktop/scripts/build-ffmpeg.sh', 'packaging/desktop/scripts/build-librespot.sh', 'packaging/desktop/scripts/build-shairport.sh', 'packaging/desktop/scripts/build.js') }}
 
-            - name: Build FFmpeg and librespot for macOS
+            - name: Build FFmpeg, librespot and shairport-sync for macOS
               if: runner.os == 'macOS' && steps.mac-bundled.outputs.cache-hit != 'true'
               run: |
-                  brew install nasm
+                  brew install nasm autoconf automake libtool pkgconf
                   for target in mac-arm64 mac-x64; do
                       node packaging/desktop/scripts/build.js ffmpeg "$target"
                       bash packaging/desktop/scripts/check-ffmpeg.sh "bundled/ffmpeg/$target"
                       node packaging/desktop/scripts/build.js librespot "$target"
+                      node packaging/desktop/scripts/build.js shairport "$target"
                   done
 
             - name: Install system packages
@@ -532,7 +545,7 @@ jobs:
             - name: Check out the repository
               uses: actions/checkout@v7
 
-            - name: Put the apps and FFmpeg's sources on a draft release, with the tag's message as its notes
+            - name: Put the apps and the bundled programs' sources on a draft release, with the tag's message as its notes
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}
@@ -540,10 +553,11 @@ jobs:
                   REPO: ${{ github.repository }}
               run: |
                   gh run download "$RUN" --repo "$REPO" --pattern 'WiiJukebox-*' --dir installers
-                  # The LGPL and GPL ask for the exact sources next to the binaries.
-                  bash packaging/desktop/scripts/build-ffmpeg.sh sources ffmpeg-source
-                  cp packaging/desktop/scripts/build-ffmpeg.sh packaging/desktop/scripts/build.js ffmpeg-source/
-                  tar -cf "installers/WiiJukebox-${TAG#v}-ffmpeg-source.tar" -C ffmpeg-source .
+                  # The LGPL parts (FFmpeg, LAME, libconfig) need their exact sources next to the binaries.
+                  bash packaging/desktop/scripts/build-ffmpeg.sh sources sources
+                  bash packaging/desktop/scripts/build-shairport.sh sources sources
+                  cp packaging/desktop/scripts/build-ffmpeg.sh packaging/desktop/scripts/build-shairport.sh packaging/desktop/scripts/build.js sources/
+                  tar -cf "installers/WiiJukebox-${TAG#v}-sources.tar" -C sources .
                   find installers -type f -exec ls -l {} +
                   tag=$(gh api "repos/$REPO/git/refs/tags/$TAG" --jq .object.sha)
                   gh api "repos/$REPO/git/tags/$tag" --jq .message > notes.md

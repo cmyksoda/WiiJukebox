@@ -85,7 +85,8 @@
     },
     "deb": {
       "artifactName": "wiijukebox_${version}_${arch}.${ext}",
-      "packageName": "wiijukebox"
+      "packageName": "wiijukebox",
+      "recommends": ["libappindicator3-1", "libavahi-client3"]
     },
     "rpm": {
       "artifactName": "wiijukebox-${version}-1.${arch}.${ext}",
