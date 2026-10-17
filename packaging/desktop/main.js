@@ -406,7 +406,9 @@ function showCloseDialog() {
             modal: true,
             show: false,
             frame: false,
-            resizable: false,
+            // Windows shrinks a frameless window by its resize border (16x8) whenever it stops being resizable, so
+            // there the card stays resizable and its size is pinned instead (presentCloseDialog).
+            resizable: process.platform === 'win32',
             minimizable: false,
             maximizable: false,
             fullscreenable: false,
@@ -441,16 +443,11 @@ function presentCloseDialog(height) {
     const dialog = closeDialog;
     if (!dialog || dialog.isVisible() || !Number.isFinite(height)) return;
     const content = Math.min(400, Math.max(120, Math.ceil(height / 2) * 2));
-    // Windows kept this non-resizable card at 344x170 whatever it was asked, so it is resizable just while sized,
-    // and grown by any gap Windows still leaves between the size asked for and the page it gives.
-    dialog.setResizable(true);
     dialog.setContentSize(CLOSE_DIALOG_WIDTH, content);
-    const [gotWidth, gotHeight] = dialog.getContentSize();
-    if (gotWidth !== CLOSE_DIALOG_WIDTH || gotHeight !== content) {
-        const [outerWidth, outerHeight] = dialog.getSize();
-        dialog.setSize(outerWidth + CLOSE_DIALOG_WIDTH - gotWidth, outerHeight + content - gotHeight);
+    if (dialog.isResizable()) {
+        dialog.setMinimumSize(CLOSE_DIALOG_WIDTH, content);
+        dialog.setMaximumSize(CLOSE_DIALOG_WIDTH, content);
     }
-    dialog.setResizable(false);
     const parent = win?.getBounds();
     const [width, tall] = dialog.getSize();
     if (parent) dialog.setPosition(Math.round(parent.x + (parent.width - width) / 2), Math.round(parent.y + (parent.height - tall) / 2));
