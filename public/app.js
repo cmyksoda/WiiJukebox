@@ -1768,10 +1768,11 @@ function setVizPressed(pressed) {
 async function toggleVisualizer() {
     if (viz.starting) return;
     if (document.body.classList.contains('viz')) {
+        // Leave fullscreen before hiding the stage: hiding it first left Windows' page still fullscreen.
+        if (document.fullscreenElement === $('#viz-stage')) await document.exitFullscreen().catch(() => {});
         document.body.classList.remove('viz');
         setVizPressed(false);
         $('#viz-overlay').hidden = true;
-        if (document.fullscreenElement === $('#viz-stage')) document.exitFullscreen().catch(() => {});
         cancelAnimationFrame(viz.raf);
         clearInterval(viz.cycleTimer);
         if (!viz.monitoring) $('#monitor-audio').pause();
