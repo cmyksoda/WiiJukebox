@@ -4,8 +4,16 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
+const made = [];
+process.on('exit', () => {
+    for (const dir of made) fs.rmSync(dir, { recursive: true, force: true });
+});
+
+/** Removed when the test process exits, so tests need not clean up after themselves. */
 function tempDir(prefix = 'wiijukebox-test-') {
-    return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+    made.push(dir);
+    return dir;
 }
 
 /** The body runs as the program; `process.argv.slice(2)` holds its arguments. */
