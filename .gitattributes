@@ -1,3 +1,6 @@
 
 # Keep the upstream checksum manifest valid across checkouts.
 client/vendor/projectm/** -text
+# The bundled programs' cache keys hash these scripts, so every system must check them out alike.
+packaging/desktop/scripts/build-*.sh text eol=lf
+packaging/desktop/scripts/build.js text eol=lf
