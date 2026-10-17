@@ -14,6 +14,10 @@ const { WiiProtocol } = require('../src/client/protocol');
 const { Artwork, tileRgb565 } = require('../src/client/artwork');
 const run = promisify(execFile);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// A loaded CI runner can fall well behind real time, so wait on the condition with a generous deadline.
+async function until(ready, ms = 8000) {
+    for (const end = Date.now() + ms; !ready() && Date.now() < end;) await sleep(25);
+}
 
 class FileSource extends Source {
     static id = 'file';
@@ -54,7 +58,8 @@ test('seeking reopens a finite track at the offset and keeps the pause state', {
         await pipeline.attach(new FileSource(file));
         await pipeline.waitForAudio();
         assert.equal(pipeline.status.capabilities.seek, true);
-        await sleep(1200);
+        await until(() => heard.length > 0);
+        await sleep(300);
         assert.ok(heard.length && heard.every((entry) => entry.peak === 0), 'starts in the silent half');
         pipeline.setPaused(true);
         heard.length = 0;
@@ -62,7 +67,7 @@ test('seeking reopens a finite track at the offset and keeps the pause state', {
         assert.equal(pipeline.pacer.paused, true);
         pipeline.setPaused(false);
         await pipeline.waitForAudio();
-        await sleep(1200);
+        await until(() => pipeline.status.nowPlaying.position >= 6.5);
         assert.ok(heard.length && heard[0].position >= 6 && heard[0].position < 6.1);
         assert.ok(heard.every((entry) => entry.peak > 1000), 'the first audio after seeking is the tone');
         assert.ok(pipeline.status.nowPlaying.position >= 6.5 && pipeline.status.nowPlaying.position < 8);
@@ -99,7 +104,7 @@ test('Wii seek commands validate the position and complete after audio', { timeo
         assert.equal((await call('POST', 'control?action=seek&position=abc')).status, 400);
         const accepted = await call('POST', 'control?action=seek&position=7000');
         assert.match(accepted.body, /ok\taccepted\t\d+/);
-        for (let i = 0; i < 50 && protocol.commandState === 'pending'; i++) await sleep(50);
+        await until(() => protocol.commandState !== 'pending');
         assert.equal(protocol.commandState, 'complete');
         assert.equal(protocol.commandStatus, 'Seeked');
         assert.ok(pipeline.pacer.position >= 7);
