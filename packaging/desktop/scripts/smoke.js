@@ -743,6 +743,13 @@ const press = (client, key, vk) => Promise.all(['rawKeyDown', 'keyUp'].map((type
 
 const barMenuShown = (bar) => bar.evaluate("!document.querySelector('#menu-scrim').hidden");
 
+// The bar's view only grows over the window a moment after its menu shows, so the menu is usable once both have happened.
+const barMenuReady = async (bar) => {
+    if (!(await barMenuShown(bar))) return false;
+    const layout = await windowViews();
+    return viewOf(layout, 'bar').bounds.height === layout.root.height;
+};
+
 // Opens the ≡ menu and clicks down a path of entries (a submenu's parent, then its entry), as a user would.
 async function chooseFromBarMenu(bar, labels) {
     await bar.evaluate("document.querySelector('#menu').click(); true");
@@ -759,7 +766,7 @@ async function checkBarMenu(app, bar, page) {
     const BAR = 34;
     const visible = () => bar.evaluate("!document.querySelector('#menu-scrim').hidden");
     const closed = (what) => until(what, async () => !(await visible()) && (await windowViews()).views.find((v) => v.url.endsWith('titlebar.html')).bounds.height === BAR, 5000).then(() => true, () => false);
-    const opened = () => until('the menu', visible, 5000).then(() => true, () => false);
+    const opened = () => until('the menu', () => barMenuReady(bar), 5000).then(() => true, () => false);
     const key = (name) => bar.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(name)}, bubbles: true })); true`);
     const focused = () => bar.evaluate("document.activeElement.querySelector?.('.label')?.textContent ?? document.activeElement.id");
     const mouse = (type, x, y) => bar.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
@@ -1110,7 +1117,7 @@ async function checkMenuHover(bar) {
 
     await moveTo(away.x, away.y);
     await click(...Object.values(await centerOf('#menu')));
-    await until('the menu', () => barMenuShown(bar), 5000);
+    await until('the menu', () => barMenuReady(bar), 5000);
     check('a menu opened with the mouse has no entry lit until the pointer or a key moves', (await lit()).length === 0);
 
     await glide(away, await rowCenter('Theme'), 6, 20);
@@ -1317,7 +1324,9 @@ async function checkCloseDialog() {
         check('the card is compact (376px wide, even height) and its buttons sit on whole pixels',
             look.card.width === 376 && look.card.height % 2 === 0 && look.card.height < 220 && look.buttons.every((b) => [b.x, b.y, b.width, b.height].every(Number.isInteger)), JSON.stringify(look.card));
         check('the choice is remembered unless unticked, and the safe default has focus', look.remember === true && look.focus === 'background');
-        check('the card is the size of its content', (await cards())[0].size.join() === `376,${look.card.height}`, JSON.stringify((await cards())[0].size));
+        // The card reports its height as the page's last step, and the window is sized when main hears it.
+        const sized = await until('the card to be sized', async () => (await cards())[0]?.size.join() === `376,${look.card.height}`, 5000).then(() => true, () => false);
+        check('the card is the size of its content', sized, JSON.stringify((await cards())[0]?.size));
 
         // Only the card may answer, and only with a real choice.
         await inMain(`electron.ipcMain.emit('close-dialog:answer', { sender: electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow()).contentView.children[0].webContents }, { choice: 'quit', remember: true }); return true;`);
