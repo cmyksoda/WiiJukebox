@@ -12,6 +12,7 @@ client/dist/apps/wiijukebox/THIRD_PARTY.txt
 
 # Local project notes and assistant settings.
 /project-notes/
+/.claude/
 
 # Packaging outputs and tool state.
 /packaging/dist/
@@ -22,3 +23,11 @@ client/dist/apps/wiijukebox/THIRD_PARTY.txt
 /packaging/desktop/node_modules/
 /packaging/desktop/out/
 /packaging/desktop/app/
+
+# Signing keys live outside the repository (see packaging/android/app/build.gradle).
+*.jks
+*.keystore
+keystore.properties
+
+*.log
+.DS_Store
