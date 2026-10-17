@@ -1117,21 +1117,25 @@ async function checkMenuHover(bar) {
     await sleep(60);
     check('the entry under the pointer is lit, and a submenu entry opens its submenu', (await lit()).join() === 'Theme' && await subShown() && await subLabels() === 'System,Light,Dark');
 
-    // Straight down to another entry: the light follows at once, the submenu goes a moment later.
+    // Straight down to another entry: the light follows and takes the submenu with it.
     const theme = await rowCenter('Theme');
     const other = await rowCenter('Show server log');
     await glide(theme, other, 6, 20);
     check('moving to another entry moves the light there, one entry at a time', (await lit()).join() === 'Show server log');
-    check('while the submenu is still open for a moment', await subShown());
-    await sleep(450);
-    check('and it closes by itself once the pointer has rested elsewhere', !(await subShown()));
+    check('and the submenu closes with it at once', !(await subShown()));
 
-    // Back onto Theme, then diagonally across the entry below it to the submenu, slowly enough that a plain delay would shut it.
+    // Back onto Theme, then diagonally across the entry below it to the submenu: the entries crossed only take over
+    // after a short grace, so a slow diagonal loses the submenu and a quick one keeps it.
     await glide(other, theme, 6, 20);
     await sleep(60);
-    const dark = await rowCenter('Dark', 'sub');
-    await glide(await rowCenter('Theme'), dark, 12, 55);
-    check('a slow diagonal across other entries to the submenu does not close it', await subShown());
+    let dark = await rowCenter('Dark', 'sub');
+    await glide(theme, dark, 12, 55);
+    check('a diagonal slower than the grace lets the entries it crosses take over', !(await subShown()));
+    await glide(dark, theme, 6, 20);
+    await sleep(60);
+    dark = await rowCenter('Dark', 'sub');
+    await glide(theme, dark, 6, 10);
+    check('a quick diagonal across other entries to the submenu does not close it', await subShown());
     await sleep(350);
     check('and it stays open with its parent lit while the pointer is in it, lighting the entry under it', await subShown() && (await lit()).join() === 'Theme,Dark', (await lit()).join());
     await glide(dark, away, 6, 20);
