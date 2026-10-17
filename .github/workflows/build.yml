@@ -205,7 +205,7 @@ jobs:
             - name: Restore our macOS builds
               if: runner.os == 'macOS'
               id: mac-bundled
-              uses: actions/cache@v6
+              uses: actions/cache/restore@v6
               with:
                   path: |
                       bundled/ffmpeg/mac-arm64
@@ -226,6 +226,20 @@ jobs:
                       node packaging/desktop/scripts/build.js librespot "$target"
                       node packaging/desktop/scripts/build.js shairport "$target"
                   done
+
+            # Saved now rather than at the end, so a later failing step doesn't throw away 20 minutes of builds.
+            - name: Save our macOS builds
+              if: runner.os == 'macOS' && steps.mac-bundled.outputs.cache-hit != 'true'
+              uses: actions/cache/save@v6
+              with:
+                  path: |
+                      bundled/ffmpeg/mac-arm64
+                      bundled/ffmpeg/mac-x64
+                      bundled/librespot/mac-arm64
+                      bundled/librespot/mac-x64
+                      bundled/shairport/mac-arm64
+                      bundled/shairport/mac-x64
+                  key: ${{ steps.mac-bundled.outputs.cache-primary-key }}
 
             - name: Install system packages
               if: runner.os == 'Linux'
