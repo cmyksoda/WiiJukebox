@@ -406,8 +406,8 @@ function showCloseDialog() {
             modal: true,
             show: false,
             frame: false,
-            // Windows shrinks a frameless window by its resize border (16x8) whenever it stops being resizable, so
-            // there the card stays resizable and its size is pinned instead (presentCloseDialog).
+            // Windows takes 16x8 off a frameless window for each size limit (and not resizable means limits), so there
+            // the card has none and turns away drags instead.
             resizable: process.platform === 'win32',
             minimizable: false,
             maximizable: false,
@@ -421,6 +421,7 @@ function showCloseDialog() {
             webPreferences: { preload: path.join(__dirname, 'close-preload.js'), contextIsolation: true, sandbox: true },
         });
         dialog.removeMenu();
+        if (dialog.isResizable()) dialog.on('will-resize', (event) => event.preventDefault());
         closeDialog = dialog;
         let answer = { choice: 'cancel', remember: false };
         answerClose = (given) => {
@@ -444,10 +445,6 @@ function presentCloseDialog(height) {
     if (!dialog || dialog.isVisible() || !Number.isFinite(height)) return;
     const content = Math.min(400, Math.max(120, Math.ceil(height / 2) * 2));
     dialog.setContentSize(CLOSE_DIALOG_WIDTH, content);
-    if (dialog.isResizable()) {
-        dialog.setMinimumSize(CLOSE_DIALOG_WIDTH, content);
-        dialog.setMaximumSize(CLOSE_DIALOG_WIDTH, content);
-    }
     const parent = win?.getBounds();
     const [width, tall] = dialog.getSize();
     if (parent) dialog.setPosition(Math.round(parent.x + (parent.width - width) / 2), Math.round(parent.y + (parent.height - tall) / 2));
