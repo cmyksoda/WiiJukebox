@@ -442,6 +442,12 @@ function presentCloseDialog(height) {
     if (!dialog || dialog.isVisible() || !Number.isFinite(height)) return;
     const content = Math.min(400, Math.max(120, Math.ceil(height / 2) * 2));
     dialog.setContentSize(CLOSE_DIALOG_WIDTH, content);
+    // Windows gives this frameless card a smaller content area than asked (344x170 for 376x186), so grow it by the gap.
+    const [gotWidth, gotHeight] = dialog.getContentSize();
+    if (gotWidth !== CLOSE_DIALOG_WIDTH || gotHeight !== content) {
+        const [outerWidth, outerHeight] = dialog.getSize();
+        dialog.setSize(outerWidth + CLOSE_DIALOG_WIDTH - gotWidth, outerHeight + content - gotHeight);
+    }
     const parent = win?.getBounds();
     const [width, tall] = dialog.getSize();
     if (parent) dialog.setPosition(Math.round(parent.x + (parent.width - width) / 2), Math.round(parent.y + (parent.height - tall) / 2));
