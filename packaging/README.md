@@ -326,9 +326,16 @@ Because the repository is private (Windows minutes count 2x, macOS 10x), a push 
 request builds Linux only. Windows and macOS run when a commit message contains
 `[ci all]`, `[ci windows]` or `[ci macos]`, from the Actions page ("Run workflow", or
 `gh workflow run desktop.yml -f platforms=macos`), or for a `v*` tag. A newer push
-cancels a run that is still going. Artifacts are `WiiJukebox-linux`,
-`WiiJukebox-windows` and `WiiJukebox-macos`, kept for 14 days, with the smoke logs in
-`smoke-logs-<system>`.
+cancels a run that is still going.
+
+A private repository has 500 MB of Actions storage, and keeping the installers of every push
+once filled it in a day. So a push keeps nothing except a failed run's smoke logs
+(`smoke-logs-<system>`, 3 days). "Run workflow" keeps the installers as artifacts
+(`WiiJukebox-linux`, `WiiJukebox-windows`, `WiiJukebox-macos`) for one day. A `v*` tag puts
+them on a draft release with `WiiJukebox-<version>-ffmpeg-source.tar` and then deletes the
+artifacts, since release files don't count against that storage.
+`test/workflow-storage.test.js` fails `npm test` when an upload would be kept more than 3
+days or would run on an ordinary push.
 
 ## What was and was not verified
 

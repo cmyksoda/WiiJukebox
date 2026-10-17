@@ -3,6 +3,9 @@ name: Desktop app
 # Pushes and pull requests build and test Linux only. macOS minutes cost 10x and Windows 2x on a private
 # repository, so those run when a commit message contains [ci all], [ci windows] or [ci macos], from
 # "Run workflow", or for a v* tag.
+# A private repository has 500 MB of Actions storage, which installers kept from every push once filled
+# in a day. So only "Run workflow" keeps installers (for one day) and a v* tag puts them on a draft
+# release instead; test/workflow-storage.test.js holds every upload to that.
 on:
     push:
         branches: [main, desktop-app]
@@ -386,8 +389,9 @@ jobs:
                   node scripts/smoke.js "$RUNNER_TEMP/mac-x64/WiiJukebox.app" --arch x86_64 --port "$SMOKE_PORT" 2>&1 | tee ../dist/smoke-macos-x64.log
                   exit "${PIPESTATUS[0]}"
 
+            # The release job moves a tag's installers onto its draft release and deletes these.
             - name: Upload the installers
-              if: always()
+              if: success() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
               uses: actions/upload-artifact@v7
               with:
                   name: WiiJukebox-${{ matrix.name }}
@@ -398,11 +402,11 @@ jobs:
                       packaging/dist/desktop/*.zip
                       packaging/dist/desktop/*.exe
                       packaging/dist/desktop/*.dmg
-                  if-no-files-found: warn
-                  retention-days: 14
+                  if-no-files-found: error
+                  retention-days: 1
 
             - name: Upload the smoke test logs
-              if: always()
+              if: failure()
               uses: actions/upload-artifact@v7
               with:
                   name: smoke-logs-${{ matrix.name }}
@@ -410,4 +414,37 @@ jobs:
                       packaging/dist/*.log
                       packaging/dist/*.png
                   if-no-files-found: ignore
-                  retention-days: 14
+                  retention-days: 3
+
+    # Release assets don't count against Actions storage, unlike artifacts.
+    release:
+        needs: build
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: write
+            actions: write
+        steps:
+            - name: Check out the repository
+              uses: actions/checkout@v7
+
+            - name: Put the installers and FFmpeg's sources on a draft release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.ref_name }}
+                  RUN: ${{ github.run_id }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  gh run download "$RUN" --repo "$REPO" --pattern 'WiiJukebox-*' --dir installers
+                  # The LGPL and GPL ask for the exact sources next to the binaries.
+                  bash packaging/desktop/scripts/build-ffmpeg.sh sources ffmpeg-source
+                  cp packaging/desktop/scripts/build-ffmpeg.sh packaging/desktop/scripts/build.js ffmpeg-source/
+                  tar -cf "installers/WiiJukebox-${TAG#v}-ffmpeg-source.tar" -C ffmpeg-source .
+                  find installers -type f -exec ls -l {} +
+                  gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1 \
+                      || gh release create "$TAG" --repo "$REPO" --draft --title "$TAG" --notes ""
+                  find installers -type f -print0 | xargs -0 gh release upload "$TAG" --repo "$REPO" --clobber
+                  gh api "repos/$REPO/actions/runs/$RUN/artifacts" --paginate \
+                      --jq '.artifacts[] | select(.name | startswith("WiiJukebox-")) | .id' \
+                      | while read -r id; do gh api -X DELETE "repos/$REPO/actions/artifacts/$id"; done
