@@ -1288,7 +1288,10 @@ async function checkCloseDialog() {
         await until('the card to load', () => opened.evaluate("document.activeElement?.id === 'background'").catch(() => false), 10000);
         return opened;
     };
-    const press = (card, key) => card.evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true })); true`);
+    const keyEvent = (key) => `document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true })); true`;
+    const press = (card, key) => card.evaluate(keyEvent(key));
+    // These make the card answer, which closes its page, so it may be gone before it replies; the checks wait for the card to go instead.
+    const closing = (card, expression) => { card.evaluate(expression).catch(() => {}); };
 
     const app = new App('closecard', {
         args: [`--remote-debugging-port=${DEBUG_PORT}`, `--inspect=${INSPECT_PORT}`],
@@ -1339,7 +1342,7 @@ async function checkCloseDialog() {
         await press(card, 'ArrowLeft');
         check('arrow keys move between the buttons', await card.evaluate('document.activeElement.id') === 'quit');
         await press(card, 'ArrowRight');
-        await press(card, 'Escape');
+        closing(card, keyEvent('Escape'));
         check('Escape cancels: the card goes, nothing is remembered, and the window stays', await cardGone() && saved(app) === 'ask' && (await calls()).length === 0);
         card.close();
 
@@ -1351,7 +1354,7 @@ async function checkCloseDialog() {
         check('closing the window from the system asks too, and never twice at once', (await cards()).length === 1);
         await card.evaluate("document.querySelector('#quit').focus(); true");
         await card.evaluate("document.querySelector('#remember').focus(); true");
-        await press(card, 'Enter');
+        closing(card, keyEvent('Enter'));
         check('Enter anywhere but on another button picks Keep playing, remembers it and hides the window',
             await cardGone() && await until('the saved choice', () => saved(app) === 'background', 5000).then(() => true, () => false) && (await calls()).at(-1) === 'hide', JSON.stringify(await calls()));
         card.close();
@@ -1383,7 +1386,7 @@ async function checkCloseDialog() {
         await record();
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
-        await again.evaluate("document.querySelector('#remember').click(); document.querySelector('#background').click(); true");
+        closing(again, "document.querySelector('#remember').click(); document.querySelector('#background').click(); true");
         check('unticked, Keep playing hides the window this once', await cardGone() && (await calls()).at(-1) === 'hide');
         check('and is not remembered, so it asks again', saved(second) === 'ask');
         again.close();
@@ -1402,13 +1405,13 @@ async function checkCloseDialog() {
 
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
-        await again.evaluate("document.querySelector('#cancel').click(); true");
+        closing(again, "document.querySelector('#cancel').click(); true");
         check('the Cancel button leaves everything as it was', await cardGone() && saved(second) === 'ask' && (await calls()).filter((c) => c === 'hide').length === 1);
         again.close();
 
         await inMain(`${mainWindow}.close(); return true;`);
         again = await cardUp();
-        await again.evaluate("document.querySelector('#quit').click(); true");
+        closing(again, "document.querySelector('#quit').click(); true");
         const exit = await Promise.race([second.exited, sleep(30000).then(() => null)]);
         check('Quit remembers the choice and quits the app', exit !== null && saved(second) === 'quit', JSON.stringify(exit));
     } catch (err) {
