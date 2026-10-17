@@ -214,7 +214,7 @@ static void sources_and_list(struct wj_session *s, struct wj_pointer *none) {
     item(s, "plex", "source", "Plex", "");
     item(s, "ytdlp", "source", "YouTube / SoundCloud", "");
     item(s, "spotify", "source", "Spotify Connect", "");
-    item(s, "airplay", "source", "AirPlay (Apple Music)", "");
+    item(s, "airplay", "source", "AirPlay", "");
     item(s, "ytmusic", "source", "YouTube Music", "");
     item(s, "desktop", "source", "Desktop audio (Linux)", "");
     s->selected = 2;

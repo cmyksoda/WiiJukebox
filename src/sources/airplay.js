@@ -57,7 +57,7 @@ const libconfigString = (value) => `"${String(value).replaceAll('\\', '\\\\').re
 
 class AirplaySource extends ReceiverSource {
     static id = 'airplay';
-    static label = 'AirPlay (Apple Music)';
+    static label = 'AirPlay';
     static binaryName = 'shairport-sync';
     static installHint = 'Install shairport-sync built with the stdout backend and metadata support ' +
         '(see docs/streaming-services.md), or set its full path in the AirPlay settings.';
