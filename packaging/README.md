@@ -172,37 +172,44 @@ offers the included FFmpeg again. A development run has no included FFmpeg, so t
 is hidden and the computer's own is used. An override (`WIIJUKEBOX_FFMPEG`) wins over the
 setting.
 
-Every bundled build is GPL v3 with `libmp3lame`, and its license text and source pointer
-ship next to it in `resources/bin` (`ffmpeg-LICENSE.txt`, `ffmpeg-README.txt`).
-`scripts/stage.js` downloads each one and checks a pinned SHA-256.
+Every bundled FFmpeg is our own build, made by `scripts/build-ffmpeg.sh` from pinned, checksummed
+sources: FFmpeg 8.1.3 under the LGPL v3, with LAME for MP3, zlib and a TLS library. Nothing GPL-only
+or nonfree is enabled (`scripts/check-ffmpeg.sh` checks a build), so it can ship with the app, and
+each release carries its exact sources as `WiiJukebox-<version>-ffmpeg-source.tar`. Its licenses and
+a README with its configuration ship next to it in `resources/bin` (`ffmpeg-LICENSE.txt`,
+`ffmpeg-README.txt`).
 
-| System | Build | Source |
-|---|---|---|
-| Linux x64 | FFmpeg 8.1.3 (Jellyfin portable GPL build, glibc 2.28 or newer) | jellyfin/jellyfin-ffmpeg `v8.1.3-1` |
-| Windows x64 | FFmpeg 6.1.1 essentials | gyan.dev, through eugeneware/ffmpeg-static `b6.1.1` |
-| macOS x64 and arm64 | FFmpeg 8.1.3 (Jellyfin portable GPL build) | jellyfin/jellyfin-ffmpeg `v8.1.3-1` (needs macOS 12 or later) |
+| System | TLS | Built in | Runs on |
+|---|---|---|---|
+| Linux x64 | OpenSSL 3.5 (Apache 2.0), linked in | an AlmaLinux 8 container | glibc 2.28 or newer |
+| Windows x64 | Windows' own SChannel | a Debian 12 container, with mingw-w64 | Windows 10 or newer |
+| macOS arm64 and x64 | Apple's Secure Transport | the Mac itself (in CI, macos-latest) | macOS 11 or newer, not yet tried |
 
-macOS does not use eugeneware's builds: its arm64 binary is configured
-`--enable-nonfree`, reports "nonfree and unredistributable" and must not be shipped.
+`scripts/build.js ffmpeg <target>` builds a target the first time `stage.js` needs it and keeps it
+in `~/.cache/wiijukebox-desktop/ffmpeg-build` (changing the build script starts a new folder); the
+Linux and Windows builds need podman or docker. Only what the server writes is encoded: MP3, raw
+PCM, and JPEG, PNG and raw pixels for cover art. Every decoder, demuxer, protocol and filter of
+FFmpeg's own stays in. Desktop audio is recorded with `parec`, so no FFmpeg needs PulseAudio.
 
-Linux used eugeneware's build (johnvansickle's FFmpeg 7.0.2) until it turned out to crash on any
-URL that names a host. That build is linked fully statically, glibc included, and a static glibc
-resolves names by loading the computer's NSS modules (`libnss_files.so.2` and the like) with
-`dlopen`; another glibc's modules cannot be loaded into a static program, so the program dies with
-SIGSEGV inside `getaddrinfo` (the server logged `decode failed: code null signal SIGSEGV`). It
+Before this, Linux used eugeneware's build (johnvansickle's FFmpeg 7.0.2) until it turned out to
+crash on any URL that names a host. That build is linked fully statically, glibc included, and a
+static glibc resolves names by loading the computer's NSS modules (`libnss_files.so.2` and the like)
+with `dlopen`; another glibc's modules cannot be loaded into a static program, so the program dies
+with SIGSEGV inside `getaddrinfo` (the server logged `decode failed: code null signal SIGSEGV`). It
 failed the same way on glibc 2.35, 2.41 and 2.43, for radio stations, podcasts, yt-dlp links and a
 library server reached by name; a literal address such as `http://127.0.0.1:4533` resolves nothing,
-which is why a local Navidrome and the smoke test never showed it. Jellyfin's Linux build links
-glibc dynamically and everything else statically, so the computer's own libc does the lookup, and
-it is the same release as the macOS builds. It does include libfdk-aac, which the macOS builds
-leave out. `test/decoder-hostname.test.js` decodes a stream from `http://localhost:<port>`; it runs
-in `npm test`, and against the included FFmpeg in CI and in the smoke test.
+which is why a local Navidrome and the smoke test never showed it. Our Linux build links glibc
+dynamically and everything else statically, so the computer's own libc does the lookup.
+`test/decoder-hostname.test.js` decodes a stream from `http://localhost:<port>`; it runs in `npm
+test`, and against our FFmpeg on every system in CI. Jellyfin's portable GPL build filled in for a
+while on Linux and macOS, and gyan.dev's 6.1.1 on Windows, but Jellyfin's Linux build includes
+libfdk-aac, whose license does not allow it to be shipped with GPL code.
 
 yt-dlp is optional and not bundled. The first-run page (or Install or update yt-dlp
 in the menu) downloads the standalone release into the app's own `bin` folder, and
-that copy is used before one on `PATH` so updating it takes effect. Spotify Connect
-and AirPlay receivers (librespot, shairport-sync) are not bundled either; see
-`docs/streaming-services.md`.
+that copy is used before one on `PATH` so updating it takes effect. The Spotify Connect
+receiver (librespot) is bundled, see [librespot](#librespot-spotify-connect); the AirPlay
+receiver (shairport-sync) is not, see `docs/streaming-services.md`.
 
 ### Install notes (the builds are unsigned)
 
@@ -237,8 +244,8 @@ npm run dist:mac        # on a Mac: arm64 and x64 dmg and zip
 npm run icons           # only after the jukebox mark changes: needs Inkscape and Pillow
 ```
 
-`scripts/stage.js` copies `src/` and `public/` into `app/server` and downloads the
-FFmpeg for the target (`WIIJUKEBOX_NO_FFMPEG=1` skips it). `scripts/make-icons.py`
+`scripts/stage.js` copies `src/` and `public/` into `app/server` and our FFmpeg for the
+target into `app/bin`, building it first if needed (`WIIJUKEBOX_NO_FFMPEG=1` skips it). `scripts/make-icons.py`
 renders every icon from `public/images/jukebox.svg`: `build/icon.png`, `icon.ico` and
 `icon.icns` for the three systems, the tray icons and window icon in `assets/`, and the
 copy of the mark the local pages show.
@@ -306,9 +313,10 @@ passes `--default-ports` to run the app once with the server's own defaults (400
 ### Continuous integration
 
 `.github/workflows/desktop.yml` is modeled on Feishin's build workflows: an OS matrix,
-Node 22, electron-builder, and the installers uploaded as artifacts. Every runner
-installs, builds, unit-tests the desktop code, smoke-tests the packaged app and
-uploads it. Ubuntu also runs `npm test` and `npm run smoke`, builds the `.deb` and
+Node 22 and electron-builder. A first job builds our FFmpeg for Linux and Windows in
+containers, kept in the Actions cache until its scripts change; macOS builds its own the
+same way. Every runner then installs, builds, unit-tests the desktop code and smoke-tests
+the packaged app. Ubuntu also runs `npm test` and `npm run smoke`, builds the `.deb` and
 installs it, and builds the `.rpm` and installs it in a `fedora:latest` container, with
 the smoke test run against each installed copy. Windows smoke-tests the zip and then the installer,
 installed and uninstalled for real. macOS smoke-tests the arm64 app, and the Intel app
@@ -410,7 +418,7 @@ problems, port busy, crash, FFmpeg missing) was rendered and read.
 - Start at login actually launching the app after signing in (it is registered, but
   nothing was rebooted), and macOS login items for an app that is not in Applications.
 - macOS on Intel hardware or older than the runner's macOS (the Intel app ran under
-  Rosetta; the bundled FFmpeg needs macOS 12), Windows on ARM, Linux on arm64.
+  Rosetta; Electron needs macOS 12), Windows on ARM, Linux on arm64.
 - The `.rpm` on a real Fedora desktop (Wayland session, the menu entry and icon showing,
   the tray on GNOME or KDE) and on RHEL or openSUSE. The container run has no desktop or
   GPU and runs as root with `--no-sandbox`; the deb run is what covers Chromium's sandbox.
@@ -427,14 +435,10 @@ problems, port busy, crash, FFmpeg missing) was rendered and read.
 
 ### librespot (Spotify Connect)
 
-librespot publishes no builds, so a Linux binary built with cargo can be bundled next to FFmpeg:
-
-```sh
-cargo install librespot --locked --no-default-features --features native-tls,with-libmdns --root ~/.cache/wj-librespot/out
-WIIJUKEBOX_LIBRESPOT=~/.cache/wj-librespot/out/bin/librespot \
-WIIJUKEBOX_LIBRESPOT_LICENSE=<cargo registry>/librespot-<version>/LICENSE npm run dist:linux
-```
-
-It is MIT licensed (shipped as `librespot-LICENSE.txt`) and links the system OpenSSL 3. Only the pipe
-backend is built, since WiiJukebox reads its audio from stdout. CI does not build it yet, and the
-Windows and macOS packages do not include it.
+librespot publishes no builds, so `scripts/build-librespot.sh` builds 0.8.0 from crates.io with its
+own lockfile, the same way and in the same places as FFmpeg (`scripts/build.js librespot <target>`).
+It uses rustls instead of OpenSSL, so it needs no system libraries beyond the C library, and only
+the pipe audio backend, since WiiJukebox reads its audio from stdout. librespot is MIT licensed;
+`librespot-LICENSE.txt` next to it also carries the license of every crate built into it, with
+where to find each crate's source (Symphonia, its audio decoder, is MPL 2.0).
+`WIIJUKEBOX_NO_LIBRESPOT=1` leaves it out of a build.

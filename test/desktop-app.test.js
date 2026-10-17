@@ -92,7 +92,7 @@ test('an FFmpeg counts as usable only when it can encode MP3', scriptable, async
 
 test('only the version number of an FFmpeg banner is shown', () => {
     assert.equal(ffmpegVersionNumber('ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024'), '7.0.2');
-    assert.equal(ffmpegVersionNumber('ffmpeg version 8.1.3-Jellyfin Copyright (c) 2000-2026'), '8.1.3');
+    assert.equal(ffmpegVersionNumber('ffmpeg version 8.1.3-wiijukebox Copyright (c) 2000-2026'), '8.1.3');
     assert.equal(ffmpegVersionNumber('ffmpeg version 6.1.1-essentials_build-www.gyan.dev Copyright'), '6.1.1');
     assert.equal(ffmpegVersionNumber('ffmpeg version n7.1 Copyright'), '7.1');
     assert.equal(ffmpegVersionNumber('ffmpeg version N-117000-gabcdef Copyright'), null, 'a development build has no number');

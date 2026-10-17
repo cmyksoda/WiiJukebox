@@ -49,6 +49,7 @@ jobs:
         runs-on: ubuntu-latest
         outputs:
             matrix: ${{ steps.pick.outputs.matrix }}
+            bundled: ${{ steps.pick.outputs.bundled }}
         steps:
             - name: Choose the systems to build
               id: pick
@@ -67,15 +68,53 @@ jobs:
                       *'[ci macos]'*) want=macos ;;
                   esac
                   matrix=$(jq -cn --arg want "$want" '
-                      [{name: "linux", os: "ubuntu-latest", script: "dist:linux"},
-                       {name: "windows", os: "windows-latest", script: "dist:win"},
-                       {name: "macos", os: "macos-latest", script: "dist:mac"}]
+                      [{name: "linux", os: "ubuntu-latest", script: "dist:linux", target: "linux-x64", ffmpeg: "linux-x64/ffmpeg"},
+                       {name: "windows", os: "windows-latest", script: "dist:win", target: "win-x64", ffmpeg: "win-x64/ffmpeg.exe"},
+                       {name: "macos", os: "macos-latest", script: "dist:mac", target: "", ffmpeg: "mac-arm64/ffmpeg"}]
                       | map(select($want == "all" or .name == $want)) | {include: .}')
                   echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
                   echo "building: $matrix"
+                  # Linux and Windows programs are built in containers on Linux; macOS builds its own.
+                  bundled=$(echo "$matrix" | jq -c '[.include[].target | select(. != "")] + ["linux-x64"] | unique
+                      | [.[] as $target | ("ffmpeg", "librespot") | {tool: ., target: $target}]')
+                  echo "bundled=$bundled" >> "$GITHUB_OUTPUT"
+
+    # Our own FFmpeg (LGPL) and librespot builds (packaging/desktop/scripts/build-*.sh), rebuilt only
+    # when their scripts change.
+    bundled:
+        needs: plan
+        name: ${{ matrix.tool }} ${{ matrix.target }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 40
+        strategy:
+            fail-fast: false
+            matrix:
+                include: ${{ fromJSON(needs.plan.outputs.bundled) }}
+        steps:
+            - name: Check out the repository
+              uses: actions/checkout@v7
+
+            - name: Restore the build
+              id: cache
+              uses: actions/cache@v6
+              with:
+                  path: bundled/${{ matrix.tool }}/${{ matrix.target }}
+                  key: ${{ matrix.tool }}-${{ matrix.target }}-${{ hashFiles(format('packaging/desktop/scripts/build-{0}.sh', matrix.tool), 'packaging/desktop/scripts/build.js') }}
+                  enableCrossOsArchive: true
+
+            - name: Build it
+              if: steps.cache.outputs.cache-hit != 'true'
+              env:
+                  WIIJUKEBOX_BUILDS: ${{ github.workspace }}/bundled
+                  WIIJUKEBOX_CONTAINER: docker
+              run: node packaging/desktop/scripts/build.js ${{ matrix.tool }} ${{ matrix.target }}
+
+            - name: Check that FFmpeg has nothing GPL-only or nonfree
+              if: matrix.tool == 'ffmpeg'
+              run: bash packaging/desktop/scripts/check-ffmpeg.sh bundled/ffmpeg/${{ matrix.target }}
 
     build:
-        needs: plan
+        needs: [plan, bundled]
         name: ${{ matrix.name }}
         runs-on: ${{ matrix.os }}
         timeout-minutes: 45
@@ -84,6 +123,7 @@ jobs:
             matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
         env:
             NODE_OPTIONS: --max-old-space-size=4096
+            WIIJUKEBOX_BUILDS: ${{ github.workspace }}/bundled
 
         steps:
             - name: Check out the repository
@@ -98,7 +138,7 @@ jobs:
                       package-lock.json
                       packaging/desktop/package-lock.json
 
-            - name: Cache downloaded FFmpeg and Electron
+            - name: Cache Electron and the FFmpeg sources
               uses: actions/cache@v6
               with:
                   path: |
@@ -110,6 +150,46 @@ jobs:
                       ~/AppData/Local/electron/Cache
                       ~/AppData/Local/electron-builder/Cache
                   key: desktop-${{ runner.os }}-${{ hashFiles('packaging/desktop/scripts/stage.js', 'packaging/desktop/package-lock.json') }}
+
+            - name: Restore our FFmpeg build
+              if: matrix.target != ''
+              uses: actions/cache/restore@v6
+              with:
+                  path: bundled/ffmpeg/${{ matrix.target }}
+                  key: ffmpeg-${{ matrix.target }}-${{ hashFiles('packaging/desktop/scripts/build-ffmpeg.sh', 'packaging/desktop/scripts/build.js') }}
+                  enableCrossOsArchive: true
+                  fail-on-cache-miss: true
+
+            - name: Restore our librespot build
+              if: matrix.target != ''
+              uses: actions/cache/restore@v6
+              with:
+                  path: bundled/librespot/${{ matrix.target }}
+                  key: librespot-${{ matrix.target }}-${{ hashFiles('packaging/desktop/scripts/build-librespot.sh', 'packaging/desktop/scripts/build.js') }}
+                  enableCrossOsArchive: true
+                  fail-on-cache-miss: true
+
+            - name: Restore our macOS builds
+              if: runner.os == 'macOS'
+              id: mac-bundled
+              uses: actions/cache@v6
+              with:
+                  path: |
+                      bundled/ffmpeg/mac-arm64
+                      bundled/ffmpeg/mac-x64
+                      bundled/librespot/mac-arm64
+                      bundled/librespot/mac-x64
+                  key: mac-bundled-${{ hashFiles('packaging/desktop/scripts/build-ffmpeg.sh', 'packaging/desktop/scripts/build-librespot.sh', 'packaging/desktop/scripts/build.js') }}
+
+            - name: Build FFmpeg and librespot for macOS
+              if: runner.os == 'macOS' && steps.mac-bundled.outputs.cache-hit != 'true'
+              run: |
+                  brew install nasm
+                  for target in mac-arm64 mac-x64; do
+                      node packaging/desktop/scripts/build.js ffmpeg "$target"
+                      bash packaging/desktop/scripts/check-ffmpeg.sh "bundled/ffmpeg/$target"
+                      node packaging/desktop/scripts/build.js librespot "$target"
+                  done
 
             - name: Install system packages
               if: runner.os == 'Linux'
@@ -145,11 +225,10 @@ jobs:
                   done
                   exit 1
 
-            # A URL that names a host makes FFmpeg resolve it; the old static Linux build crashed there.
+            # A URL that names a host makes FFmpeg resolve it; an old static Linux build crashed there.
             - name: Decode a stream by host name with the included FFmpeg
-              if: runner.os == 'Linux'
               env:
-                  WIIJUKEBOX_FFMPEG: ${{ github.workspace }}/packaging/desktop/app/bin/ffmpeg
+                  WIIJUKEBOX_FFMPEG: ${{ github.workspace }}/bundled/ffmpeg/${{ matrix.ffmpeg }}
               run: node --test test/decoder-hostname.test.js
 
             - name: List what was built

@@ -285,7 +285,9 @@ async function checkReturningUser() {
             const encoders = await run(ffmpeg.path, ['-hide_banner', '-encoders']);
             check('bundled FFmpeg has the MP3 encoder', /libmp3lame/.test(String(encoders.stdout)));
             const license = await run(ffmpeg.path, ['-hide_banner', '-L']);
-            check('bundled FFmpeg is licensed GPL (redistributable)', /GNU General Public License/i.test(String(license.stdout)) && !/nonfree/i.test(String(license.stdout) + String(license.stderr)));
+            const terms = String(license.stdout) + String(license.stderr);
+            check('bundled FFmpeg is our LGPL v3 build (redistributable)', /GNU Lesser General Public License/i.test(terms)
+                && /version 3/.test(terms) && !/nonfree/i.test(terms) && /-wiijukebox/.test(ffmpeg.version));
             const encoded = await run(ffmpeg.path, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libmp3lame', '-f', 'mp3', '-']);
             check('bundled FFmpeg encodes a tone to MP3', !encoded.err && encoded.stdout.length > 4000, `${encoded.stdout.length} bytes`);
             const named = await decodeByHostname(ffmpeg.path, encoded.stdout);

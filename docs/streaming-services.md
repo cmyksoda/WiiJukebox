@@ -35,13 +35,14 @@ connects. Spotify with an account connected lists that entry beside its library.
 ### Spotify Connect (librespot)
 
 Requires Spotify Premium and [librespot](https://github.com/librespot-org/librespot).
+The desktop app includes it. Running the server on its own, build it with cargo:
 
 ```bash
-cargo install librespot --locked --no-default-features --features native-tls,with-libmdns
+cargo install librespot --locked --no-default-features --features rustls-tls-native-roots,with-libmdns
 ```
 
-Fedora, with `openssl-devel` installed, builds this in a few minutes. Put the
-binary on `PATH` or set its full path under Spotify settings (`binary`).
+That takes a few minutes and needs no OpenSSL. Put the binary on `PATH` or set
+its full path under Spotify settings (`binary`).
 
 - Device name, bitrate (96, 160 or 320) and volume normalization are settings.
 - The Spotify app's own volume slider is ignored (`--volume-ctrl fixed`); the Wii
@@ -277,7 +278,7 @@ Reports never block playback; a failure appears only as a warning in the log.
 
 | Item | Use | License |
 |---|---|---|
-| [librespot](https://github.com/librespot-org/librespot) | Spawned as a separate program, not bundled | MIT |
+| [librespot](https://github.com/librespot-org/librespot) | Spawned as a separate program; the desktop app bundles a build of it (`packaging/desktop/scripts/build-librespot.sh`) | MIT; the licenses of the crates built into it ship in `librespot-LICENSE.txt` |
 | [Spotify Web API](https://developer.spotify.com/documentation/web-api) | Library, search and playback commands with your own developer app; no Spotify code or artwork bundled | Spotify's Developer Terms and Policy |
 | [shairport-sync](https://github.com/mikebrady/shairport-sync) | Spawned as a separate program, not bundled | MIT and BSD-style (see its LICENSES folder) |
 | [iTunes Search API](https://performance-partners.apple.com/search-api) and Apple's top-podcasts chart | Show search, feed lookup and the chart; keyless web requests, no Apple code or artwork bundled | Apple's API terms |
