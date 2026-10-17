@@ -2,12 +2,14 @@
 
 WiiJukebox plays mainstream services through paths that use the listener's own
 account and official or established open-source protocols. Nothing here
-decrypts DRM (Widevine, FairPlay, PlayReady) or shares accounts.
+decrypts DRM (Widevine, FairPlay, PlayReady) or shares accounts. For your own
+music server (Navidrome, Jellyfin or Plex), see
+[Self-hosted music](self-hosted-services.md).
 
 | Service | Path | You need | Browse on the Wii | Status |
 |---|---|---|---|---|
 | Spotify | Spotify Connect receiver (librespot) for audio, plus the Spotify Web API for your library and remote control | Premium, `librespot` binary, your own free Spotify developer app | Liked Songs, Playlists, Albums; pick a song or playlist and play, pause and skip from the Wii or web | Built and tested against a fake Spotify and a fake librespot; no real Spotify account was tested. Without the developer app it stays a plain receiver |
-| AirPlay (Apple Music and any other app) | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac; `shairport-sync`, which the desktop app includes on Linux and macOS | Start entry; the sender controls playback | Built. Receiver, metadata pipe and cover art parsed against the real program; no Apple sender was tested |
+| AirPlay (Apple Music and any other app) | AirPlay receiver (shairport-sync) | An iPhone, iPad or Mac; `shairport-sync`, which the desktop app includes on Linux and macOS | Start entry; the sender controls playback | Built. Run end to end through the server with a stand-in AirPlay 1 sender (encrypted ALAC, now playing); cover art parsed against the real program; no Apple device was tested |
 | YouTube Music | music.youtube.com search plus yt-dlp | `yt-dlp` (and your browser cookies for Premium or your library) | Saved links, Liked Music with cookies | Built. Search, albums and playback were run live |
 | Podcasts | Apple's iTunes search and chart, then each show's own RSS feed | Nothing | Subscriptions, Top shows | Built. Search, the chart, a feed and one episode with seeking were run live |
 | Tidal | none | | | Not offered. See below |
