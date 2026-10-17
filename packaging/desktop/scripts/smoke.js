@@ -33,8 +33,8 @@ const YTDLP = args.includes('--ytdlp');
 const DEFAULT_PORTS = args.includes('--default-ports');
 const ONLY_TITLEBAR = option('--only', null) === 'titlebar';
 const ONLY_LIVE = option('--only', null) === 'live';
-// A Mac names the app in its Quit entry.
-const QUIT = process.platform === 'darwin' ? 'Quit WiiJukebox' : 'Quit';
+// Each system's own word for the last menu entry.
+const QUIT = { darwin: 'Quit WiiJukebox', win32: 'Exit' }[process.platform] || 'Quit';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let failures = 0;
@@ -801,7 +801,7 @@ async function checkBarMenu(app, bar, page) {
         sizes: [...document.querySelectorAll('#menu-root .item')].map((n) => getComputedStyle(n).fontSize),
         box: document.querySelector('#menu-root').getBoundingClientRect(),
         checks: Object.fromEntries([...document.querySelectorAll('#menu-root > .item[aria-checked]')].map((n) => [n.querySelector('.label').textContent, n.getAttribute('aria-checked')])),
-        quit: [...document.querySelectorAll('#menu-root > .item')].find((n) => n.querySelector('.label').textContent === 'Quit')?.querySelector('.hint').textContent,
+        quit: [...document.querySelectorAll('#menu-root > .item')].find((n) => n.querySelector('.label').textContent === ${JSON.stringify(QUIT)})?.querySelector('.hint').textContent,
         drag: getComputedStyle(document.querySelector('#bar')).webkitAppRegion,
         expanded: document.querySelector('#menu').getAttribute('aria-expanded'),
         firstFocused: document.activeElement.querySelector?.('.label')?.textContent,
@@ -1084,7 +1084,8 @@ async function checkTitleBar() {
             }
             await page.evaluate("document.querySelector('#viz-toggle').click(); true");
             await settled(false);
-            check('closing the visualizer leaves fullscreen and closes it', await page.evaluate("!document.fullscreenElement && !document.body.classList.contains('viz')") === true);
+            check('closing the visualizer leaves fullscreen and closes it', await page.evaluate("!document.fullscreenElement && !document.body.classList.contains('viz')") === true,
+                JSON.stringify({ element: await page.evaluate('document.fullscreenElement?.id ?? null'), viz: await page.evaluate("document.body.classList.contains('viz')"), window: (await windowViews()).fullscreen }));
 
             await page.evaluate("document.body.classList.add('viz'); true");
             await page.evaluate("document.querySelector('#viz-fullscreen').click(); true", { userGesture: true });
@@ -1340,6 +1341,7 @@ async function checkCloseDialog() {
             card: document.querySelector('main').getBoundingClientRect().toJSON(),
             focus: document.activeElement.id,
             font: getComputedStyle(document.querySelector('#detail')).fontSize,
+            viewport: [innerWidth, innerHeight],
         })`));
         check('the bar\'s × asks, in a card of its own that is modal over the window', (await cards()).every((c) => c.modal && c.parent), JSON.stringify(await cards()));
         check('with a bold title and one short sentence naming where it waits',
@@ -1351,7 +1353,7 @@ async function checkCloseDialog() {
         check('the choice is remembered unless unticked, and the safe default has focus', look.remember === true && look.focus === 'background');
         // The card reports its height as the page's last step, and the window is sized when main hears it.
         const sized = await until('the card to be sized', async () => (await cards())[0]?.size.join() === `376,${look.card.height}`, 5000).then(() => true, () => false);
-        check('the card is the size of its content', sized, JSON.stringify((await cards())[0]?.size));
+        check('the card is the size of its content', sized, JSON.stringify({ window: (await cards())[0]?.size, viewport: look.viewport }));
 
         // Only the card may answer, and only with a real choice.
         await inMain(`electron.ipcMain.emit('close-dialog:answer', { sender: electron.BaseWindow.getAllWindows().find((w) => !w.getParentWindow()).contentView.children[0].webContents }, { choice: 'quit', remember: true }); return true;`);
