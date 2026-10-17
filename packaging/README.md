@@ -313,30 +313,81 @@ passes `--default-ports` to run the app once with the server's own defaults (400
 
 ### Continuous integration
 
-`.github/workflows/desktop.yml` is modeled on Feishin's build workflows: an OS matrix,
-Node 22 and electron-builder. A first job builds our FFmpeg for Linux and Windows in
-containers, kept in the Actions cache until its scripts change; macOS builds its own the
-same way. Every runner then installs, builds, unit-tests the desktop code and smoke-tests
-the packaged app. Ubuntu also runs `npm test` and `npm run smoke`, builds the `.deb` and
-installs it, and builds the `.rpm` and installs it in a `fedora:latest` container, with
-the smoke test run against each installed copy. Windows smoke-tests the zip and then the installer,
-installed and uninstalled for real. macOS smoke-tests the arm64 app, and the Intel app
-under Rosetta.
+`.github/workflows/build.yml` builds all three apps. The desktop jobs are modeled on
+Feishin's build workflows: an OS matrix, Node 22 and electron-builder. A first job builds
+our FFmpeg and librespot for Linux and Windows in containers, kept in the Actions cache
+until their scripts change; macOS builds its own the same way. Every runner then
+installs, builds, unit-tests the desktop code and smoke-tests the packaged app. Ubuntu
+also runs `npm test` and `npm run smoke`, builds the `.deb` and installs it, and builds
+the `.rpm` and installs it in a `fedora:latest` container, with the smoke test run against
+each installed copy. Windows smoke-tests the zip and then the installer, installed and
+uninstalled for real. macOS smoke-tests the arm64 app, and the Intel app under Rosetta.
 
-Because the repository is private (Windows minutes count 2x, macOS 10x), a push or pull
-request builds Linux only. Windows and macOS run when a commit message contains
-`[ci all]`, `[ci windows]` or `[ci macos]`, from the Actions page ("Run workflow", or
-`gh workflow run desktop.yml -f platforms=macos`), or for a `v*` tag. A newer push
-cancels a run that is still going.
+The Wii job runs in devkitPro's `devkitppc` container, pinned to the release with
+devkitPPC r50 and libogc 3.1.0 that every hardware-tested build used. It runs the client's
+host tests (`make -C client host-test`) and builds both zips. The Android job builds the
+debug APK, or for a `v*` tag the signed release APK (see [Releasing](#releasing)).
+
+A push or pull request builds the desktop app for Linux only (on a private repository
+Windows minutes count 2x and macOS 10x). Windows and macOS run when a commit message
+contains `[ci all]`, `[ci windows]` or `[ci macos]`, from the Actions page ("Run
+workflow", or `gh workflow run build.yml -f platforms=macos`), or for a `v*` tag. The Wii
+and Android jobs run every time. A newer push cancels a run that is still going.
 
 A private repository has 500 MB of Actions storage, and keeping the installers of every push
 once filled it in a day. So a push keeps nothing except a failed run's smoke logs
-(`smoke-logs-<system>`, 3 days). "Run workflow" keeps the installers as artifacts
-(`WiiJukebox-linux`, `WiiJukebox-windows`, `WiiJukebox-macos`) for one day. A `v*` tag puts
-them on a draft release with `WiiJukebox-<version>-ffmpeg-source.tar` and then deletes the
-artifacts, since release files don't count against that storage.
-`test/workflow-storage.test.js` fails `npm test` when an upload would be kept more than 3
-days or would run on an ordinary push.
+(`smoke-logs-<system>`, 3 days). "Run workflow" keeps the apps as artifacts
+(`WiiJukebox-linux`, `-windows`, `-macos`, `-wii`, `-android`) for one day. A `v*` tag
+puts them on a draft release and then deletes the artifacts, since release files don't
+count against that storage. `test/workflow-storage.test.js` fails `npm test` when an
+upload would be kept more than 3 days or would run on an ordinary push.
+
+### Releasing
+
+A `v*` tag builds every app and puts it on a **draft** release, so nothing is public until
+someone presses Publish on the Releases page.
+
+1. Set the version. `package.json` is the one source; `test/versions.test.js` fails until
+   the others match, and the Android version comes from it on its own:
+
+   ```bash
+   npm version 1.0.0 --no-git-tag-version
+   npm --prefix packaging/desktop version 1.0.0 --no-git-tag-version
+   # and <version> (plus <release_date>) in client/dist/apps/wiijukebox/meta.xml
+   ```
+
+2. Commit, then make the tag with a message. The message becomes the release notes
+   (Markdown works), so this is where the changelog goes:
+
+   ```bash
+   git tag -a v1.0.0    # an editor opens for the notes
+   git push origin main v1.0.0
+   ```
+
+   The first job fails within seconds if the tag doesn't match `package.json` or has no
+   message (a plain `git tag v1.0.0`).
+
+3. When the run finishes, the draft release has the AppImage, `.deb` and `.rpm`, the
+   Windows installer and portable zip, the macOS `.dmg` and `.zip` for Apple silicon and
+   Intel, the two Wii zips (`apps/wiijukebox/` for SD cards and the Open Shop Channel, and
+   the wiiload one), the signed APK, and `WiiJukebox-<version>-ffmpeg-source.tar`. Check
+   it, then Publish.
+
+To fix the notes later, edit the release on GitHub. Re-running a failed tag run keeps the
+draft and replaces its files.
+
+The release APK needs the signing key as two repository secrets (Settings, Secrets and
+variables, Actions). Without them a tag's Android job fails rather than shipping an APK
+that can't update the installed one:
+
+```bash
+cd ~/.local/share/wiijukebox-signing
+base64 -w0 wiijukebox-release.jks | gh secret set ANDROID_SIGNING_KEYSTORE
+gh secret set ANDROID_SIGNING_PROPERTIES < keystore.properties
+```
+
+The job writes them to the runner's temporary folder only for the signing step and points
+`storeFile` at its own copy. Pull requests from forks never receive secrets.
 
 ## What was and was not verified
 

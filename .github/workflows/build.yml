@@ -1,32 +1,35 @@
-name: Desktop app
+name: Build
 
-# Pushes and pull requests build and test Linux only. macOS minutes cost 10x and Windows 2x on a private
-# repository, so those run when a commit message contains [ci all], [ci windows] or [ci macos], from
-# "Run workflow", or for a v* tag.
-# A private repository has 500 MB of Actions storage, which installers kept from every push once filled
-# in a day. So only "Run workflow" keeps installers (for one day) and a v* tag puts them on a draft
-# release instead; test/workflow-storage.test.js holds every upload to that.
+# The desktop app, the Wii app and the Android controller. Pushes and pull requests build the desktop app
+# for Linux only; [ci all], [ci windows] or [ci macos] in a commit message, "Run workflow", or a v* tag
+# build Windows and macOS too (on a private repository their minutes cost 2x and 10x).
+# Only "Run workflow" (for one day) and v* tags keep files, since installers kept from every push once
+# filled the 500 MB of Actions storage in a day; test/workflow-storage.test.js holds every upload to that.
 on:
     push:
-        branches: [main, desktop-app]
+        branches: [main]
         tags: ['v*']
         paths:
             - 'packaging/desktop/**'
+            - 'packaging/android/**'
+            - 'client/**'
             - 'src/**'
             - 'public/**'
             - 'test/**'
-            - 'tools/vendor.js'
+            - 'tools/**'
             - 'package*.json'
-            - '.github/workflows/desktop.yml'
+            - '.github/workflows/build.yml'
     pull_request:
         paths:
             - 'packaging/desktop/**'
+            - 'packaging/android/**'
+            - 'client/**'
             - 'src/**'
             - 'public/**'
             - 'test/**'
-            - 'tools/vendor.js'
+            - 'tools/**'
             - 'package*.json'
-            - '.github/workflows/desktop.yml'
+            - '.github/workflows/build.yml'
     workflow_dispatch:
         inputs:
             platforms:
@@ -37,7 +40,7 @@ on:
 
 # A newer push replaces a run that is still going.
 concurrency:
-    group: desktop-${{ github.ref }}
+    group: build-${{ github.ref }}
     cancel-in-progress: true
 
 permissions:
@@ -54,6 +57,23 @@ jobs:
             matrix: ${{ steps.pick.outputs.matrix }}
             bundled: ${{ steps.pick.outputs.bundled }}
         steps:
+            - name: Check out the repository
+              if: startsWith(github.ref, 'refs/tags/v')
+              uses: actions/checkout@v7
+
+            # Here a wrong tag fails in seconds rather than after the builds.
+            - name: Check the tag against the version, and that it carries release notes
+              if: startsWith(github.ref, 'refs/tags/v')
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.ref_name }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  version=$(jq -r .version package.json)
+                  [ "$TAG" = "v$version" ] || { echo "::error::$TAG does not match version $version in package.json"; exit 1; }
+                  type=$(gh api "repos/$REPO/git/refs/tags/$TAG" --jq .object.type)
+                  [ "$type" = tag ] || { echo "::error::$TAG has no message; make it with git tag -a and write the release notes there"; exit 1; }
+
             - name: Choose the systems to build
               id: pick
               env:
@@ -416,9 +436,92 @@ jobs:
                   if-no-files-found: ignore
                   retention-days: 3
 
+    # devkitPPC r50 and libogc 3.1.0, the toolchain every hardware-tested Wii build used.
+    wii:
+        needs: plan
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        container: docker.io/devkitpro/devkitppc:20260503@sha256:44cb1a920e1ec3ec7c06767493c3b85f8d643d6137cc4661f0201895ac6e4967
+        steps:
+            - name: Check out the repository
+              uses: actions/checkout@v7
+
+            - name: Install what the host tests need
+              run: apt-get update -qq && apt-get install -y -qq --no-install-recommends gcc libc6-dev libfreetype-dev pkg-config
+
+            - name: Client host tests
+              run: make -C client host-test
+
+            - name: Build the Wii app and its zips
+              run: make -C client -j"$(nproc)" package
+
+            - name: Upload the Wii zips
+              if: success() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
+              uses: actions/upload-artifact@v7
+              with:
+                  name: WiiJukebox-wii
+                  path: client/dist/WiiJukebox-*-wii*.zip
+                  if-no-files-found: error
+                  retention-days: 1
+
+    android:
+        needs: plan
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - name: Check out the repository
+              uses: actions/checkout@v7
+
+            - name: Install Java
+              uses: actions/setup-java@v6
+              with:
+                  distribution: temurin
+                  java-version: 21
+
+            - name: Install the Android platform and build tools
+              run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0" > /dev/null
+
+            - name: Build the debug APK
+              if: "!startsWith(github.ref, 'refs/tags/v')"
+              run: sh packaging/android/build.sh
+
+            # Android only installs an update signed with the same key, so a release must never ship unsigned.
+            - name: Build the signed APK
+              if: startsWith(github.ref, 'refs/tags/v')
+              env:
+                  KEYSTORE: ${{ secrets.ANDROID_SIGNING_KEYSTORE }}
+                  PROPERTIES: ${{ secrets.ANDROID_SIGNING_PROPERTIES }}
+              run: |
+                  if [ -z "$KEYSTORE" ] || [ -z "$PROPERTIES" ]; then
+                      echo "::error::add the ANDROID_SIGNING_KEYSTORE and ANDROID_SIGNING_PROPERTIES secrets (packaging/README.md, Releasing)"
+                      exit 1
+                  fi
+                  echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+                  { echo "$PROPERTIES" | grep -v '^storeFile'; echo "storeFile=$RUNNER_TEMP/release.jks"; } > "$RUNNER_TEMP/keystore.properties"
+                  WIIJUKEBOX_SIGNING="$RUNNER_TEMP/keystore.properties" sh packaging/android/build.sh release
+                  rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/keystore.properties"
+                  mv packaging/dist/WiiJukebox-android.apk "packaging/dist/WiiJukebox-$(jq -r .version package.json)-android.apk"
+
+            - name: Check the APK's signature and version
+              run: |
+                  tools="$ANDROID_HOME/build-tools/36.0.0"
+                  for apk in packaging/dist/WiiJukebox-*android*.apk; do
+                      "$tools/apksigner" verify --print-certs "$apk" | grep -E 'Signer #1 certificate (DN|SHA-256)'
+                      "$tools/aapt2" dump badging "$apk" | head -1
+                  done
+
+            - name: Upload the APK
+              if: success() && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
+              uses: actions/upload-artifact@v7
+              with:
+                  name: WiiJukebox-android
+                  path: packaging/dist/WiiJukebox-*android*.apk
+                  if-no-files-found: error
+                  retention-days: 1
+
     # Release assets don't count against Actions storage, unlike artifacts.
     release:
-        needs: build
+        needs: [build, wii, android]
         if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         timeout-minutes: 30
@@ -429,7 +532,7 @@ jobs:
             - name: Check out the repository
               uses: actions/checkout@v7
 
-            - name: Put the installers and FFmpeg's sources on a draft release
+            - name: Put the apps and FFmpeg's sources on a draft release, with the tag's message as its notes
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}
@@ -442,8 +545,13 @@ jobs:
                   cp packaging/desktop/scripts/build-ffmpeg.sh packaging/desktop/scripts/build.js ffmpeg-source/
                   tar -cf "installers/WiiJukebox-${TAG#v}-ffmpeg-source.tar" -C ffmpeg-source .
                   find installers -type f -exec ls -l {} +
-                  gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1 \
-                      || gh release create "$TAG" --repo "$REPO" --draft --title "$TAG" --notes ""
+                  tag=$(gh api "repos/$REPO/git/refs/tags/$TAG" --jq .object.sha)
+                  gh api "repos/$REPO/git/tags/$tag" --jq .message > notes.md
+                  if gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
+                      gh release edit "$TAG" --repo "$REPO" --notes-file notes.md
+                  else
+                      gh release create "$TAG" --repo "$REPO" --draft --verify-tag --title "WiiJukebox ${TAG#v}" --notes-file notes.md
+                  fi
                   find installers -type f -print0 | xargs -0 gh release upload "$TAG" --repo "$REPO" --clobber
                   gh api "repos/$REPO/actions/runs/$RUN/artifacts" --paginate \
                       --jq '.artifacts[] | select(.name | startswith("WiiJukebox-")) | .id' \
