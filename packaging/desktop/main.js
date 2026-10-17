@@ -945,7 +945,8 @@ if (!relaunching && !app.requestSingleInstanceLock()) {
     app.whenReady().then(async () => {
         if (process.argv.includes('--quit')) return app.quit();
         createWindow();
-        createTray();
+        // Chromium's headless platform has no screen, and GTK, which draws the Linux tray icon, aborts without one.
+        if (app.commandLine.getSwitchValue('ozone-platform') !== 'headless') createTray();
         buildMenus();
         titleFeed = new TitleFeed({
             getUrl: () => (currentPage === 'player' ? serverUrl : null),
