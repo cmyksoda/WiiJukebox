@@ -278,6 +278,16 @@ async function clickMenuItem(id) {
     }
 }
 
+// The receivers the app ships must reach its server whatever the included FFmpeg switch says.
+async function checkReceivers(state, when) {
+    const exe = process.platform === 'win32' ? '.exe' : '';
+    const shipped = (name) => fs.existsSync(path.join(state.resources, 'bin', name + exe));
+    const { sources } = JSON.parse((await get(`${state.serverUrl}api/sources`)).body);
+    const installed = (id) => sources.find((source) => source.id === id)?.configured === true;
+    if (shipped('librespot')) check(`the included librespot counts as installed ${when}`, installed('spotify'));
+    if (shipped('shairport-sync')) check(`the included shairport-sync counts as installed ${when}`, installed('airplay'));
+}
+
 async function checkReturningUser() {
     console.log('\n== returning user: server, FFmpeg and web UI ==');
     const app = new App('returning', { settings: { setupDone: true, onClose: 'background' } });
@@ -306,6 +316,7 @@ async function checkReturningUser() {
 
         const status = await get(`${state.serverUrl}api/status`);
         check('GET /api/status', status.status === 200 && typeof JSON.parse(status.body) === 'object', status.body.toString().slice(0, 100));
+        await checkReceivers(state, 'with the included FFmpeg');
         const page = await get(state.serverUrl);
         check('GET / serves the web UI', page.status === 200 && /<title>WiiJukebox/.test(page.body.toString()));
         const vendor = await get(`${state.serverUrl}vendor/butterchurn.min.js`);
@@ -704,6 +715,7 @@ async function checkSystemFfmpeg() {
         check('the setting is read: the included FFmpeg is off', state.useBundledFfmpeg === false);
         if (state.serverUrl) {
             check('the computer\'s own FFmpeg runs the server, with MP3', !isBundled(state) && state.ffmpeg.mp3 === true, `${state.ffmpeg.path} -- ${state.ffmpeg.version}`);
+            await checkReceivers(state, 'with the included FFmpeg off');
             await clickMenuItem('bundled-ffmpeg');
         } else {
             console.log(`  (this computer's FFmpeg cannot be used: ${state.ffmpeg ? 'no MP3 encoder' : 'none found'})`);
