@@ -15,7 +15,7 @@ const { PlexSource } = require('./plex');
 const { SpotifySource } = require('./spotify');
 const { AirplaySource } = require('./airplay');
 const { YtMusicSource } = require('./ytmusic');
-const { findExecutable } = require('./receiver');
+const { findReceiver } = require('./receiver');
 
 const REGISTRY = [
     RadioSource, PodcastsSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
@@ -84,9 +84,9 @@ class SourceRegistry {
         if (id === 'ytmusic') return true;
         // Receivers are offered once their program is installed; until then the
         // settings screen explains how to get it.
-        if (id === 'spotify') return Boolean(findExecutable(cfg.binary || SpotifySource.binaryName));
+        if (id === 'spotify') return Boolean(findReceiver(cfg.binary, SpotifySource.binaryName));
         if (id === 'airplay') {
-            return process.platform !== 'win32' && Boolean(findExecutable(cfg.binary || AirplaySource.binaryName));
+            return process.platform !== 'win32' && Boolean(findReceiver(cfg.binary, AirplaySource.binaryName));
         }
         return false;
     }

@@ -532,7 +532,8 @@ async function startServer() {
     server = new ServerProcess({
         entry: path.join(serverRoot, 'src', 'main.js'),
         cwd: serverRoot,
-        env: { PATH: toolDirs().join(path.delimiter) },
+        // The receivers come along even when the included FFmpeg is switched off.
+        env: { PATH: toolDirs().join(path.delimiter), WIIJUKEBOX_RECEIVERS: bundledBin },
         nodePath: process.execPath,
     });
     server.on('line', (line) => log.write(line));

@@ -34,6 +34,16 @@ function findExecutable(nameOrPath) {
     return null;
 }
 
+/**
+ * A receiver program: the configured one, else the desktop app's own copy (WIIJUKEBOX_RECEIVERS, which its
+ * FFmpeg switch leaves alone), else whatever PATH has.
+ */
+function findReceiver(binary, name) {
+    if (binary) return findExecutable(binary);
+    const own = process.env.WIIJUKEBOX_RECEIVERS;
+    return (own && findExecutable(path.join(own, name))) || findExecutable(name);
+}
+
 // The pacer slices on frame boundaries but assumes it is given whole frames.
 class FrameAligner extends Transform {
     constructor() {
@@ -70,7 +80,8 @@ class ReceiverSource extends Source {
     }
 
     get _binary() {
-        return this.config.binary || this.constructor.binaryName;
+        return findReceiver(this.config.binary, this.constructor.binaryName)
+            || this.config.binary || this.constructor.binaryName;
     }
 
     get capabilities() {
@@ -272,4 +283,4 @@ class ReceiverSource extends Source {
     }
 }
 
-module.exports = { ReceiverSource, FrameAligner, findExecutable };
+module.exports = { ReceiverSource, FrameAligner, findExecutable, findReceiver };

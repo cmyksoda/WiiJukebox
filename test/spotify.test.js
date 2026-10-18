@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { SpotifySource } = require('../src/sources/spotify');
 const { SourceRegistry } = require('../src/sources/index');
+const { findReceiver } = require('../src/sources/receiver');
 const { Config } = require('../src/config');
 const { tempDir, fakeBinary, waitFor } = require('./helpers/fake-binary');
 
@@ -43,6 +44,28 @@ test('a missing librespot is reported with how to install it', async () => {
     const registry = new SourceRegistry(new Config(tempDir()));
     registry.config.updateSource('spotify', { binary: '/nonexistent/librespot' });
     assert.equal(registry.describe().find((s) => s.id === 'spotify').configured, false);
+});
+
+test("the desktop app's own receivers are found first, and its FFmpeg switch does not hide them", (t) => {
+    const own = tempDir();
+    const librespot = fakeBinary(own, 'librespot', '');
+    const shairport = fakeBinary(own, 'shairport-sync', '');
+    const saved = process.env.WIIJUKEBOX_RECEIVERS;
+    process.env.WIIJUKEBOX_RECEIVERS = own;
+    t.after(() => {
+        if (saved === undefined) delete process.env.WIIJUKEBOX_RECEIVERS;
+        else process.env.WIIJUKEBOX_RECEIVERS = saved;
+    });
+
+    assert.equal(findReceiver('', 'librespot'), librespot);
+    assert.equal(findReceiver('/nonexistent/librespot', 'librespot'), null, 'a configured program wins, even a missing one');
+    assert.equal(new SpotifySource({}, { configDir: own })._binary, librespot);
+    const described = new SourceRegistry(new Config(tempDir())).describe();
+    assert.equal(described.find((s) => s.id === 'spotify').configured, true);
+    if (process.platform !== 'win32') {
+        assert.equal(findReceiver('', 'shairport-sync'), shairport);
+        assert.equal(described.find((s) => s.id === 'airplay').configured, true);
+    }
 });
 
 test('receiver starts librespot with the pipe backend and relays PCM and track details', async () => {
