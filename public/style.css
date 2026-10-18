@@ -861,6 +861,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     font-size: 14px;
     text-align: center;
     box-shadow: 0 6px 18px rgba(20, 40, 60, .25);
+    /* It only informs, so taps reach whatever is under it. */
+    pointer-events: none;
 }
 #toast.error { background: var(--danger); border-color: var(--danger); color: #fff; }
 

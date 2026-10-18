@@ -98,9 +98,12 @@ function toast(message, isError = false) {
     el.classList.toggle('error', isError);
     el.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        el.hidden = true;
-    }, 5000);
+    toastTimer = setTimeout(hideToast, 5000);
+}
+
+function hideToast() {
+    clearTimeout(toastTimer);
+    $('#toast').hidden = true;
 }
 
 /**
@@ -1906,6 +1909,8 @@ function setNowPlayingOpen(open) {
     $('#main').inert = sheet;
     $('#player').inert = sheet;
     $('#nowplaying').setAttribute('role', sheet ? 'dialog' : 'region');
+    // A toast from the page underneath would sit over the sheet's controls.
+    if (sheet) hideToast();
     if (sheet) $('#np-close').focus();
     else if ($('#nowplaying').contains(document.activeElement)) $('#mini-open').focus();
 }
