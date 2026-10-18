@@ -739,7 +739,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 .folder-row .path { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
 .folder-picker { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--edge-soft); }
 .picker-bar { display: flex; align-items: center; gap: 8px; }
-.picker-bar input { flex: 1; min-width: 0; }
+/* Starts at no width so the path never widens the panel past a phone's screen. */
+.picker-bar input { flex: 1; width: 0; min-width: 0; }
 .folder-choices { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border-block: 1px solid var(--edge-soft); }
 .folder-choices .hint { margin: 12px; }
 .folder-choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 4px 12px; border: 0; background: transparent; text-align: start; }
