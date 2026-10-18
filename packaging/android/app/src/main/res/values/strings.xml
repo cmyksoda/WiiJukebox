@@ -1,18 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WiiJukebox</string>
-    <string name="choose_title">Choose a server</string>
-    <string name="choose_hint">Servers on this Wi-Fi network appear here.</string>
+    <string name="choose_hint">Choose the computer that runs WiiJukebox.</string>
+    <string name="on_this_wifi">On this Wi-Fi</string>
+    <string name="recent">Recent</string>
+    <string name="type_address">Or type its address</string>
+    <string name="address_note">Works over Tailscale or a VPN too: use the computer\'s address there.</string>
     <string name="searching">Looking for servers…</string>
-    <string name="none_found">No WiiJukebox server answered. Check that the server is running and that this phone is on the same Wi-Fi network (guest networks often block discovery).</string>
+    <string name="none_found_title">No servers found</string>
+    <string name="none_found">Check that WiiJukebox is running on your computer and that this phone is on the same Wi-Fi. Guest networks often block finding it.</string>
     <string name="scan_again">Scan again</string>
-    <string name="enter_address">Enter address</string>
-    <string name="address_title">Server address</string>
+    <string name="scanning">Looking…</string>
     <string name="address_hint">192.168.0.3:4005</string>
     <string name="connect">Connect</string>
+    <string name="connecting">Connecting to %1$s…</string>
     <string name="cancel">Cancel</string>
-    <string name="unreachable">Could not reach %1$s.</string>
-    <string name="switch_server">Choose another server</string>
-    <string name="retry">Try again</string>
+    <string name="typed">Typed address</string>
+    <string name="forget_title">Forget %1$s?</string>
+    <string name="forget_body">It leaves the Recent list. You can type it again any time.</string>
+    <string name="forget">Forget</string>
+    <string name="unreachable">Couldn\'t reach %1$s. Check that WiiJukebox is running there.</string>
     <string name="invalid_address">Enter an address such as 192.168.0.3:4005.</string>
 </resources>

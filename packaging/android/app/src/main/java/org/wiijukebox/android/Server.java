@@ -30,6 +30,17 @@ final class Server {
         return new Server(id, name, newHost, newPort);
     }
 
+    /** The same server: by its UUID when both have one, otherwise by address. */
+    boolean sameAs(Server other) {
+        if (!id.isEmpty() && !other.id.isEmpty()) return id.equals(other.id);
+        return address().equals(other.address());
+    }
+
+    /** Typed in by hand rather than found, so it has no UUID and goes by its address. */
+    boolean typed() {
+        return id.isEmpty();
+    }
+
     JSONObject toJson() throws JSONException {
         return new JSONObject().put("id", id).put("name", name).put("host", host).put("port", port);
     }

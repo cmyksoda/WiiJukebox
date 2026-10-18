@@ -5,11 +5,13 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import java.util.ArrayList;
 import java.util.List;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/** Remembers the chosen server by its UUID, so a new address is found again by discovery. */
+/** Remembers recent servers, a found one by its UUID so a new address is found again by discovery. */
 final class ServerStore {
+    private static final int RECENT = 6;
     private final SharedPreferences prefs;
 
     ServerStore(Context context) {
@@ -17,26 +19,52 @@ final class ServerStore {
     }
 
     Server last() {
-        String json = prefs.getString("last", null);
-        if (json == null) return null;
+        List<Server> recent = recent();
+        return recent.isEmpty() ? null : recent.get(0);
+    }
+
+    /** Newest first. */
+    List<Server> recent() {
+        List<Server> servers = new ArrayList<>();
         try {
-            Server server = Server.fromJson(new JSONObject(json));
-            return server.host.isEmpty() ? null : server;
+            JSONArray list = new JSONArray(prefs.getString("recent", "[]"));
+            for (int i = 0; i < list.length(); i++) {
+                Server server = Server.fromJson(list.getJSONObject(i));
+                if (!server.host.isEmpty()) servers.add(server);
+            }
+            // Older versions kept only the last server.
+            String last = prefs.getString("last", null);
+            if (servers.isEmpty() && last != null) {
+                Server server = Server.fromJson(new JSONObject(last));
+                if (!server.host.isEmpty()) servers.add(server);
+            }
         } catch (JSONException e) {
-            return null;
+            // A damaged list starts over.
         }
+        return servers;
     }
 
     void remember(Server server) {
-        try {
-            prefs.edit().putString("last", server.toJson().toString()).apply();
-        } catch (JSONException e) {
-            // Not worth failing a connection over.
-        }
+        List<Server> servers = recent();
+        servers.removeIf(server::sameAs);
+        servers.add(0, server);
+        save(servers);
     }
 
-    void forget() {
-        prefs.edit().remove("last").apply();
+    void forget(Server server) {
+        List<Server> servers = recent();
+        servers.removeIf(server::sameAs);
+        save(servers);
+    }
+
+    private void save(List<Server> servers) {
+        JSONArray list = new JSONArray();
+        try {
+            for (Server server : servers.subList(0, Math.min(RECENT, servers.size()))) list.put(server.toJson());
+        } catch (JSONException e) {
+            return;
+        }
+        prefs.edit().putString("recent", list.toString()).remove("last").apply();
     }
 
     /** Extra discovery ports, for servers that moved off 4005 (comma separated). */
