@@ -13,7 +13,7 @@ MARK = HERE.parent.parent / "public" / "images" / "jukebox.svg"
 OUT = HERE / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher_foreground.xml"
 CANVAS = 108  # the adaptive icon's size in dp
 SAFE_RADIUS = 33  # launchers may mask anything past the 66dp safe circle
-BRAND = "#1AA5E8"
+DROP = 3  # dp the cabinet sits below the middle, which looked high with the notes above it
 
 
 def subpaths(d):
@@ -57,17 +57,25 @@ def main():
     points = lambda part: [p for _, ps in part for p in ps]
     bounds = lambda ps: (min(p[0] for p in ps), min(p[1] for p in ps), max(p[0] for p in ps), max(p[1] for p in ps))
 
-    # Center the cabinet (the largest part) rather than the whole mark, so the notes float above a centered jukebox.
+    # Place the cabinet (the largest part) rather than the whole mark, so the notes float above it.
     def area(part):
         left, top, right, bottom = bounds(points(part))
         return (right - left) * (bottom - top)
     left, top, right, bottom = bounds(points(max(parts, key=area)))
     cx, cy = (left + right) / 2, (top + bottom) / 2
-    farthest = max(((px - cx) ** 2 + (py - cy) ** 2) ** 0.5 for part in parts for px, py in points(part))
-    scale = SAFE_RADIUS / farthest
+    reach = lambda scale: max(((px - cx) * scale) ** 2 + ((py - cy) * scale + DROP) ** 2
+                              for part in parts for px, py in points(part)) ** 0.5
+    low, high = 0.0, 1.0  # the largest scale that still fits, by halving
+    for _ in range(50):
+        middle = (low + high) / 2
+        if reach(middle) < SAFE_RADIUS:
+            low = middle
+        else:
+            high = middle
+    scale = low
 
     number = lambda n: f"{n:.2f}".rstrip("0").rstrip(".")
-    place = lambda p: f"{number(CANVAS / 2 + (p[0] - cx) * scale)},{number(CANVAS / 2 + (p[1] - cy) * scale)}"
+    place = lambda p: f"{number(CANVAS / 2 + (p[0] - cx) * scale)},{number(CANVAS / 2 + DROP + (p[1] - cy) * scale)}"
     path = "".join(command + " ".join(place(p) for p in ps) for part in parts for command, ps in part)
 
     OUT.write_text(
@@ -79,11 +87,11 @@ def main():
         f'    android:viewportWidth="{CANVAS}"\n'
         f'    android:viewportHeight="{CANVAS}">\n'
         "    <path\n"
-        f'        android:fillColor="{BRAND}"\n'
+        '        android:fillColor="#FFFFFF"\n'
         f'        android:pathData="{path}" />\n'
         "</vector>\n"
     )
-    print(f"cabinet {number((bottom - top) * scale)}dp tall, mark reaches {number(farthest * scale)}dp from center")
+    print(f"cabinet {number((bottom - top) * scale)}dp tall, mark reaches {number(reach(scale))}dp from center")
 
 
 if __name__ == "__main__":

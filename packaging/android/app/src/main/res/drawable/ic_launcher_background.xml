@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The desktop icon's gradient, from packaging/desktop/scripts/make-icons.py. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="270"
+        android:startColor="#42BDF4"
+        android:endColor="#0B86C8" />
+</shape>
