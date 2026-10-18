@@ -338,7 +338,8 @@ const SHORT = {
     subsonic: 'Navidrome', jellyfin: 'Jellyfin', plex: 'Plex', radio: 'Radio', podcasts: 'Podcasts',
     ytdlp: 'Web links', ytmusic: 'YouTube Music',
 };
-const homeView = { token: 0, recentTimer: null };
+// What Home last showed, so coming back paints it at once and only rows that changed repaint.
+const homeView = { token: 0, recentTimer: null, overview: null, services: new Map(), painted: new WeakMap() };
 const homeVisible = () => state.activeSource === null && $('#content').dataset.view === 'home';
 
 function goHome({ keepSidebar = false } = {}) {
@@ -365,6 +366,7 @@ function renderHome() {
             h('div', { class: 'home-head' }, h('h3', { id: 'home-channels-title', text: 'All channels' })),
             h('div', { class: 'grid', id: 'home-channels' })));
     paintChannels();
+    if (homeView.overview) paintOverview(homeView.overview, token);
     loadHome(token);
 }
 
@@ -401,16 +403,44 @@ async function loadHome(token) {
     try {
         overview = await api('/home');
     } catch (err) {
-        if (token === homeView.token) $('#home-rows').replaceChildren(homeNote(`Home could not load: ${err.message}`));
+        if (token === homeView.token && !homeView.overview) {
+            $('#home-rows').replaceChildren(homeNote(`Home could not load: ${err.message}`));
+        }
         return;
     }
     if (token !== homeView.token) return;
-    paintRecent(overview.recent);
-
-    const slots = overview.services.map(() => h('div', { class: 'home-service' }));
-    $('#home-rows').replaceChildren(...slots);
+    const unchanged = JSON.stringify(overview) === JSON.stringify(homeView.overview);
+    homeView.overview = overview;
+    const slots = unchanged ? [...$('#home-rows').children] : paintOverview(overview, token);
     await Promise.all(overview.services.map((service, i) => loadService(service, slots[i], token)));
     if (token === homeView.token) showFirstRunHint();
+}
+
+/** Jump back in, then a slot per service: what it showed last time, or room for its rows while they load. */
+function paintOverview(overview, token) {
+    paintRecent(overview.recent);
+    const slots = overview.services.map((service) => {
+        const slot = h('div', { class: 'home-service' });
+        const last = homeView.services.get(service.id);
+        if (last) {
+            paintService(service, slot, last, token);
+            homeView.painted.set(slot, JSON.stringify(last));
+        } else {
+            slot.replaceChildren(...loadingRows(service));
+        }
+        return slot;
+    });
+    $('#home-rows').replaceChildren(...slots);
+    return slots;
+}
+
+const loadingRows = (service) => service.rows.map((row) => homeSection(row.title, service, loadingShelf()));
+
+/** A row of blank cards the size of real ones, so nothing below jumps when they arrive. */
+function loadingShelf() {
+    return h('ul', { class: 'shelf loading', 'aria-label': 'Loading' }, [1, 2, 3, 4].map(() => h('li', {},
+        h('span', { class: 'card' }, h('span', { class: 'art' }), h('span', { class: 't' }, '\u00a0', h('br'), '\u00a0'),
+            h('span', { class: 's', text: '\u00a0' })))));
 }
 
 /** On a page with nothing to offer yet, say where things come from. */
@@ -421,7 +451,6 @@ function showFirstRunHint() {
 }
 
 async function loadService(service, slot, token) {
-    slot.replaceChildren(...service.rows.map((row) => homeSection(row.title, service, h('p', { class: 'hint', text: 'Loading…' }))));
     let data;
     try {
         data = await api(`/home/${service.id}`);
@@ -429,8 +458,18 @@ async function loadService(service, slot, token) {
         data = { error: err.message };
     }
     if (token !== homeView.token) return;
+    // A row that brings nothing new is left as it is rather than repainted.
+    const json = JSON.stringify(data);
+    if (homeView.painted.get(slot) === json) return;
+    if (!data.error && !data.rows?.some((row) => row.error)) homeView.services.set(service.id, data);
+    paintService(service, slot, data, token);
+    homeView.painted.set(slot, json);
+}
 
+function paintService(service, slot, data, token) {
     const retry = () => {
+        homeView.painted.delete(slot);
+        slot.replaceChildren(...loadingRows(service));
         loadService(service, slot, token);
     };
     const channel = state.sources.find((src) => src.id === service.id);
@@ -473,6 +512,7 @@ async function clearRecent() {
         return toast(err.message, true);
     }
     paintRecent([]);
+    if (homeView.overview) homeView.overview.recent = [];
     showFirstRunHint();
     // The button that had focus is gone; keep the keyboard at the top of the page.
     const first = $('#content h3');
@@ -487,8 +527,10 @@ function refreshRecent() {
     homeView.recentTimer = setTimeout(async () => {
         if (!homeVisible()) return;
         try {
-            const { recent } = await api('/home');
-            if (homeVisible()) paintRecent(recent);
+            const overview = await api('/home');
+            if (!homeVisible()) return;
+            paintRecent(overview.recent);
+            if (homeView.overview) homeView.overview.recent = overview.recent;
         } catch { /* the next visit loads it again */ }
     }, 400);
 }

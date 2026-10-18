@@ -612,6 +612,7 @@ html.in-app #page-menu { display: none; }
     scroll-padding-inline: var(--pad);
 }
 .shelf > li { flex: 0 0 148px; min-width: 0; scroll-snap-align: start; }
+.shelf.loading .card { opacity: .5; pointer-events: none; }
 span.play-all { pointer-events: none; }
 .card .tag {
     position: absolute;
