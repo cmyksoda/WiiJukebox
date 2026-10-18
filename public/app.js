@@ -16,6 +16,7 @@ const state = {
     activeSource: null, // id of the source being browsed
     status: null,
     stack: [], // browse history, for the back button
+    searched: false, // the page shows search results, which Back and an emptied search box leave
     panelTimer: null, // polling for the receiver / sign-in panels
 };
 
@@ -151,6 +152,7 @@ let navigations = 0;
 
 function setToolbar({ title, back = false, search = false, settings = null, pages = false, placeholder = 'Search' }) {
     navigations++;
+    state.searched = false;
     stopPanelTimer();
     $('#crumb').textContent = title;
     $('#back').hidden = !back;
@@ -274,7 +276,7 @@ function openChannelMenu(el, anchor) {
         label: src.label, trigger: el, anchor,
         items: [
             { label: 'Open', run: () => openSource(src) },
-            SETTINGS[src.id] ? { label: 'Settings', run: () => { enterSource(src); renderSettings(src); } } : null,
+            SETTINGS[src.id] ? { label: 'Settings', run: () => { enterSource(src); openSettings(src); } } : null,
             'separator',
             { label: `Hide “${src.label}”`, run: () => hideChannel(src, el) },
         ].filter(Boolean),
@@ -673,7 +675,13 @@ async function openSource(src) {
     return browse('');
 }
 
-const settingsAction = (src) => (SETTINGS[src.id] ? () => renderSettings(src) : null);
+const settingsAction = (src) => (SETTINGS[src.id] ? () => openSettings(src) : null);
+
+// Settings opened from a channel's page lead back to it.
+function openSettings(src) {
+    state.stack.push({ render: () => openSource(state.sources.find((entry) => entry.id === src.id) || src) });
+    renderSettings(src, { back: true });
+}
 
 // --- library browsing ----------------------------------------------------
 
@@ -726,7 +734,7 @@ function spotifyProblem(src, message) {
     return h('div', { class: 'panel' },
         h('p', { class: 'notice error', text: message }),
         h('div', { class: 'buttons' },
-            h('button', { class: 'pill small primary', text: 'Spotify settings', onclick: () => renderSettings(src) })));
+            h('button', { class: 'pill small primary', text: 'Spotify settings', onclick: () => openSettings(src) })));
 }
 
 // A library channel says whether its suggestions fill the home screen, and offers to make them.
@@ -1225,7 +1233,7 @@ function spotifyInvite(src, web) {
     return h('div', { class: 'notice' },
         h('p', { text }),
         h('div', { class: 'buttons' }, h('button', {
-            class: 'pill small primary', onclick: () => renderSettings(src),
+            class: 'pill small primary', onclick: () => openSettings(src),
             text: web.state === 'reconnect' ? 'Reconnect Spotify' : 'Set up Spotify account',
         })));
 }
@@ -1275,7 +1283,7 @@ const SETTINGS = {
     ],
 };
 
-async function renderSettings(src, { problem } = {}) {
+async function renderSettings(src, { problem, back = false } = {}) {
     const fields = SETTINGS[src.id];
     const ticket = navigations;
     let current = { values: {}, secrets: {} };
@@ -1286,7 +1294,7 @@ async function renderSettings(src, { problem } = {}) {
     if (src.id === 'spotify') web = (await api('/sources/spotify/info').catch(() => null))?.web || null;
     // Title and form change together, so a slow reply never shows the new title over the old page.
     if (navigations !== ticket) return;
-    setToolbar({ title: `${src.label} setup`, back: false });
+    setToolbar({ title: `${src.label} setup`, back });
     const content = $('#content');
     content.className = '';
 
@@ -1347,7 +1355,7 @@ async function renderSettings(src, { problem } = {}) {
             const updated = state.sources.find((s) => s.id === src.id);
             toast(updated.configured ? `Saved ${src.label}` : 'Saved');
             if (updated.configured) openSource(updated);
-            else renderSettings(updated, { problem });
+            else renderSettings(updated, { problem, back });
         } catch (err) {
             toast(err.message, true);
         }
@@ -2164,6 +2172,7 @@ window.wiiJukeboxBack = () => {
     else if (document.body.classList.contains('viz')) toggleVisualizer();
     else if (document.body.classList.contains('np-open')) setNowPlayingOpen(false);
     else if (document.body.classList.contains('sources-open')) setSourcesOpen(false);
+    else if (state.searched || (!$('#search').hidden && $('#search').value.trim())) leaveSearch();
     else if (!$('#back').hidden) $('#back').click();
     else if (state.activeSource !== null) goHome();
     else return false;
@@ -2200,6 +2209,15 @@ $('#viz-toggle').onclick = toggleVisualizer;
 $('#mini-viz').onclick = toggleVisualizer;
 
 let searchTimer;
+
+/** Back from search results to the channel they searched. */
+function leaveSearch() {
+    clearTimeout(searchTimer);
+    $('#search').value = '';
+    const src = state.sources.find((entry) => entry.id === state.activeSource);
+    if (state.activeSource === 'podcasts') podcastHome();
+    else if (src) openSource(src);
+}
 $('#search').oninput = (e) => {
     clearTimeout(searchTimer);
     $('#pagination').hidden = true;
@@ -2207,6 +2225,7 @@ $('#search').oninput = (e) => {
     const podcast = state.activeSource === 'podcasts';
     if (!q) {
         if (podcast) podcastHome();
+        else if (state.searched) leaveSearch();
         return;
     }
     searchTimer = setTimeout(async () => {
@@ -2216,6 +2235,7 @@ $('#search').oninput = (e) => {
                 `/sources/${state.activeSource}/search?q=${encodeURIComponent(q)}`,
             );
             renderItems(items, '', `Results for “${q}”`);
+            state.searched = true;
         } catch (err) {
             toast(err.message, true);
         }
