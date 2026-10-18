@@ -1196,6 +1196,15 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     #nowplaying { padding: 18px 16px 18px 15px; }
 }
 
+/* Between the sidebar and now playing the library can be narrow (a phone on its side), so its toolbar then wraps
+   like a phone's instead of squeezing the title into a column of letters. */
+@media (min-width: 901px) { #main { container-type: inline-size; } }
+@container (max-width: 560px) {
+    #toolbar { flex-wrap: wrap; }
+    #page-menu { order: 1; }
+    #search { order: 2; flex: 1 1 100%; }
+}
+
 @media (max-width: 380px) {
     #controls, #modes { grid-template-columns: 50px 68px 50px; gap: 10px; }
     .round { width: 50px; height: 50px; }
