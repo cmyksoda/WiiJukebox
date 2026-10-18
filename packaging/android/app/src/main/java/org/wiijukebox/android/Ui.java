@@ -35,6 +35,8 @@ final class Ui {
     <T extends TextView> T font(T view, float sp, int weight, int color) {
         view.setTextSize(sp);
         view.setTypeface(nunito);
+        // A new typeface drops the weight, and setting the same weight again is skipped, so clear it first.
+        view.setFontVariationSettings(null);
         view.setFontVariationSettings("'wght' " + weight);
         view.setTextColor(color(color));
         view.setIncludeFontPadding(false);

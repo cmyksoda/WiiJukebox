@@ -263,8 +263,12 @@ public final class MainActivity extends Activity implements Chooser.Listener {
     @Override
     public void onAddress(String text) {
         Server server = Server.fromAddress(text);
-        if (server == null) chooser.showAddressProblem(getString(R.string.invalid_address));
-        else connect(server, false);
+        if (server == null) {
+            chooser.showAddressProblem(getString(R.string.invalid_address));
+            return;
+        }
+        hideKeyboard();
+        connect(server, false);
     }
 
     @Override

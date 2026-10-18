@@ -39,7 +39,14 @@ final class Chooser extends ScrollView {
     private final Ui ui;
     private final Listener listener;
     private final LinearLayout column;
+    // Rebuilt on every render.
+    private final LinearLayout lists;
+    // Built once, so a render never takes the field away from someone typing in it.
     private final EditText address;
+    private final TextView typeLabel;
+    private final TextView connect;
+    private final TextView addressError;
+    private final TextView addressNote;
     private List<Server> found = new ArrayList<>();
     private List<Server> recent = new ArrayList<>();
     private boolean scanning;
@@ -52,11 +59,13 @@ final class Chooser extends ScrollView {
         this.ui = ui;
         this.listener = listener;
         setFillViewport(true);
-        setClipToPadding(false);
         column = new LinearLayout(context);
         column.setOrientation(LinearLayout.VERTICAL);
         column.setPadding(ui.dp(24), ui.dp(28), ui.dp(24), ui.dp(24));
         addView(column, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        lists = new LinearLayout(context);
+        lists.setOrientation(LinearLayout.VERTICAL);
+        column.addView(lists);
 
         address = new EditText(context);
         address.setHint(R.string.address_hint);
@@ -67,6 +76,30 @@ final class Chooser extends ScrollView {
             listener.onAddress(address.getText().toString());
             return true;
         });
+        connect = new TextView(context);
+        connect.setText(R.string.connect);
+        connect.setGravity(Gravity.CENTER);
+        connect.setPadding(ui.dp(22), 0, ui.dp(22), 0);
+        connect.setOnClickListener(v -> listener.onAddress(address.getText().toString()));
+        LinearLayout row = new LinearLayout(context);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(address, new LinearLayout.LayoutParams(0, ui.dp(52), 1f));
+        LinearLayout.LayoutParams go = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ui.dp(52));
+        go.setMargins(ui.dp(10), 0, 0, 0);
+        row.addView(connect, go);
+
+        typeLabel = new TextView(context);
+        addressError = new TextView(context);
+        addressError.setPadding(ui.dp(4), ui.dp(8), 0, 0);
+        addressError.setLineSpacing(0, 1.25f);
+        addressNote = new TextView(context);
+        addressNote.setText(R.string.address_note);
+        addressNote.setPadding(ui.dp(4), ui.dp(10), 0, 0);
+        addressNote.setLineSpacing(0, 1.25f);
+        column.addView(sectionRow(typeLabel, R.string.type_address, null));
+        column.addView(row);
+        column.addView(addressError);
+        column.addView(addressNote);
         render();
     }
 
@@ -106,6 +139,8 @@ final class Chooser extends ScrollView {
     void showAddressProblem(String message) {
         addressProblem = message;
         render();
+        // The field and what is wrong with it sit at the bottom, where the keyboard would hide them.
+        post(() -> smoothScrollTo(0, column.getBottom()));
     }
 
     /** The page lies under the system bars; this keeps the screen's content out from under them. */
@@ -118,18 +153,18 @@ final class Chooser extends ScrollView {
     /** Rebuilt from its state on every change and theme switch; the lists are a handful of rows. */
     void render() {
         setBackground(ui.stripes());
-        column.removeAllViews();
+        lists.removeAllViews();
         header();
-        if (connecting != null) column.addView(notice(getContext().getString(R.string.connecting, connecting.address()), false));
-        else if (problem != null) column.addView(notice(problem, true));
+        if (connecting != null) lists.addView(notice(getContext().getString(R.string.connecting, connecting.address()), false));
+        else if (problem != null) lists.addView(notice(problem, true));
 
         section(R.string.on_this_wifi, scanButton());
         if (!found.isEmpty()) {
-            for (Server server : found) column.addView(serverRow(server, server.address(), false));
+            for (Server server : found) lists.addView(serverRow(server, server.address(), false));
         } else if (scanning) {
-            column.addView(searching());
+            lists.addView(searching());
         } else {
-            column.addView(nothingFound());
+            lists.addView(nothingFound());
         }
 
         List<Server> others = new ArrayList<>();
@@ -142,47 +177,64 @@ final class Chooser extends ScrollView {
             section(R.string.recent, null);
             for (Server server : others) {
                 String detail = server.typed() ? getContext().getString(R.string.typed) : server.address();
-                column.addView(serverRow(server, detail, true));
+                lists.addView(serverRow(server, detail, true));
             }
         }
 
-        section(R.string.type_address, null);
-        column.addView(addressRow());
-        if (addressProblem != null) {
-            TextView error = ui.text(addressProblem, 14, 600, R.color.danger);
-            error.setPadding(ui.dp(4), ui.dp(8), 0, 0);
-            column.addView(error);
-        }
-        TextView note = ui.text(getContext().getString(R.string.address_note), 14, 500, R.color.dim);
-        note.setPadding(ui.dp(4), ui.dp(10), 0, 0);
-        column.addView(note);
+        styleTyping();
+    }
+
+    /** Only the colors and the error change here; the views themselves stay. */
+    private void styleTyping() {
+        ui.font(typeLabel, 13, 800, R.color.dim);
+        ui.font(address, 17, 600, R.color.text);
+        address.setHintTextColor(ui.color(R.color.dim));
+        address.setPadding(ui.dp(16), 0, ui.dp(16), 0);
+        StateListDrawable field = new StateListDrawable();
+        GradientDrawable focused = ui.shape(R.color.card, 0, 14);
+        focused.setStroke(ui.dp(2), ui.color(R.color.accent));
+        field.addState(new int[] {android.R.attr.state_focused}, focused);
+        field.addState(new int[0], ui.shape(R.color.card, R.color.edge, 14));
+        address.setBackground(field);
+        ui.font(connect, 16, 800, R.color.on_accent);
+        connect.setBackground(ui.pressable(ui.shape(R.color.button, 0, 26), 26));
+        ui.font(addressError, 14, 600, R.color.danger);
+        addressError.setText(addressProblem);
+        addressError.setVisibility(addressProblem == null ? GONE : VISIBLE);
+        ui.font(addressNote, 14, 500, R.color.dim);
     }
 
     private void header() {
         ImageView icon = new ImageView(getContext());
         icon.setImageResource(R.mipmap.ic_launcher);
-        column.addView(icon, new LinearLayout.LayoutParams(ui.dp(64), ui.dp(64)));
+        lists.addView(icon, new LinearLayout.LayoutParams(ui.dp(64), ui.dp(64)));
 
         SpannableString name = new SpannableString(getContext().getString(R.string.app_name));
         name.setSpan(new ForegroundColorSpan(ui.color(R.color.brand)), 0, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         TextView wordmark = ui.text(name, 32, 800, R.color.text);
         wordmark.setPadding(0, ui.dp(18), 0, ui.dp(6));
         wordmark.setLetterSpacing(-0.02f);
-        column.addView(wordmark);
-        column.addView(ui.text(getContext().getString(R.string.choose_hint), 16, 500, R.color.dim));
+        lists.addView(wordmark);
+        lists.addView(ui.text(getContext().getString(R.string.choose_hint), 16, 500, R.color.dim));
     }
 
     private void section(int title, View trailing) {
+        lists.addView(sectionRow(new TextView(getContext()), title, trailing));
+    }
+
+    private LinearLayout sectionRow(TextView label, int title, View trailing) {
         LinearLayout row = new LinearLayout(getContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setMinimumHeight(ui.dp(36));
-        TextView label = ui.text(getContext().getString(title).toUpperCase(), 13, 800, R.color.dim);
+        ui.font(label, 13, 800, R.color.dim);
+        label.setText(getContext().getString(title).toUpperCase());
         label.setLetterSpacing(0.08f);
         row.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         if (trailing != null) row.addView(trailing);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.setMargins(0, ui.dp(30), 0, ui.dp(10));
-        column.addView(row, params);
+        row.setLayoutParams(params);
+        return row;
     }
 
     private View scanButton() {
@@ -314,33 +366,6 @@ final class Chooser extends ScrollView {
         params.setMargins(0, ui.dp(24), 0, 0);
         box.setLayoutParams(params);
         return box;
-    }
-
-    private View addressRow() {
-        LinearLayout row = new LinearLayout(getContext());
-        row.setGravity(Gravity.CENTER_VERTICAL);
-
-        if (address.getParent() != null) ((ViewGroup) address.getParent()).removeView(address);
-        ui.font(address, 17, 600, R.color.text);
-        address.setHintTextColor(ui.color(R.color.dim));
-        address.setPadding(ui.dp(16), 0, ui.dp(16), 0);
-        StateListDrawable field = new StateListDrawable();
-        GradientDrawable focused = ui.shape(R.color.card, 0, 14);
-        focused.setStroke(ui.dp(2), ui.color(R.color.accent));
-        field.addState(new int[] {android.R.attr.state_focused}, focused);
-        field.addState(new int[0], ui.shape(R.color.card, R.color.edge, 14));
-        address.setBackground(field);
-        row.addView(address, new LinearLayout.LayoutParams(0, ui.dp(52), 1f));
-
-        TextView go = ui.text(getContext().getString(R.string.connect), 16, 800, R.color.on_accent);
-        go.setGravity(Gravity.CENTER);
-        go.setPadding(ui.dp(22), 0, ui.dp(22), 0);
-        go.setBackground(ui.pressable(ui.shape(R.color.button, 0, 26), 26));
-        go.setOnClickListener(v -> listener.onAddress(address.getText().toString()));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ui.dp(52));
-        params.setMargins(ui.dp(10), 0, 0, 0);
-        row.addView(go, params);
-        return row;
     }
 
     private void confirmForget(Server server) {
