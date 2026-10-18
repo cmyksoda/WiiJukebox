@@ -663,11 +663,13 @@ async function openSource(src) {
 
     if (!src.configured) return renderSettings(src);
 
-    const problem = await connect();
     if (src.id === 'ytdlp' || src.id === 'ytmusic') {
-        if (problem) toast(`${src.label}: ${problem}`, true);
-        return renderLinks(src);
+        // The page needs nothing from the connection, so it shows at once and any problem follows as a toast.
+        renderLinks(src);
+        connect().then((problem) => { if (problem) toast(`${src.label}: ${problem}`, true); });
+        return;
     }
+    const problem = await connect();
     if (problem) {
         toast(`${src.label}: ${problem}`, true);
         return renderSettings(src, { problem });
@@ -1095,12 +1097,24 @@ function renderLinks(src) {
     bindFavorites(src.id, '#yt-url', '#yt-name', '#yt-save');
 }
 
+// Each channel's saved list as it last showed, painted at once on the next visit while it refreshes.
+const savedLists = new Map();
+
 async function bindFavorites(source, urlInput, nameInput, saveButton) {
     const container = $('#favorites');
     container.className = 'favorites';
+    const radio = source === 'radio';
+    const heading = (count) => h('h2', { class: 'favorites-heading' }, radio ? 'Saved stations' : 'Saved links',
+        count === null ? null : h('span', { class: 'favorites-count', text: count }));
+    let shown = null;
     const reload = async () => {
         const { items } = await api(`/sources/${source}/favorites`);
-        const radio = source === 'radio';
+        savedLists.set(source, items);
+        // The page may have moved on while this was on its way, or already show exactly this.
+        if (container.isConnected && JSON.stringify(items) !== shown) paint(items);
+    };
+    const paint = (items) => {
+        shown = JSON.stringify(items);
         const rows = items.map((item) => {
             const details = h('span', { class: 'favorite-details' }, h('span', { class: 'favorite-name', text: item.name }));
             try {
@@ -1124,12 +1138,13 @@ async function bindFavorites(source, urlInput, nameInput, saveButton) {
                 }, h('i', { class: 'g g-close', 'aria-hidden': 'true' })));
         });
         container.replaceChildren(...kids([
-            h('h2', { class: 'favorites-heading' }, radio ? 'Saved stations' : 'Saved links',
-                h('span', { class: 'favorites-count', text: items.length })),
+            heading(items.length),
             items.length ? null : h('p', { class: 'favorites-empty',
                 text: 'Save a link above to keep it here and on your Wii.' }),
             rows]));
     };
+    if (savedLists.has(source)) paint(savedLists.get(source));
+    else container.replaceChildren(heading(null));
     $(saveButton).onclick = async () => {
         try {
             await api(`/sources/${source}/favorites`, { method: 'POST', body: {
