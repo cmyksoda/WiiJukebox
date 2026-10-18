@@ -14,7 +14,7 @@
 // a push source can only relay a skip request back to whatever is sending
 // (DACP for AirPlay, AVRCP for Bluetooth, the Web API for Spotify). Capabilities
 // below are how a source declares which of those it can actually do, so the
-// WebUI can grey out controls that would do nothing rather than lying.
+// WebUI can gray out controls that would do nothing rather than lying.
 
 const { EventEmitter } = require('events');
 

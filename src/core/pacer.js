@@ -8,7 +8,7 @@
 //
 // So everything funnels through here: push() fills a buffer, and a timer drains
 // exactly BYTES_PER_SECOND into the encoder no matter what. When the buffer runs
-// dry the pacer emits silence instead of stalling. That single behaviour is what
+// dry the pacer emits silence instead of stalling. That single behavior is what
 // lets a source disconnect, be swapped, and reconnect without the Wii ever
 // noticing the stream went away.
 
