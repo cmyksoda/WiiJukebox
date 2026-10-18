@@ -112,6 +112,23 @@ function hideToast() {
  * A small modal question. Resolves true on the confirm button; Cancel, Escape and a tap outside all
  * answer no. The browser's own modal dialog keeps focus inside and handles Escape.
  */
+// Buttons as wide as their text, and a phone's card centered in an odd height, land on half pixels;
+// this rounds both, so a dialog's edges and labels stay crisp at 1x.
+function onWholePixels(dialog) {
+    const settle = () => {
+        for (const button of dialog.querySelectorAll('.buttons button')) {
+            button.style.width = '';
+            button.style.width = `${Math.ceil(button.getBoundingClientRect().width)}px`;
+        }
+        dialog.style.translate = '';
+        const top = dialog.getBoundingClientRect().top;
+        if (top % 1) dialog.style.translate = `0 ${Math.round(top) - top}px`;
+    };
+    settle();
+    addEventListener('resize', settle);
+    dialog.addEventListener('close', () => removeEventListener('resize', settle));
+}
+
 function confirmDialog({ question, detail, confirm }) {
     return new Promise((resolve) => {
         const dialog = h('dialog', { class: 'confirm', 'aria-labelledby': 'confirm-question', 'aria-describedby': 'confirm-text' },
@@ -129,6 +146,7 @@ function confirmDialog({ question, detail, confirm }) {
         });
         document.body.append(dialog);
         dialog.showModal();
+        onWholePixels(dialog);
     });
 }
 
@@ -327,6 +345,7 @@ function openSidebarSettings() {
     });
     document.body.append(dialog);
     dialog.showModal();
+    onWholePixels(dialog);
     boxes.values().next().value?.box.focus();
 }
 $('#sidebar-settings').onclick = openSidebarSettings;

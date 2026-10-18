@@ -868,7 +868,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #mini-art { position: relative; width: 46px; height: 46px; flex: none; overflow: hidden; border-radius: 8px; border: 1px solid var(--edge); background: var(--tile); }
 #mini-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 #mini-placeholder { font-size: 20px; }
-#mini-text { display: flex; flex-direction: column; min-width: 0; }
+#mini-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 #mini-title { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #mini-artist { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #mini-controls { display: flex; align-items: center; gap: 8px; flex: none; }
