@@ -279,7 +279,7 @@ class JellyfinSource extends QueueSource {
             id: t.Id,
             type: 'track',
             title: t.Name,
-            subtitle: [(t.Artists || []).join(', '), t.Album].filter(Boolean).join(' - '),
+            subtitle: [(t.Artists || []).join(', '), t.Album].filter(Boolean).join(' · '),
             artist: (t.Artists || []).join(', '),
             album: t.Album,
             // Jellyfin reports ticks: 10,000,000 per second.

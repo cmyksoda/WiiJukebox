@@ -60,7 +60,7 @@ class PlexSource extends QueueSource {
         return { id: `${type}/${item.ratingKey}`, type, title: item.title || 'Untitled',
             artist: item.grandparentTitle || (type === 'album' ? item.parentTitle : ''),
             album: type === 'track' ? item.parentTitle || '' : '',
-            subtitle: [item.grandparentTitle, item.parentTitle].filter(Boolean).join(' — '),
+            subtitle: [item.grandparentTitle, item.parentTitle].filter(Boolean).join(' · '),
             duration: item.duration ? item.duration / 1000 : null, artwork: this._thumb(item) };
     }
 

@@ -30,7 +30,7 @@ function trackItem(track, albumArt = null) {
         id: `${episode ? 'episode' : 'track'}/${track.id}`,
         type: 'track',
         title: track.name || 'Untitled',
-        subtitle: episode ? artist : [artist, track.album?.name].filter(Boolean).join(' — '),
+        subtitle: episode ? artist : [artist, track.album?.name].filter(Boolean).join(' · '),
         artist,
         album: track.album?.name || '',
         artwork: pickImage(track.album?.images || track.images) || albumArt,

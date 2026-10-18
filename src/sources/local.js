@@ -206,7 +206,7 @@ class LocalSource extends QueueSource {
         const album = v.albums.get(track.albumId);
         return {
             id: track.id, type: 'track', title: track.title,
-            subtitle: [track.artist, track.album].filter(Boolean).join(' - '),
+            subtitle: [track.artist, track.album].filter(Boolean).join(' · '),
             artist: track.artist, album: track.album, duration: track.duration,
             artwork: album ? this._albumArt(album) : null,
         };

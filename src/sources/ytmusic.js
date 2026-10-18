@@ -68,20 +68,20 @@ function parseRow(kind, renderer) {
         const [artist = '', album = ''] = groups;
         return {
             id: `https://music.youtube.com/watch?v=${id}`, type: 'track', title,
-            subtitle: [artist, album].filter(Boolean).join(' — '),
+            subtitle: [artist, album].filter(Boolean).join(' · '),
             artist, album: duration === null ? '' : album, duration, artwork,
         };
     }
     if (kind === 'albums' && browseId.startsWith('MPRE')) {
         return {
             id: `list/https://music.youtube.com/browse/${browseId}`, type: 'album', title,
-            subtitle: groups.join(' — '), artwork,
+            subtitle: groups.join(' · '), artwork,
         };
     }
     if (kind === 'playlists' && browseId.startsWith('VL')) {
         return {
             id: `list/https://music.youtube.com/playlist?list=${browseId.slice(2)}`, type: 'playlist', title,
-            subtitle: groups.join(' — '), artwork,
+            subtitle: groups.join(' · '), artwork,
         };
     }
     if (kind === 'artists' && browseId) {

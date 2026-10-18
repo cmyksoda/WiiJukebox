@@ -274,7 +274,7 @@ class SubsonicSource extends QueueSource {
             id: s.id,
             type: 'track',
             title: s.title,
-            subtitle: [s.artist, s.album].filter(Boolean).join(' - '),
+            subtitle: [s.artist, s.album].filter(Boolean).join(' · '),
             artist: s.artist,
             album: s.album,
             duration: s.duration,

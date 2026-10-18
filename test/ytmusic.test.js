@@ -77,7 +77,7 @@ test('search groups songs, albums, playlists and artists with covers and duratio
     assert.equal(song.duration, 230);
     assert.equal(song.artwork, 'https://yt3.googleusercontent.com/abc=w400-h400-l90-rj');
     assert.equal(album.id, 'list/https://music.youtube.com/browse/MPREb_7ltM34kr0mH');
-    assert.equal(album.subtitle, 'Daft Punk — 2001');
+    assert.equal(album.subtitle, 'Daft Punk · 2001');
     assert.equal(playlist.id, 'list/https://music.youtube.com/playlist?list=PLImcLkJqSBKgkIndmyBXVGM9pDKsW88-2');
     assert.equal(artist.id, 'albums/Daft Punk');
 });

@@ -1733,7 +1733,7 @@ function applyStatus(status) {
 
     const np = status.nowPlaying || {};
     const title = np.title || 'Nothing playing';
-    const subtitle = [np.artist, np.album].filter(Boolean).join(' — ');
+    const subtitle = [np.artist, np.album].filter(Boolean).join(' · ');
     $('#np-title').textContent = title;
     $('#np-artist').textContent = subtitle;
     $('#mini-title').textContent = title;

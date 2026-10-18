@@ -395,7 +395,7 @@ class YtdlpSource extends QueueSource {
                 id: `${LIST_PREFIX}${url}`,
                 type: 'playlist',
                 title: info.title || url,
-                subtitle: [uploader, countLabel(info)].filter(Boolean).join(' — '),
+                subtitle: [uploader, countLabel(info)].filter(Boolean).join(' · '),
                 artwork: meta.artwork,
             };
         }
@@ -404,7 +404,7 @@ class YtdlpSource extends QueueSource {
             id: url,
             type: 'track',
             title: meta.title || info.title || url,
-            subtitle: [meta.artist, meta.album].filter(Boolean).join(' — ') || uploader,
+            subtitle: [meta.artist, meta.album].filter(Boolean).join(' · ') || uploader,
             artist: meta.artist,
             album: meta.album,
             duration: meta.duration,
