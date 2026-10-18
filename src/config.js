@@ -49,6 +49,8 @@ const DEFAULTS = {
         // `country` is the two-letter Apple store used for search and the chart.
         podcasts: { subscriptions: [], country: 'us' },
         desktop: {},
+        // Absolute paths of the music folders Local files reads.
+        local: { folders: [] },
         subsonic: { url: '', username: '', password: '' },
         jellyfin: { url: '', username: '', password: '', token: null, userId: null, deviceId: null },
         plex: { url: '', token: '' },

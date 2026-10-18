@@ -138,6 +138,7 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .g-artist::before { left: 32%; right: 32%; top: 6%; height: 36%; border-radius: 50%; }
 .g-artist::after { left: 12%; right: 12%; top: 50%; bottom: 6%; border-radius: 50% 50% 16% 16% / 70% 70% 16% 16%; }
 .g-album { border-radius: 50%; background: radial-gradient(circle closest-side, transparent 0 26%, currentColor 28%); }
+.g-folder { background: currentColor; clip-path: polygon(4% 16%, 40% 16%, 50% 28%, 96% 28%, 96% 86%, 4% 86%); }
 .g-playlist {
     background: linear-gradient(currentColor 0 0) 4% 12% / 70% 11% no-repeat,
         linear-gradient(currentColor 0 0) 4% 40% / 70% 11% no-repeat,
@@ -730,6 +731,22 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 .proof .meta { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
 .proof .hint { margin: 0; overflow-wrap: anywhere; }
 .steps a { color: var(--accent-text); }
+
+/* Local files: the chosen folders, and a folder browser that also works from a phone. */
+.folder-list { display: flex; flex-direction: column; gap: 8px; }
+.folder-list .hint { margin: 0; }
+.folder-row { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: var(--radius-sm); background: var(--tile); }
+.folder-row .path { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.folder-picker { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--edge-soft); }
+.picker-bar { display: flex; align-items: center; gap: 8px; }
+.picker-bar input { flex: 1; min-width: 0; }
+.folder-choices { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; border-block: 1px solid var(--edge-soft); }
+.folder-choices .hint { margin: 12px; }
+.folder-choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 4px 12px; border: 0; background: transparent; text-align: start; }
+.folder-choice + .folder-choice { border-top: 1px solid var(--edge-soft); }
+.folder-choice:hover, .folder-choice:focus-visible { background: var(--tile-hover); }
+.folder-choice .g { color: var(--accent); }
+.folder-choice span { min-width: 0; overflow-wrap: anywhere; }
 
 .favorites { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
 .favorites-heading { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }

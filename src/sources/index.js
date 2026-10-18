@@ -6,6 +6,7 @@
 
 const { RadioSource } = require('./radio');
 const { PodcastsSource } = require('./podcasts');
+const { LocalSource } = require('./local');
 const { SubsonicSource } = require('./subsonic');
 const { JellyfinSource } = require('./jellyfin');
 const { YtdlpSource } = require('./ytdlp');
@@ -18,7 +19,7 @@ const { YtMusicSource } = require('./ytmusic');
 const { findReceiver } = require('./receiver');
 
 const REGISTRY = [
-    RadioSource, PodcastsSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
+    RadioSource, PodcastsSource, LocalSource, SubsonicSource, JellyfinSource, PlexSource, YtdlpSource,
     SpotifySource, AirplaySource, YtMusicSource, DesktopSource,
 ];
 
@@ -78,6 +79,7 @@ class SourceRegistry {
         // Nothing to set up: either yt-dlp is installed or connect() explains
         // how to install it, which is a better message than an empty form.
         if (id === 'ytdlp') return true;
+        if (id === 'local') return Array.isArray(cfg.folders) && cfg.folders.length > 0;
         if (id === 'subsonic') return Boolean(cfg.url && cfg.username);
         if (id === 'jellyfin') return Boolean(cfg.url && (cfg.token || cfg.username));
         if (id === 'plex') return Boolean(cfg.url && cfg.token);
@@ -126,6 +128,7 @@ class SourceRegistry {
     async configure(id, patch) {
         this.get(id); // Validate before persisting anything.
         if (id === 'spotify') patch = this._spotifyPatch(patch);
+        if (id === 'local' && 'folders' in patch) patch = { ...patch, folders: LocalSource.cleanFolders(patch.folders) };
         const previous = this._instances.get(id);
         await previous.disconnect();
         this._instances.delete(id);
@@ -149,6 +152,12 @@ class SourceRegistry {
             }
         }
         return rest;
+    }
+
+    /** The picture behind a Local files `local-art:` link, for the web page and the Wii alike. */
+    async localArt(url) {
+        if (!this._isConfigured('local')) return null;
+        return (await this.connect('local')).art(url);
     }
 
     async disconnectAll() {

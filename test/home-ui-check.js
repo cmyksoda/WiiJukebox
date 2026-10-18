@@ -233,7 +233,7 @@ const check = (label, ok, detail) => {
             return text;
         };
         const toastText = (view) => view.textContent('#toast');
-        const everyChannel = ['radio', 'podcasts', 'subsonic', 'jellyfin', 'plex', 'ytdlp', 'spotify', 'airplay', 'ytmusic', 'desktop'];
+        const everyChannel = ['radio', 'podcasts', 'local', 'subsonic', 'jellyfin', 'plex', 'ytdlp', 'spotify', 'airplay', 'ytmusic', 'desktop'];
         const settled = (view) => view.waitForTimeout(450);
 
         await page.click('#home-link');

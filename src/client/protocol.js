@@ -15,7 +15,7 @@ function controlMessage(action, result) {
 // A bounded text protocol keeps the Wii parser small. Opaque references retain
 // full upstream items (including radio URLs) on the server, not on the console.
 class WiiProtocol {
-    constructor({ registry, pipeline, config, artwork = new Artwork() }) {
+    constructor({ registry, pipeline, config, artwork = new Artwork({ localArt: (url) => registry.localArt(url) }) }) {
         this.registry = registry;
         this.pipeline = pipeline;
         this.config = config;

@@ -23,11 +23,12 @@ const state = {
 // Corner glyphs for a source's top-level folders, matching the Wii client's icons.
 const FOLDER_GLYPHS = {
     artists: 'artist', albums: 'album', playlists: 'playlist', starred: 'star', top: 'star', subscriptions: 'podcast',
+    songs: 'note', folders: 'folder',
 };
 
 // What each channel is, for the label on its tile.
 const KINDS = {
-    subsonic: 'Library', jellyfin: 'Library', plex: 'Library',
+    local: 'Library', subsonic: 'Library', jellyfin: 'Library', plex: 'Library',
     radio: 'Live', podcasts: 'Shows', ytdlp: 'Streaming', ytmusic: 'Streaming',
     spotify: 'Receiver', airplay: 'Receiver', desktop: 'Capture',
 };
@@ -337,7 +338,7 @@ $('#sidebar-settings').onclick = openSidebarSettings;
 
 // Short names for the tag on a card and the link beside a row title.
 const SHORT = {
-    subsonic: 'Navidrome', jellyfin: 'Jellyfin', plex: 'Plex', radio: 'Radio', podcasts: 'Podcasts',
+    local: 'Local files', subsonic: 'Navidrome', jellyfin: 'Jellyfin', plex: 'Plex', radio: 'Radio', podcasts: 'Podcasts',
     ytdlp: 'Web links', ytmusic: 'YouTube Music',
 };
 // What Home last showed, so coming back paints it at once and only rows that changed repaint.
@@ -828,8 +829,9 @@ function renderItems(items, path, label, offset = 0, container = null) {
     };
 
     const cardFor = (item) => {
-        if (item.type === 'folder' && !item.artwork) {
-            const glyph = FOLDER_GLYPHS[item.id] || (String(item.id).startsWith('section/') ? 'album' : 'note');
+        if ((item.type === 'folder' || FOLDER_GLYPHS[item.id]) && !item.artwork) {
+            const glyph = FOLDER_GLYPHS[item.id] || (String(item.id).startsWith('section/') ? 'album'
+                : String(item.id).startsWith('dir/') ? 'folder' : 'note');
             return h('button', { class: 'category', onclick: () => open(item) },
                 h('i', { class: `g g-${glyph}`, 'aria-hidden': 'true' }), item.title || '');
         }
@@ -1258,11 +1260,13 @@ function spotifyInvite(src, web) {
 const f = (key, label, type = 'text', extra = {}) => ({ key, label, type, ...extra });
 // What a channel's short name leaves out, above its settings.
 const INTRO = {
+    local: 'Plays the music files on this computer. WiiJukebox reads their tags and covers, and keeps up as you add more.',
     subsonic: 'Navidrome, or any other Subsonic-compatible server, such as Gonic, Airsonic-Advanced or Ampache.',
     ytdlp: 'Plays links from YouTube, SoundCloud, Bandcamp, Mixcloud and many more sites, with yt-dlp.',
 };
 
 const SETTINGS = {
+    local: [],
     plex: [f('url', 'Server URL', 'url', { placeholder: 'http://192.168.1.10:32400' }), f('token', 'Plex token', 'password', { secret: true })],
     subsonic: [
         f('url', 'Server URL', 'url', { placeholder: 'https://music.example.com' }),
@@ -1307,6 +1311,7 @@ async function renderSettings(src, { problem, back = false } = {}) {
         try { current = await api(`/sources/${src.id}/settings`); } catch { /* a fresh source has nothing saved */ }
     }
     if (src.id === 'spotify') web = (await api('/sources/spotify/info').catch(() => null))?.web || null;
+    const library = src.id === 'local' ? await api('/sources/local/info').catch(() => ({})) : null;
     // Title and form change together, so a slow reply never shows the new title over the old page.
     if (navigations !== ticket) return;
     setToolbar({ title: `${src.label} setup`, back });
@@ -1347,6 +1352,7 @@ async function renderSettings(src, { problem, back = false } = {}) {
     const basic = fields.filter((fld) => !fld.advanced && !fld.account).map(fieldFor);
     const advanced = fields.filter((fld) => fld.advanced).map(fieldFor);
     const account = fields.filter((fld) => fld.account).map(fieldFor);
+    const folders = library ? localFolders({ info: library, saved: current.values.folders }) : null;
 
     const save = async () => {
         const patch = {};
@@ -1363,6 +1369,11 @@ async function renderSettings(src, { problem, back = false } = {}) {
                 const value = field.number ? Number(input.value) : input.value.trim();
                 if (value !== (current.values[field.key] ?? (field.number ? 0 : ''))) patch[field.key] = value;
             }
+        }
+        if (folders) {
+            const chosen = folders.value();
+            if (!chosen.length) return toast('Add the folder that holds your music first', true);
+            if (chosen.join('\n') !== (current.values.folders || []).join('\n')) patch.folders = chosen;
         }
         try {
             if (Object.keys(patch).length) await api(`/sources/${src.id}/config`, { method: 'POST', body: patch });
@@ -1383,11 +1394,100 @@ async function renderSettings(src, { problem, back = false } = {}) {
             web, field: account, input: inputs.get('clientId'), saved: current.values.clientId || '',
             onSaved: (id) => { current.values.clientId = id; },
         }) : null,
+        folders?.element,
         basic,
         advanced.length ? h('details', { class: 'advanced', open: problem ? true : null },
             h('summary', { text: 'Advanced' }), h('div', { class: 'form' }, advanced)) : null,
         h('div', { class: 'buttons' },
-            h('button', { class: 'pill primary', id: 'save-src', text: ['spotify', 'airplay', 'ytmusic', 'ytdlp'].includes(src.id) ? 'Save' : 'Connect', onclick: save })))]));
+            h('button', { class: 'pill primary', id: 'save-src', text: ['local', 'spotify', 'airplay', 'ytmusic', 'ytdlp'].includes(src.id) ? 'Save' : 'Connect', onclick: save })))]));
+}
+
+// --- Local files folders -----------------------------------------------------------
+
+/** Local files' folders, chosen by browsing this computer's folders (so a phone can do it too), and the scan's progress. */
+function localFolders({ info, saved }) {
+    let folders = saved?.length ? saved.slice() : info.suggested ? [info.suggested] : [];
+    let status = info;
+    let poll = null;
+    const list = h('div', { class: 'folder-list' });
+    const picker = h('div', { class: 'folder-picker', hidden: true });
+    const progress = h('div', { class: 'status-line' });
+    const add = h('button', { class: 'pill', text: 'Add a folder…', onclick: () => browseFolders('') });
+    const box = h('section', { class: 'panel folders', 'aria-label': 'Music folders' },
+        h('h3', { text: 'Music folders' }), list, h('div', { class: 'buttons' }, add), picker, progress);
+
+    const paintList = () => {
+        list.replaceChildren(...(folders.length ? folders.map((folder) => h('div', { class: 'folder-row' },
+            h('span', { class: 'path', text: folder }),
+            h('button', { class: 'pill quiet', text: 'Remove', onclick: () => {
+                folders = folders.filter((other) => other !== folder);
+                paintList();
+            } }))) : [h('p', { class: 'hint', text: 'Add the folder that holds your music, such as your Music folder.' })]));
+    };
+
+    const browseFolders = async (where) => {
+        let listing;
+        try {
+            listing = await api('/sources/local/action/folders', { method: 'POST', body: { path: where } });
+        } catch (err) {
+            return toast(err.message, true);
+        }
+        const typed = h('input', { type: 'text', value: listing.path, spellcheck: 'false', autocomplete: 'off',
+            'aria-label': 'Folder path', onkeydown: (e) => { if (e.key === 'Enter') browseFolders(typed.value); } });
+        const choices = listing.folders.length
+            ? listing.folders.map((folder) => h('button', { class: 'folder-choice', onclick: () => browseFolders(folder.path) },
+                h('i', { class: 'g g-folder', 'aria-hidden': 'true' }), h('span', { text: folder.name })))
+            : [h('p', { class: 'hint', text: 'No folders inside this one.' })];
+        picker.replaceChildren(
+            h('div', { class: 'picker-bar' },
+                h('button', { class: 'pill quiet', text: 'Up', disabled: !listing.parent, onclick: () => browseFolders(listing.parent) }),
+                typed,
+                h('button', { class: 'pill quiet', text: 'Go', onclick: () => browseFolders(typed.value) })),
+            h('div', { class: 'folder-choices' }, choices),
+            h('div', { class: 'buttons' },
+                h('button', { class: 'pill primary', text: 'Use this folder', onclick: () => {
+                    if (!folders.includes(listing.path)) folders.push(listing.path);
+                    picker.hidden = true;
+                    paintList();
+                } }),
+                h('button', { class: 'pill quiet', text: 'Cancel', onclick: () => { picker.hidden = true; } })));
+        picker.hidden = false;
+    };
+
+    const paintStatus = () => {
+        if (!saved?.length) return progress.replaceChildren(h('p', { class: 'hint', text: 'WiiJukebox looks through these folders when you press Save.' }));
+        const counts = `${status.songs.toLocaleString('en-US')} songs, ${status.albums.toLocaleString('en-US')} albums`;
+        const read = status.progress?.toRead ? ` Reading ${status.progress.read.toLocaleString('en-US')} of ${status.progress.toRead.toLocaleString('en-US')} new files…` : '';
+        progress.replaceChildren(...kids([
+            h('p', { class: 'hint', text: status.scanning ? `Looking through your folders: ${counts} so far.${read}` : `${counts}.` }),
+            ...(status.missing || []).map((folder) => h('p', { class: 'notice error',
+                text: `Can't find ${folder}. Its music comes back when the folder is there again.` })),
+            h('button', { class: 'pill quiet', text: status.scanning ? 'Scanning…' : 'Scan again', disabled: status.scanning, onclick: async () => {
+                try {
+                    status = await api('/sources/local/action/rescan', { method: 'POST', body: {} });
+                    watch();
+                } catch (err) {
+                    toast(err.message, true);
+                }
+            } })]));
+    };
+
+    // While a scan runs, its counts climb on screen; leaving the page ends the polling.
+    const watch = () => {
+        paintStatus();
+        clearInterval(poll);
+        if (!status.scanning) return;
+        poll = setInterval(async () => {
+            if (!box.isConnected) return clearInterval(poll);
+            status = await api('/sources/local/info').catch(() => status);
+            paintStatus();
+            if (!status.scanning) clearInterval(poll);
+        }, 1500);
+    };
+
+    paintList();
+    watch();
+    return { element: box, value: () => folders.slice() };
 }
 
 // --- Spotify account -------------------------------------------------------------

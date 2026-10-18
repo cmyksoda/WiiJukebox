@@ -44,7 +44,7 @@ class WebServer {
         this.wii = new WiiProtocol({ pipeline, registry, config });
         this.history = history || new PlayHistory({ file: path.join(config.dir, 'history.json') });
         this.history.listen(pipeline);
-        this.art = new ArtProxy();
+        this.art = new ArtProxy({ localArt: (url) => this.registry.localArt(url) });
         this.home = new HomeService({ registry, config, history: this.history, art: this.art });
         this.publicDir = publicDir || path.join(__dirname, '..', '..', 'public');
 

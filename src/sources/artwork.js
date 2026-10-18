@@ -7,7 +7,13 @@ const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 10000;
 
 /** @returns {Promise<string|null>} a data: URI, or null when it cannot be produced */
-function shrinkToDataUri(image, { ffmpegPath = 'ffmpeg', size = 300 } = {}) {
+async function shrinkToDataUri(image, opts) {
+    const jpeg = await shrinkImage(image, opts);
+    return jpeg ? `data:image/jpeg;base64,${jpeg.toString('base64')}` : null;
+}
+
+/** @returns {Promise<Buffer|null>} a JPEG at most `size` pixels on each side */
+function shrinkImage(image, { ffmpegPath = 'ffmpeg', size = 300 } = {}) {
     if (!image?.length || image.length > MAX_INPUT_BYTES) return Promise.resolve(null);
     return new Promise((resolve) => {
         const args = ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-frames:v', '1',
@@ -28,10 +34,10 @@ function shrinkToDataUri(image, { ffmpegPath = 'ffmpeg', size = 300 } = {}) {
         child.on('close', (code) => {
             clearTimeout(timer);
             const out = Buffer.concat(chunks);
-            resolve(code === 0 && out.length ? `data:image/jpeg;base64,${out.toString('base64')}` : null);
+            resolve(code === 0 && out.length ? out : null);
         });
         child.stdin.end(image);
     });
 }
 
-module.exports = { shrinkToDataUri };
+module.exports = { shrinkToDataUri, shrinkImage };

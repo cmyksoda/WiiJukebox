@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
+const { ART_PREFIX: LOCAL_ART } = require('../sources/local');
 
 const SIZES = [64, 96, 128, 160, 192];
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -24,9 +25,10 @@ function tileRgb565(pixels, size) {
 // Artwork URLs often carry provider credentials, so the Wii only ever sees an
 // opaque key; the URL never leaves the server.
 class Artwork {
-    constructor({ ffmpegPath = 'ffmpeg', fetchImpl = fetch } = {}) {
+    constructor({ ffmpegPath = 'ffmpeg', fetchImpl = fetch, localArt = null } = {}) {
         this.ffmpegPath = ffmpegPath;
         this.fetch = fetchImpl;
+        this.localArt = localArt;
         this.urls = new Map();
         this.cache = new Map();
         this.pending = new Map();
@@ -66,6 +68,11 @@ class Artwork {
             const match = /^data:image\/[\w.+-]+;base64,([A-Za-z0-9+/=]+)$/.exec(url);
             if (!match) throw new Error('unsupported artwork data');
             return Buffer.from(match[1], 'base64');
+        }
+        if (url.startsWith(LOCAL_ART)) {
+            const art = this.localArt ? await this.localArt(url) : null;
+            if (!art) throw new Error('artwork unavailable');
+            return art.data;
         }
         if (!/^https?:\/\//i.test(url)) throw new Error('unsupported artwork URL');
         const res = await this.fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });

@@ -526,6 +526,15 @@ async function showStartFailure(err) {
     await showPage('crashed', { detail: `${err.message}\n\n${lines}` });
 }
 
+// Local files offers this folder first; Electron knows where each system keeps it.
+function musicFolder() {
+    try {
+        return app.getPath('music');
+    } catch {
+        return '';
+    }
+}
+
 async function startServer() {
     log?.close();
     log = openLog(logFile);
@@ -533,7 +542,7 @@ async function startServer() {
         entry: path.join(serverRoot, 'src', 'main.js'),
         cwd: serverRoot,
         // The receivers come along even when the included FFmpeg is switched off.
-        env: { PATH: toolDirs().join(path.delimiter), WIIJUKEBOX_RECEIVERS: bundledBin },
+        env: { PATH: toolDirs().join(path.delimiter), WIIJUKEBOX_RECEIVERS: bundledBin, WIIJUKEBOX_MUSIC_DIR: musicFolder() },
         nodePath: process.execPath,
     });
     server.on('line', (line) => log.write(line));

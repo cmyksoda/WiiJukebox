@@ -4,6 +4,7 @@
 // server fetches the image.
 
 const { createHash } = require('node:crypto');
+const { ART_PREFIX: LOCAL_ART } = require('../sources/local');
 
 const PREFIX = '/api/art/';
 const KEY_LIMIT = 4096;
@@ -13,8 +14,9 @@ const FETCH_TIMEOUT_MS = 8000;
 const IMAGE_TYPES = /^image\/(png|jpe?g|webp|gif|avif)\b/i;
 
 class ArtProxy {
-    constructor({ fetchImpl = fetch } = {}) {
+    constructor({ fetchImpl = fetch, localArt = null } = {}) {
         this.fetch = fetchImpl;
+        this.localArt = localArt;
         this.urls = new Map();
     }
 
@@ -22,7 +24,7 @@ class ArtProxy {
     link(url) {
         if (typeof url !== 'string') return null;
         if (url.startsWith(PREFIX) || /^data:image\//i.test(url)) return url;
-        if (!/^https?:\/\//i.test(url)) return null;
+        if (!/^https?:\/\//i.test(url) && !(this.localArt && url.startsWith(LOCAL_ART))) return null;
         const key = createHash('sha256').update(url).digest('hex').slice(0, 20);
         this._touch(key, url);
         return `${PREFIX}${key}`;
@@ -53,17 +55,17 @@ class ArtProxy {
         const url = this.urls.get(key);
         if (!url) return fail(res, 404, 'unknown artwork');
         this._touch(key, url);
+        if (url.startsWith(LOCAL_ART)) {
+            const art = await this.localArt(url).catch(() => null);
+            return art ? image(res, art.mime, art.data) : fail(res, 404, 'artwork unavailable');
+        }
         try {
             const upstream = await this.fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
             const type = upstream.headers.get('content-type') || '';
             if (!upstream.ok || !IMAGE_TYPES.test(type)) return fail(res, 502, 'artwork unavailable');
             const body = Buffer.from(await upstream.arrayBuffer());
             if (body.length > MAX_IMAGE_BYTES) return fail(res, 502, 'artwork too large');
-            res.writeHead(200, {
-                'Content-Type': type, 'Content-Length': body.length, 'X-Content-Type-Options': 'nosniff',
-                'Cache-Control': 'private, max-age=3600',
-            });
-            res.end(body);
+            image(res, type, body);
         } catch {
             fail(res, 502, 'artwork unavailable');
         }
@@ -75,6 +77,14 @@ class ArtProxy {
         this.urls.set(key, url);
         while (this.urls.size > KEY_LIMIT) this.urls.delete(this.urls.keys().next().value);
     }
+}
+
+function image(res, type, body) {
+    res.writeHead(200, {
+        'Content-Type': type, 'Content-Length': body.length, 'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, max-age=3600',
+    });
+    res.end(body);
 }
 
 function fail(res, code, message) {
