@@ -866,7 +866,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #seekbar::-webkit-slider-runnable-track {
     height: 8px;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--accent) 0 var(--pct), var(--edge-soft) var(--pct) 100%);
+    /* Kept inside the clear border, or the fill's first pixel repeats there as a blue sliver at the end. */
+    background: linear-gradient(90deg, var(--accent) 0 var(--pct), var(--edge-soft) var(--pct) 100%) padding-box;
     border: 1px solid transparent;
 }
 #seekbar::-moz-range-track { height: 8px; border-radius: 999px; background: var(--edge-soft); border: 1px solid transparent; }
