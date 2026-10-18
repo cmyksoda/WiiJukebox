@@ -1710,14 +1710,16 @@ function currentPosition() {
 function drawProgress() {
     if (clock.dragging) return;
     const seek = $('#seekbar');
-    const live = !(clock.duration > 0);
+    // As on the Wii, nothing playing is an empty track; only a stream with no end is live.
+    const idle = !state.status?.source;
+    const live = !idle && !(clock.duration > 0);
     $('#seek').classList.toggle('live', live);
-    const fraction = live ? 0 : currentPosition() / clock.duration;
+    const fraction = clock.duration > 0 ? currentPosition() / clock.duration : 0;
     seek.value = String(Math.round(fraction * 1000));
     seek.style.setProperty('--pct', `${(fraction * 100).toFixed(2)}%`);
     $('#mini-progress i').style.width = `${(fraction * 100).toFixed(2)}%`;
-    $('#np-elapsed').textContent = fmtDuration(currentPosition());
-    $('#np-total').textContent = clock.duration > 0 ? fmtDuration(clock.duration) : '';
+    $('#np-elapsed').textContent = fmtDuration(idle ? 0 : currentPosition());
+    $('#np-total').textContent = clock.duration > 0 ? fmtDuration(clock.duration) : idle ? '--:--' : '';
 }
 
 function setPlayPauseGlyph(paused) {
