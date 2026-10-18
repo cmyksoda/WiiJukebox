@@ -426,7 +426,7 @@ const check = (label, ok, detail) => {
         await page.click('#sources [data-source="subsonic"]');
         await page.waitForSelector('.category');
         await page.click('#sources [data-source="subsonic"]', { button: 'right' });
-        await page.click('.ctx >> text=Hide “Navidrome / Subsonic”');
+        await page.click('.ctx >> text=Hide “Navidrome”');
         await page.waitForSelector('.channel');
         check('hiding the channel you are in takes you home', (await page.textContent('#crumb')) === 'Home'
             && !(await listed(page, '#sources')).includes('subsonic') && await page.getAttribute('#sources .home', 'aria-current') === 'true');

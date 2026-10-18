@@ -25,8 +25,8 @@ static void encoded(const char *text, char *out) {
 int main(void) {
     struct wj_menu menu = {0};
     assert(!parse("source\tradio\tInternet Radio\tidle\n"
-                  "source\tsubsonic\tNavidrome / Subsonic\tready\n"
-                  "source\tytdlp\tYouTube / SoundCloud\tready\n"
+                  "source\tsubsonic\tNavidrome\tready\n"
+                  "source\tytdlp\tWeb links\tready\n"
                   "source\tdesktop\tDesktop audio (Linux)\tready\n", 1, 0, &menu));
     assert(menu.count == 4 && menu.total == 4);
     assert(!strcmp(menu.items[1].ref, "subsonic"));

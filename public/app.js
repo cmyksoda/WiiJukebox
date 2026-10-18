@@ -333,7 +333,7 @@ $('#sidebar-settings').onclick = openSidebarSettings;
 // Short names for the tag on a card and the link beside a row title.
 const SHORT = {
     subsonic: 'Navidrome', jellyfin: 'Jellyfin', plex: 'Plex', radio: 'Radio', podcasts: 'Podcasts',
-    ytdlp: 'YouTube', ytmusic: 'YouTube Music',
+    ytdlp: 'Web links', ytmusic: 'YouTube Music',
 };
 const homeView = { token: 0, recentTimer: null };
 const homeVisible = () => state.activeSource === null && $('#content').dataset.view === 'home';
@@ -1037,7 +1037,7 @@ function renderLinks(src) {
         h('div', { id: 'favorites' }),
         h('p', { class: 'hint', text: music
             ? 'Search songs, albums and playlists with the box above. A playlist or album link queues the whole thing. For Premium quality and your own library, add your browser cookies in Settings.'
-            : 'A playlist, album or channel link queues the whole thing. Anything yt-dlp supports works: YouTube, SoundCloud, Bandcamp. Or search YouTube with the box above.' })));
+            : 'Plays links from YouTube, SoundCloud, Bandcamp, Mixcloud and many more sites, with yt-dlp. A playlist, album or channel link queues the whole thing. Or search YouTube with the box above.' })));
 
     bindFavorites(src.id, '#yt-url', '#yt-name', '#yt-save');
 }
@@ -1188,6 +1188,12 @@ function spotifyInvite(src, web) {
 // --- settings ------------------------------------------------------------------
 
 const f = (key, label, type = 'text', extra = {}) => ({ key, label, type, ...extra });
+// What a channel's short name leaves out, above its settings.
+const INTRO = {
+    subsonic: 'Navidrome, or any other Subsonic-compatible server, such as Gonic, Airsonic-Advanced or Ampache.',
+    ytdlp: 'Plays links from YouTube, SoundCloud, Bandcamp, Mixcloud and many more sites, with yt-dlp.',
+};
+
 const SETTINGS = {
     plex: [f('url', 'Server URL', 'url', { placeholder: 'http://192.168.1.10:32400' }), f('token', 'Plex token', 'password', { secret: true })],
     subsonic: [
@@ -1303,6 +1309,7 @@ async function renderSettings(src, { problem } = {}) {
     };
 
     content.replaceChildren(...kids([h('div', { class: 'form' },
+        INTRO[src.id] ? h('p', { class: 'hint', text: INTRO[src.id] }) : null,
         problem ? h('p', { class: 'notice error', text: problem }) : null,
         web ? spotifyAccount({
             web, field: account, input: inputs.get('clientId'), saved: current.values.clientId || '',

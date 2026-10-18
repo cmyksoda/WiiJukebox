@@ -47,7 +47,7 @@ the Subsonic API should work the same way, but only Navidrome was tried.
 
 **Set up:**
 
-1. In WiiJukebox, open **Navidrome / Subsonic** and its settings.
+1. In WiiJukebox, open **Navidrome** and its settings. The same channel works with any Subsonic-compatible server.
 2. **Server URL:** the address you open Navidrome at, such as
    `http://192.168.1.10:4533` (Navidrome's default port is 4533) or
    `https://music.example.com`. An address with a path, such as

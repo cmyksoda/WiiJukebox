@@ -160,7 +160,7 @@ test('playing from home queues the album from the chosen track, records it and r
         let { recent } = await app.get('/api/home');
         assert.equal(recent.length, 1);
         assert.deepEqual([recent[0].source, recent[0].sourceLabel, recent[0].type, recent[0].title, recent[0].subtitle],
-            ['subsonic', 'Navidrome / Subsonic', 'album', 'Paper Lanterns', 'Mika Ito']);
+            ['subsonic', 'Navidrome', 'album', 'Paper Lanterns', 'Mika Ito']);
         assert.equal(recent[0].item.startId, 'n1-t3');
         assert.match(recent[0].artwork, /^\/api\/art\//);
         assert.ok(!JSON.stringify(recent).includes('getCoverArt'));
@@ -292,7 +292,7 @@ test('the primary is the first library service set up until one is chosen, and t
     const shown = async () => (await app.get('/api/home')).services.map((service) => service.id);
     try {
         assert.deepEqual(await primary(), { id: 'subsonic', auto: true, eligible: [
-            { id: 'subsonic', label: 'Navidrome / Subsonic' }, { id: 'jellyfin', label: 'Jellyfin' }, { id: 'plex', label: 'Plex' }] });
+            { id: 'subsonic', label: 'Navidrome' }, { id: 'jellyfin', label: 'Jellyfin' }, { id: 'plex', label: 'Plex' }] });
         assert.deepEqual((await app.get('/api/home')).primary, await primary(), 'the overview carries it too');
         assert.deepEqual((await app.get('/api/sources')).sources.filter((source) => source.suggests).map((source) => source.id),
             ['subsonic', 'jellyfin', 'plex'], 'radio, podcasts, yt-dlp, YouTube Music and the receivers have no suggestions');

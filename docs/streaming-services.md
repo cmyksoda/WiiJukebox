@@ -221,7 +221,7 @@ ALAC decoder that rejected a test sender's stream in this project's testing.
 
 Search uses the same public endpoint as the music.youtube.com page (as
 open-source clients such as ytmusicapi do) and needs no account. Playback is
-yt-dlp, so everything the YouTube / SoundCloud source supports applies.
+yt-dlp, so everything the Web links channel supports applies.
 
 - Search returns songs, albums, playlists and artists. An artist result opens
   that artist's albums.
@@ -299,7 +299,7 @@ and counts on its own.
 
 | Service | What WiiJukebox reports | Where plays go next |
 |---|---|---|
-| Navidrome / Subsonic | `scrobble.view`: now playing, then the play with its start time | Navidrome's play counts, and Last.fm or ListenBrainz when linked in Navidrome |
+| Navidrome (and other Subsonic servers) | `scrobble.view`: now playing, then the play with its start time | Navidrome's play counts, and Last.fm or ListenBrainz when linked in Navidrome |
 | Jellyfin | Playback start and stop, with the position | Jellyfin's play state and plugins such as its Last.fm scrobbler, which decide what counts |
 | Plex | Timeline (playing, stopped) and a scrobble once played | Plex's play history and its Last.fm link |
 | YouTube and YouTube Music | Marks a played video watched, with yt-dlp `--mark-watched` | YouTube history, which YouTube Music scrobblers read. Needs your cookies in Advanced, extra options |

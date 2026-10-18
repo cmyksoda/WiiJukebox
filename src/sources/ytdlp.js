@@ -61,7 +61,7 @@ const DEFAULT_FORMAT = 'bestaudio/best';
 
 class YtdlpSource extends QueueSource {
     static id = 'ytdlp';
-    static label = 'YouTube / SoundCloud';
+    static label = 'Web links';
     static family = 'pull';
     // Recent plays are already in Jump back in, so only the saved links get a row of their own.
     static homeRows = [{ id: 'saved', title: 'Saved links' }];

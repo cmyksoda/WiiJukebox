@@ -164,7 +164,7 @@ network may delay exit. Audio/control latency also includes stream buffering.
 
 ## Navidrome
 
-Use the web UI to connect **Navidrome / Subsonic**. Then the Wii can browse Artists,
+Use the web UI to connect **Navidrome**. Then the Wii can browse Artists,
 Albums, Playlists and Starred without knowing the service credentials. A opens a
 container; B + A queues its entirety, including when viewing its tracks. A on a
 track queues the album/playlist and starts at that track. The Wii displays 12 entries per page, while

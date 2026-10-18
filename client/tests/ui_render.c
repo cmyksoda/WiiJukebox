@@ -209,10 +209,10 @@ static void sources_and_list(struct wj_session *s, struct wj_pointer *none) {
     snprintf(s->title, sizeof(s->title), "Music sources");
     item(s, "radio", "source", "Internet Radio", "");
     item(s, "podcasts", "source", "Podcasts", "");
-    item(s, "subsonic", "source", "Navidrome / Subsonic", "");
+    item(s, "subsonic", "source", "Navidrome", "");
     item(s, "jellyfin", "source", "Jellyfin", "");
     item(s, "plex", "source", "Plex", "");
-    item(s, "ytdlp", "source", "YouTube / SoundCloud", "");
+    item(s, "ytdlp", "source", "Web links", "");
     item(s, "spotify", "source", "Spotify Connect", "");
     item(s, "airplay", "source", "AirPlay", "");
     item(s, "ytmusic", "source", "YouTube Music", "");

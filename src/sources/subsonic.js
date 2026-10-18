@@ -19,7 +19,7 @@ const CLIENT_NAME = 'WiiJukebox';
 
 class SubsonicSource extends QueueSource {
     static id = 'subsonic';
-    static label = 'Navidrome / Subsonic';
+    static label = 'Navidrome';
     static family = 'pull';
     static suggests = true;
     static homeRows = [

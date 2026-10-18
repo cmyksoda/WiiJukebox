@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // YouTube Music: music.youtube.com search, albums and playlists.
 //
-// Playback is yt-dlp, exactly as for the YouTube / SoundCloud source, so a
+// Playback is yt-dlp, exactly as for the Web links source, so a
 // Premium account works by passing the user's own browser cookies through
 // sources.ytmusic.extraArgs (--cookies-from-browser firefox). Search uses the
 // same public endpoint the music.youtube.com page calls, which is what
