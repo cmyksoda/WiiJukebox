@@ -283,6 +283,7 @@ static u32 icon_color(enum icon kind) {
     case ICON_AIRPLAY: return T->icon_gray;
     case ICON_YTMUSIC: return WJ_RGBA(0xe0, 0x2f, 0x3b, 0xff);
     case ICON_PODCAST: return WJ_RGBA(0xd9, 0x4a, 0x8c, 0xff);
+    case ICON_FOLDER: return WJ_RGBA(0xf8, 0xd7, 0x75, 0xff);
     default: return T->blue;
     }
 }
