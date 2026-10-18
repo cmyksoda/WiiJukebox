@@ -6,9 +6,8 @@
 
 const { REGISTRY } = require('../sources');
 
-// Libraries first, then the shows and links people open most. A media server outranks
-// Local files for the primary spot, since someone set it up on purpose.
-const ORDER = ['subsonic', 'jellyfin', 'plex', 'local', 'podcasts', 'radio', 'ytmusic', 'ytdlp'];
+// Libraries first, then the shows and links people open most.
+const ORDER = ['local', 'subsonic', 'jellyfin', 'plex', 'podcasts', 'radio', 'ytmusic', 'ytdlp'];
 const ROW_LIMIT = 12;
 const RECENT_LIMIT = 24;
 const CACHE_MS = 60 * 1000;

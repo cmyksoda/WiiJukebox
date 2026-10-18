@@ -444,7 +444,7 @@ const check = (label, ok, detail) => {
         check('it opens a dialog titled Sidebar settings with one real checkbox per channel, all ticked', sheet.title === 'Sidebar settings' && sheet.described
             && sheet.boxes.length === everyChannel.length && sheet.boxes.every(([ticked, name]) => ticked && name.length > 3), JSON.stringify(sheet));
         check('each checkbox is named by its channel and says what kind it is', sheet.boxes[0][1].startsWith('Internet Radio') && sheet.boxes[0][1].includes('Live')
-            && sheet.boxes[6][1].includes('needs setup'));
+            && sheet.boxes.find(([, name]) => name.startsWith('Spotify Connect'))[1].includes('needs setup'));
         check('the first checkbox has focus', sheet.focus === 'checkbox');
         check('Show all waits until something is hidden', await page.isDisabled('dialog.sheet >> text=Show all'));
         const geometry = await page.$eval('dialog.sheet', (dialog) => {

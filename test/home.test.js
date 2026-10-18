@@ -295,7 +295,7 @@ test('the primary is the first library service set up until one is chosen, and t
             { id: 'subsonic', label: 'Navidrome' }, { id: 'jellyfin', label: 'Jellyfin' }, { id: 'plex', label: 'Plex' }] });
         assert.deepEqual((await app.get('/api/home')).primary, await primary(), 'the overview carries it too');
         assert.deepEqual((await app.get('/api/sources')).sources.filter((source) => source.suggests).map((source) => source.id),
-            ['subsonic', 'jellyfin', 'plex'], 'radio, podcasts, yt-dlp, YouTube Music and the receivers have no suggestions');
+            ['local', 'subsonic', 'jellyfin', 'plex'], 'radio, podcasts, yt-dlp, YouTube Music and the receivers have no suggestions');
 
         let ids = await shown();
         assert.deepEqual(ids.filter((id) => ['subsonic', 'jellyfin', 'plex'].includes(id)), ['subsonic']);
