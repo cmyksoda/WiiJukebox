@@ -35,6 +35,9 @@
     --danger: #c8423d;
     --focus: 0 0 0 3px rgba(26, 165, 232, .55);
     --highlight: inset 0 1px 0 rgba(255, 255, 255, .9);
+    /* Raised controls are faintly glossy, like the Wii's buttons, so a pressable one never reads as flat text. */
+    --gloss: linear-gradient(#ffffff, #eef2f6);
+    --lift: 0 1px 2px rgba(20, 40, 60, .12);
     --radius: 14px;
     --radius-sm: 9px;
     --font: "Nunito", "Avenir Next Rounded", "Hiragino Maru Gothic ProN", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -69,6 +72,8 @@
         --danger: #ef7772;
         --focus: 0 0 0 3px rgba(61, 184, 242, .6);
         --highlight: inset 0 1px 0 rgba(255, 255, 255, .06);
+        --gloss: linear-gradient(#1e2a37, #141d27);
+        --lift: 0 1px 2px rgba(0, 0, 0, .4);
     }
 }
 
@@ -91,6 +96,8 @@
     --danger: #ef7772;
     --focus: 0 0 0 3px rgba(61, 184, 242, .6);
     --highlight: inset 0 1px 0 rgba(255, 255, 255, .06);
+    --gloss: linear-gradient(#1e2a37, #141d27);
+    --lift: 0 1px 2px rgba(0, 0, 0, .4);
 }
 
 * { box-sizing: border-box; }
@@ -223,8 +230,8 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
     padding: 0 18px;
     border: 1px solid var(--edge);
     border-radius: 999px;
-    background: var(--surface);
-    box-shadow: var(--highlight);
+    background: var(--gloss);
+    box-shadow: var(--highlight), var(--lift);
     color: var(--accent-text);
     font-weight: 700;
     white-space: nowrap;
@@ -256,8 +263,8 @@ body.viz #mini-controls .round, body.viz #mini-controls .pill { box-shadow: none
     padding: 0;
     border: 1px solid var(--edge);
     border-radius: 50%;
-    background: var(--surface);
-    box-shadow: var(--highlight);
+    background: var(--gloss);
+    box-shadow: var(--highlight), var(--lift);
     color: var(--text);
     font-size: 22px;
     transition: background .15s ease, transform .12s ease;
@@ -302,6 +309,7 @@ body.viz #mini-controls .round, body.viz #mini-controls .pill { box-shadow: none
     font-weight: 700;
 }
 .chip.live { background: var(--accent-soft); color: var(--accent-text); }
+#listeners { background: transparent; padding-inline: 4px; }
 
 /* --- visualizer sits behind the whole UI -------------------------------------------- */
 
@@ -823,10 +831,10 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #seekbar::-webkit-slider-runnable-track {
     height: 8px;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--accent) 0 var(--pct), var(--tile) var(--pct) 100%);
-    border: 1px solid var(--edge);
+    background: linear-gradient(90deg, var(--accent) 0 var(--pct), var(--edge-soft) var(--pct) 100%);
+    border: 1px solid transparent;
 }
-#seekbar::-moz-range-track { height: 8px; border-radius: 999px; background: var(--tile); border: 1px solid var(--edge); }
+#seekbar::-moz-range-track { height: 8px; border-radius: 999px; background: var(--edge-soft); border: 1px solid transparent; }
 #seekbar::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--accent); }
 #seekbar::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent-strong); }
 #seekbar::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent-strong); }
@@ -1128,9 +1136,17 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     #crumb { font-size: 26px; }
     #toast { bottom: 28px; }
 
-    #np-head { min-height: 32px; }
+    /* One header line: the brand, the toolbar and Now playing all center 46px down, with 44px buttons. */
+    #sidebar { padding-top: 24px; }
+    #brand { min-height: 44px; padding-block: 0; }
+    #nowplaying { padding-top: 24px; }
+    #np-head { min-height: 44px; }
     #np-head .eyebrow { line-height: 18px; }
-    #np-close { display: inline-flex; width: 32px; min-height: 32px; height: 32px; }
+    #np-close { display: inline-flex; width: 44px; min-height: 44px; height: 44px; }
+
+    /* Softer dividers; a shadow here would fall across the library's scrollbar. */
+    #sidebar { border-right-color: var(--edge-soft); }
+    #nowplaying { border-left-color: var(--edge-soft); }
 
     /* A 7px grab area centered on the column's 1px edge: three pixels either side. */
     #np-resizer {
