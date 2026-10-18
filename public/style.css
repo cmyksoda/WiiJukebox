@@ -1084,9 +1084,14 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 @media (max-width: 519px) {
     body.viz #mini-prev, body.viz #mini-next, body.viz #mini-monitor { display: none; }
 
-    /* A card above the bottom edge, 16px in from both sides. */
-    .confirm, .sheet { inset: auto 16px calc(16px + env(safe-area-inset-bottom)) 16px; width: auto; }
-    .sheet { max-height: calc(100dvh - 64px); }
+    /* A card in the middle of the screen, 16px in from both sides and clear of the system bars. */
+    .confirm, .sheet {
+        inset: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+        width: auto;
+        height: fit-content;
+        max-height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
+        margin: auto 0;
+    }
 
     /* Room for the title and a Settings pill beside the menu button. */
     #sources-toggle { width: 44px; padding: 0; }
