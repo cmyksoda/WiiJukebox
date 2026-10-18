@@ -43,6 +43,10 @@
     --sidebar-w: 250px;
     /* The now-playing column; the divider's saved width overrides it on <html>. */
     --np-w: 340px;
+    /* The space system bars take. The Android app sets these on <html>, since its WebView reports no safe area. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -320,7 +324,7 @@ body.viz #app { opacity: 0; pointer-events: none; }
 
 #viz-overlay {
     position: fixed;
-    top: 16px;
+    top: calc(16px + var(--safe-top));
     left: 16px;
     z-index: 3;
     font-size: 12px;
@@ -333,8 +337,8 @@ body.viz #app { opacity: 0; pointer-events: none; }
 #viz-fullscreen {
     display: none;
     position: fixed;
-    top: max(14px, env(safe-area-inset-top));
-    right: max(14px, env(safe-area-inset-right));
+    top: calc(14px + var(--safe-top));
+    right: calc(14px + var(--safe-right));
     z-index: 3;
     pointer-events: auto;
     color: #e3ebf2;
@@ -360,7 +364,7 @@ body.viz #viz-fullscreen { display: inline-grid; }
 #sidebar {
     background: var(--surface);
     border-right: 1px solid var(--edge);
-    padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+    padding: 18px 14px calc(18px + var(--safe-bottom));
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -843,7 +847,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     position: fixed;
     z-index: 10;
     left: 50%;
-    bottom: calc(var(--mini-h) + 18px + env(safe-area-inset-bottom));
+    bottom: calc(var(--mini-h) + 18px + var(--safe-bottom));
     transform: translateX(-50%);
     max-width: min(92vw, 520px);
     padding: 11px 20px;
@@ -1002,7 +1006,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
         bottom: 0;
         left: 0;
         width: min(86vw, 320px);
-        padding-top: calc(18px + env(safe-area-inset-top));
+        padding-top: calc(18px + var(--safe-top));
         transform: translateX(-102%);
         transition: transform .22s ease, visibility 0s .22s;
         visibility: hidden;
@@ -1012,13 +1016,13 @@ details.advanced .form { margin-top: 10px; max-width: none; }
     @supports (width: round(down, 1.5px, 1px)) { #sidebar { width: round(down, min(86vw, 320px), 1px); } }
     body.sources-open #sidebar-shade { opacity: 1; pointer-events: auto; }
 
-    #main { padding-bottom: calc(var(--mini-h) + 28px + env(safe-area-inset-bottom)); }
+    #main { padding-bottom: calc(var(--mini-h) + 28px + var(--safe-bottom)); }
     #toolbar {
         position: sticky;
         top: -18px;
         z-index: 2;
         margin: -18px calc(var(--gutter) * -1) 14px;
-        padding: calc(12px + env(safe-area-inset-top)) var(--gutter) 10px;
+        padding: calc(12px + var(--safe-top)) var(--gutter) 10px;
         background-color: var(--bg);
         background-image: repeating-linear-gradient(to bottom, transparent 0 6px, var(--stripe) 6px 7px);
         border-bottom: 1px solid var(--edge-soft);
@@ -1034,8 +1038,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
         left: 0;
         right: 0;
         bottom: 0;
-        height: calc(var(--mini-h) + env(safe-area-inset-bottom));
-        padding: 10px var(--gutter) env(safe-area-inset-bottom);
+        height: calc(var(--mini-h) + var(--safe-bottom));
+        padding: 10px var(--gutter) var(--safe-bottom);
         display: flex;
         align-items: center;
         gap: 10px;
@@ -1050,7 +1054,7 @@ details.advanced .form { margin-top: 10px; max-width: none; }
         position: fixed;
         z-index: 6;
         inset: 0;
-        padding: calc(14px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+        padding: calc(14px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
         border-left: 0;
         background-color: var(--bg);
         background-image: repeating-linear-gradient(to bottom, transparent 0 6px, var(--stripe) 6px 7px);

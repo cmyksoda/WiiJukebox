@@ -144,17 +144,29 @@ export function openMenu({ label, items, trigger, anchor, width = WIDTH }) {
     else menu.focus({ preventScroll: true });
 }
 
-// Whole-pixel position, kept clear of the screen edges.
+// Whole-pixel position, kept clear of the screen edges and of any system bars over the page.
 function place(menu, { x, top, bottom }, wanted) {
     const width = Math.min(wanted, innerWidth - 2 * MARGIN);
     menu.style.width = `${width}px`;
     const height = menu.offsetHeight;
     const left = Math.max(MARGIN, Math.min(Math.round(x), innerWidth - MARGIN - width));
+    const bars = safeArea();
+    const lowest = innerHeight - MARGIN - bars.bottom - height;
     let y = Math.round(top);
-    if (y + height > innerHeight - MARGIN) y = Math.round(bottom) - height;
-    y = Math.max(MARGIN, Math.min(y, innerHeight - MARGIN - height));
+    if (y > lowest) y = Math.round(bottom) - height;
+    y = Math.max(MARGIN + bars.top, Math.min(y, lowest));
     menu.style.left = `${left}px`;
     menu.style.top = `${y}px`;
+}
+
+// What --safe-top and --safe-bottom (style.css) come to here.
+function safeArea() {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position: fixed; visibility: hidden; top: var(--safe-top, 0px); bottom: var(--safe-bottom, 0px)';
+    document.body.append(probe);
+    const box = probe.getBoundingClientRect();
+    probe.remove();
+    return { top: box.top, bottom: innerHeight - box.bottom };
 }
 
 /**

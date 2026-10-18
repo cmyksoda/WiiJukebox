@@ -11,6 +11,12 @@
 try {
     var root = document.documentElement;
     if (/\bWiiJukebox\//.test(navigator.userAgent)) root.classList.add('in-app');
+    // The Android app draws the page under its system bars and says how much of it they cover.
+    if (window.WiiJukeboxApp && WiiJukeboxApp.insets) {
+        var bars = JSON.parse(WiiJukeboxApp.insets());
+        root.style.setProperty('--safe-top', bars.top + 'px');
+        root.style.setProperty('--safe-bottom', bars.bottom + 'px');
+    }
     var theme = localStorage.getItem('wiijukebox.theme');
     if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
     var width = Number(localStorage.getItem('wiijukebox.np-width'));

@@ -1771,6 +1771,7 @@ async function toggleVisualizer() {
         // Leave fullscreen before hiding the stage: hiding it first left Windows' page still fullscreen.
         if (document.fullscreenElement === $('#viz-stage')) await document.exitFullscreen().catch(() => {});
         document.body.classList.remove('viz');
+        paintThemeColor();
         setVizPressed(false);
         $('#viz-overlay').hidden = true;
         cancelAnimationFrame(viz.raf);
@@ -1809,6 +1810,7 @@ async function toggleVisualizer() {
 
     setNowPlayingOpen(false);
     document.body.classList.add('viz');
+    paintThemeColor();
     setVizPressed(true);
     $('#viz-overlay').hidden = false;
 
@@ -1926,7 +1928,10 @@ function applyTheme(choice) {
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 function paintThemeColor() {
     const dark = themeChoice === 'system' ? systemDark.matches : themeChoice === 'dark';
-    document.querySelector('meta[name="theme-color"]').content = THEME_COLORS[dark ? 'dark' : 'light'];
+    const color = THEME_COLORS[dark ? 'dark' : 'light'];
+    document.querySelector('meta[name="theme-color"]').content = color;
+    // The Android app's status bar icons sit on the page, so they follow its theme, and the visualizer's dark.
+    window.WiiJukeboxApp?.setTheme?.(color, dark || document.body.classList.contains('viz'));
 }
 systemDark.addEventListener('change', paintThemeColor);
 
@@ -1954,6 +1959,7 @@ pageMenu.onclick = (event) => {
             ...THEMES.map(([id, label]) => ({ label, checked: themeChoice === id, run: () => chooseTheme(id) })),
             'separator',
             { label: 'Sidebar settings…', run: openSidebarSettings },
+            ...(window.WiiJukeboxApp ? [{ label: 'Switch server…', run: () => window.WiiJukeboxApp.switchServer() }] : []),
         ],
     });
 };
