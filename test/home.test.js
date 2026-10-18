@@ -2,6 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { PlayHistory } = require('../src/core/history');
 const { fakeSubsonic, fakeJellyfin, fakePlex, fakePodcasts, listen } = require('./helpers/fake-services');
@@ -280,6 +281,29 @@ test('the art proxy serves only links the server made, and only pictures', async
     } finally {
         await app.close();
         await hosts.close();
+    }
+});
+
+test('Local files only becomes the primary by itself when it is the only library, and a chosen one still wins', async (t) => {
+    const navidrome = await fakeSubsonic();
+    const music = fs.mkdtempSync(path.join(os.tmpdir(), 'wiijukebox-music-'));
+    t.after(() => fs.rmSync(music, { recursive: true, force: true }));
+    const app = await harness({ local: { folders: [music] } });
+    const primary = async () => {
+        const { id, auto } = await app.get('/api/home/primary');
+        return [id, auto];
+    };
+    try {
+        assert.deepEqual(await primary(), ['local', true], 'the only library leads');
+        app.config.updateSource('subsonic', navidrome.config);
+        assert.deepEqual(await primary(), ['subsonic', true], 'setting up Navidrome as well puts it first');
+        assert.equal((await app.post('/api/home/primary', { id: 'local' })).status, 200);
+        assert.deepEqual(await primary(), ['local', false]);
+        await app.post('/api/home/primary', { id: 'subsonic' });
+        assert.deepEqual(await primary(), ['subsonic', false]);
+    } finally {
+        await app.close();
+        await navidrome.close();
     }
 });
 

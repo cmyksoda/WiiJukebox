@@ -65,7 +65,9 @@ class HomeService {
         const eligible = REGISTRY.filter((cls) => cls.suggests && shown.has(cls.id))
             .map((cls) => ({ id: cls.id, label: cls.label }));
         const chosen = eligible.find((entry) => entry.id === this.config.data.home?.primary);
-        return { id: (chosen || eligible[0])?.id ?? null, auto: !chosen, eligible };
+        // A media server was set up on purpose, so Local files only leads when it is the only library.
+        const automatic = eligible.find((entry) => entry.id !== 'local') || eligible[0];
+        return { id: (chosen || automatic)?.id ?? null, auto: !chosen, eligible };
     }
 
     /** `id` null goes back to the automatic choice. */

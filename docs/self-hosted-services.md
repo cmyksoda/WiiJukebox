@@ -39,8 +39,9 @@ address, a password or a token; it browses through WiiJukebox.
   [Play history and scrobbling](streaming-services.md#play-history-and-scrobbling).
 - **Home screen suggestions.** One library service is the **primary**: its
   rows (below) fill the home screen. Until you choose, it is the first one set
-  up, in the sidebar's order; **Set as primary** in a service's channel chooses
-  it.
+  up, in the sidebar's order, except that a media server comes before Local
+  files; **Set as primary** in a service's channel chooses it, and your choice
+  stays until that service is no longer set up.
 
 ## Local files
 
