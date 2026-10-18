@@ -231,6 +231,7 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
     mask: var(--channel-icon, url("images/channels/note.svg")) center / contain no-repeat;
 }
 .channel-icon[data-channel="radio"] { --channel-icon: url("images/channels/radio.svg"); --channel-color: #f0963a; }
+.channel-icon[data-channel="local"] { --channel-icon: url("images/channels/folder.svg"); }
 .channel-icon[data-channel="podcasts"] { --channel-icon: url("images/channels/podcast.svg"); --channel-color: #d94a8c; }
 .channel-icon[data-channel="jellyfin"] { --channel-icon: url("images/channels/jellyfin.svg"); --channel-color: #9a62e0; }
 .channel-icon[data-channel="plex"] { --channel-icon: url("images/channels/plex.svg"); --channel-color: #e2a018; }

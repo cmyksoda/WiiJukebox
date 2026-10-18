@@ -261,7 +261,7 @@ static enum icon icon_for(const char *type, const char *ref) {
     static const struct { const char *name; enum icon kind; } kinds[] = {
         { "folder", ICON_FOLDER }, { "album", ICON_ALBUM }, { "station", ICON_RADIO },
         { "artist", ICON_ARTIST }, { "playlist", ICON_PLAYLIST }, { "server", ICON_SERVER },
-        { "radio", ICON_RADIO }, { "subsonic", ICON_NOTE }, { "jellyfin", ICON_JELLYFIN },
+        { "radio", ICON_RADIO }, { "local", ICON_FOLDER }, { "subsonic", ICON_NOTE }, { "jellyfin", ICON_JELLYFIN },
         { "plex", ICON_PLEX }, { "ytdlp", ICON_VIDEO }, { "desktop", ICON_DESKTOP },
         { "spotify", ICON_SPOTIFY }, { "airplay", ICON_AIRPLAY }, { "ytmusic", ICON_YTMUSIC },
         { "podcasts", ICON_PODCAST }, { "show", ICON_PODCAST },
