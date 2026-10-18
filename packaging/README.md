@@ -23,12 +23,23 @@ A native shell around the controller web page. It:
 
 - finds servers on the Wi-Fi network with the same UDP discovery the Wii client
   uses (`src/client/discovery.js`), on port 4005 plus any extra ports you enter;
-- remembers the chosen server by its ID, so a changed IP address is found again;
-- lets you type an address (`192.168.0.3:4005`) when discovery is blocked;
+- remembers the last six servers it used under Recent, a found one by its ID so a
+  changed IP address is found again (long-press one to forget it);
+- takes a typed address (`192.168.0.3:4005`) when discovery can't reach the server,
+  such as over Tailscale or a VPN;
 - shows the controller page in a WebView that follows the system light/dark
   setting unless the page's own Theme control (System, Light, Dark, in the menu button at
   the right of its toolbar) says otherwise, and sends its Back button to the page first (close a sheet, go up a
-  folder) before leaving the app.
+  folder) before leaving the app. The same menu has Switch server… inside the app.
+
+The page draws under the status and navigation bars. The app gives the WebView their
+sizes as its safe area, for pages from older servers, and the page also reads them from
+`WiiJukeboxApp.insets()` into `--safe-top` and `--safe-bottom`, which every WebView
+version supports. The page tells the app its theme (`WiiJukeboxApp.setTheme`), so the
+bar icons stay readable when it differs from the phone's. The first screen uses the
+page's Nunito (`assets/fonts/nunito.ttf`, converted from `public/fonts/nunito-latin.woff2`,
+with its OFL license beside it). Debug builds let Chrome's `chrome://inspect` look inside
+the WebView.
 
 Requirements: JDK 17 or newer, the Android SDK with platform 37 and build-tools
 36 (`ANDROID_HOME`, default `~/Android/Sdk`). Gradle 9.6.1 and Android Gradle
