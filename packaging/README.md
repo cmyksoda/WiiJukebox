@@ -45,6 +45,11 @@ a computer or NAS.
 an update signed with the same key, so back up both files in that folder; without
 the file, Gradle still makes debug builds.
 
+The launcher icon is the jukebox mark in blue on white, with the cabinet centered
+and the same drawing as the monochrome layer for themed icons.
+`python3 -I android/make-icon.py` redraws it from `public/images/jukebox.svg`
+after the mark changes.
+
 Not done: a lock-screen media notification and a Play Store listing.
 
 ## Desktop app (Linux, Windows, macOS)
