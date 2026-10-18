@@ -90,11 +90,11 @@ final class Chooser extends ScrollView {
 
         typeLabel = new TextView(context);
         addressError = new TextView(context);
-        addressError.setPadding(ui.dp(4), ui.dp(8), 0, 0);
+        addressError.setPadding(0, ui.dp(8), 0, 0);
         addressError.setLineSpacing(0, 1.25f);
         addressNote = new TextView(context);
         addressNote.setText(R.string.address_note);
-        addressNote.setPadding(ui.dp(4), ui.dp(10), 0, 0);
+        addressNote.setPadding(0, ui.dp(10), 0, 0);
         addressNote.setLineSpacing(0, 1.25f);
         column.addView(sectionRow(typeLabel, R.string.type_address, null));
         column.addView(row);
