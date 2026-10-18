@@ -94,6 +94,8 @@
 }
 
 * { box-sizing: border-box; }
+/* Set for a frame while the theme changes, so every color switches at once (see holdTransitions in app.js). */
+.theme-switching *, .theme-switching *::before, .theme-switching *::after { transition: none !important; }
 
 html, body {
     height: 100%;

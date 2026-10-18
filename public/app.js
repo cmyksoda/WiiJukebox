@@ -1925,10 +1925,18 @@ function savedTheme() {
 }
 
 function applyTheme(choice) {
+    holdTransitions();
     themeChoice = choice;
     if (choice === 'system') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = choice;
     paintThemeColor();
+}
+
+// Controls fade their colors on hover; without this a theme switch repaints them a beat after everything else.
+function holdTransitions() {
+    const root = document.documentElement;
+    root.classList.add('theme-switching');
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')));
 }
 
 // Browsers tint their own bars from this, and the desktop app's title bar follows it as it changes.
@@ -1940,7 +1948,10 @@ function paintThemeColor() {
     // The Android app's status bar icons sit on the page, so they follow its theme, and the visualizer's dark.
     window.WiiJukeboxApp?.setTheme?.(color, dark || document.body.classList.contains('viz'));
 }
-systemDark.addEventListener('change', paintThemeColor);
+systemDark.addEventListener('change', () => {
+    if (themeChoice === 'system') holdTransitions();
+    paintThemeColor();
+});
 
 function chooseTheme(choice) {
     applyTheme(choice);
