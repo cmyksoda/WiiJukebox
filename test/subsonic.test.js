@@ -69,6 +69,16 @@ test('Navidrome auth preserves password whitespace, pages libraries and queues c
     } finally { await source.disconnect(); server.close(); }
 });
 
+test('a cover keeps one link, with a token that still checks out, while API calls get fresh salts', () => {
+    const password = 'fixture secret';
+    const source = new SubsonicSource({ url: 'http://127.0.0.1:9/music', username: 'fixture', password });
+    const cover = new URL(source._artUrl('al-1'));
+    assert.equal(source._artUrl('al-1'), cover.href);
+    assert.notEqual(source._artUrl('al-2'), cover.href);
+    assert.equal(cover.searchParams.get('t'), crypto.createHash('md5').update(password + cover.searchParams.get('s')).digest('hex'));
+    assert.notEqual(source._url('ping.view'), source._url('ping.view'));
+});
+
 test('an old second Navidrome address becomes the one address, used for requests and covers', async () => {
     const password = 'fixture';
     const server = http.createServer((req, res) => {

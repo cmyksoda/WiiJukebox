@@ -51,7 +51,7 @@ class SubsonicSource extends QueueSource {
      * reversibly and the scheme predates modern practice -- so this must run
      * over HTTPS to mean anything. Warned about in connect().
      */
-    _authParams() {
+    _authParams({ stable = false } = {}) {
         const { username, password, token, salt } = this.config;
         const params = new URLSearchParams({
             u: username,
@@ -63,17 +63,20 @@ class SubsonicSource extends QueueSource {
             params.set('t', token);
             params.set('s', salt);
         } else {
-            const s = crypto.randomBytes(8).toString('hex');
+            // Covers share one salt, so each keeps one link (and proxy address) that browsers can cache.
+            const s = stable
+                ? crypto.createHash('sha256').update(`${this.config.url}\n${username}`).digest('hex').slice(0, 16)
+                : crypto.randomBytes(8).toString('hex');
             params.set('t', crypto.createHash('md5').update(String(password ?? '') + s).digest('hex'));
             params.set('s', s);
         }
         return params;
     }
 
-    _url(endpoint, extra = {}, url = this.config.url) {
+    _url(endpoint, extra = {}, url = this.config.url, { stable = false } = {}) {
         const base = String(url || '').replace(/\/+$/, '');
         if (!/^https?:\/\//i.test(base)) throw new Error('use an HTTP(S) Navidrome server URL');
-        const params = this._authParams();
+        const params = this._authParams({ stable });
         for (const [k, v] of Object.entries(extra)) {
             if (v != null) params.set(k, String(v));
         }
@@ -280,7 +283,7 @@ class SubsonicSource extends QueueSource {
     }
 
     _artUrl(coverArt, size = 300) {
-        return this._url('getCoverArt.view', { id: coverArt, size });
+        return this._url('getCoverArt.view', { id: coverArt, size }, this.config.url, { stable: true });
     }
 
     // --- playback -----------------------------------------------------------
