@@ -2184,7 +2184,7 @@ $('#search').oninput = (e) => {
     try {
         const settings = await api('/settings');
         state.mount = settings.mount;
-        $('#wii-address').textContent = `If it can't find the server, press HOME on the Wii, choose Server address and type this address: ${settings.hostIp}:${settings.port}`;
+        if (settings.hostIp) $('#wii-address').textContent = `If it can't find the server, press HOME on the Wii, choose Server address and type this address: ${settings.hostIp}:${settings.port}`;
     } catch {
         /* non-fatal; the setup panel just shows less */
     }
