@@ -1035,8 +1035,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
         border-bottom: 1px solid var(--edge-soft);
     }
     #crumb { font-size: 21px; }
-    /* The menu button stays on the title's row at the right; Settings and the full-width search follow it. */
-    #settings-btn { order: 1; }
+    /* Settings and the menu button stay on the title's row, the menu button rightmost; the full-width search wraps below. */
+    #page-menu { order: 1; }
     #search { order: 2; }
 
     #player {
