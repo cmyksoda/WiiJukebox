@@ -33,6 +33,8 @@ const KINDS = {
     spotify: 'Receiver', airplay: 'Receiver', desktop: 'Capture',
 };
 const NO_SEARCH = new Set(['radio', 'desktop', 'spotify', 'airplay']);
+/** The Wii's icon for a channel; style.css draws it from the channel's id. */
+const channelIcon = (id) => h('span', { class: 'channel-icon', 'data-channel': id, 'aria-hidden': 'true' });
 const PHONE = window.matchMedia('(max-width: 900px)');
 
 // --- helpers -------------------------------------------------------------
@@ -214,7 +216,7 @@ function renderSources() {
             'aria-current': String(state.activeSource === src.id),
             'data-source': src.id,
             onclick: () => openSource(src),
-        }, h('span', { class: 'dot' }),
+        }, channelIcon(src.id),
         h('span', {}, h('span', { class: 'name', text: src.label }), h('span', { class: 'sub', text: sub })));
         return btn;
     }), shown.length ? null : h('p', { class: 'hint sources-empty', text: 'Every channel is hidden.' })]));
@@ -414,7 +416,8 @@ function paintChannels() {
             class: `channel ${src.state}${src.configured ? ' configured' : ''}${playing ? ' playing' : ''}`,
             'data-source': src.id,
             onclick: () => openSource(src),
-        }, h('span', { class: 'kind', text: kindOf(src) }),
+        }, channelIcon(src.id),
+        h('span', { class: 'kind', text: kindOf(src) }),
         h('span', { class: 'name', text: src.label }),
         h('span', { class: 'state' }, h('span', { class: 'dot' }), label));
     }));
@@ -567,7 +570,8 @@ function homeSection(title, service, body, action = null) {
             service ? h('button', { class: 'chip home-from', 'aria-label': `Open ${service.label}`, onclick: () => {
                 const src = state.sources.find((entry) => entry.id === service.id);
                 if (src) openSource(src);
-            } }, SHORT[service.id] || service.label, h('i', { class: 'g g-right', 'aria-hidden': 'true' })) : null,
+            } }, channelIcon(service.id), SHORT[service.id] || service.label,
+            h('i', { class: 'g g-right', 'aria-hidden': 'true' })) : null,
             action,
             shelfEl ? shelfArrows(shelfEl) : null),
         body);
@@ -613,7 +617,7 @@ function shelfArrows(row) {
 function homeCard(item, source, { replay = null, id = null } = {}) {
     const playable = Boolean(replay) || item.type === 'track' || item.type === 'station';
     const cover = artwork(item);
-    if (replay) cover.append(h('span', { class: 'tag', text: SHORT[source] || source }));
+    if (replay) cover.append(h('span', { class: 'tag' }, channelIcon(source), SHORT[source] || source));
     const subtitle = item.type === 'track' && item.artist ? item.artist : item.subtitle;
     const card = h('button', {
         class: 'card',
@@ -1768,7 +1772,8 @@ function applyStatus(status) {
 
     const source = $('#np-source');
     source.hidden = !status.source;
-    source.textContent = status.source ? status.source.label : '';
+    $('#np-source .channel-icon').dataset.channel = status.source?.id || '';
+    $('#np-source-name').textContent = status.source ? status.source.label : '';
 
     // Enable only what the active source actually supports, so a control never
     // silently does nothing.

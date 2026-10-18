@@ -219,6 +219,29 @@ code { background: var(--tile); padding: 1px 6px; border-radius: 5px; font-size:
 .round.show-play .g-pause { display: none; }
 .round.show-play .g-play { display: inline-block; }
 
+/* --- channel icons: the Wii's own (client/source/ui.c), in its colors ------------------ */
+
+.channel-icon { display: inline-block; position: relative; width: 22px; height: 22px; flex: none; color: var(--channel-color, var(--accent)); }
+.channel-icon::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    -webkit-mask: var(--channel-icon, url("images/channels/note.svg")) center / contain no-repeat;
+    mask: var(--channel-icon, url("images/channels/note.svg")) center / contain no-repeat;
+}
+.channel-icon[data-channel="radio"] { --channel-icon: url("images/channels/radio.svg"); --channel-color: #f0963a; }
+.channel-icon[data-channel="podcasts"] { --channel-icon: url("images/channels/podcast.svg"); --channel-color: #d94a8c; }
+.channel-icon[data-channel="jellyfin"] { --channel-icon: url("images/channels/jellyfin.svg"); --channel-color: #9a62e0; }
+.channel-icon[data-channel="plex"] { --channel-icon: url("images/channels/plex.svg"); --channel-color: #e2a018; }
+.channel-icon[data-channel="ytdlp"] { --channel-icon: url("images/channels/video.svg"); --channel-color: #e54f4a; }
+.channel-icon[data-channel="spotify"] { --channel-icon: url("images/channels/spotify.svg"); --channel-color: #1db954; }
+.channel-icon[data-channel="airplay"] { --channel-icon: url("images/channels/airplay.svg"); --channel-color: var(--dim); }
+.channel-icon[data-channel="ytmusic"] { --channel-icon: url("images/channels/ytmusic.svg"); --channel-color: #e02f3b; }
+.channel-icon[data-channel="desktop"] { --channel-icon: url("images/channels/desktop.svg"); --channel-color: #2cb0a0; }
+/* A channel that still needs setup shows its icon grayed out. */
+.source-btn:not(.configured, .ready) .channel-icon, .channel:not(.configured, .ready) .channel-icon { opacity: .45; filter: grayscale(1); }
+
 /* --- buttons ------------------------------------------------------------------ */
 
 .pill {
@@ -417,11 +440,19 @@ body.viz #viz-fullscreen { display: inline-grid; }
 }
 .source-btn:hover { background: var(--tile); }
 .source-btn[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.source-btn.home .g { width: 15px; height: 15px; margin: 0 -3px; color: var(--accent-text); }
-.source-btn .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--edge); flex: none; }
-.source-btn.configured .dot, .source-btn.ready .dot { background: var(--ok); }
-.source-btn.playing .dot { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-.source-btn.error .dot { background: var(--danger); }
+.source-btn.home .g { width: 16px; height: 16px; margin: 0 3px; color: var(--accent-text); }
+/* The playing channel ends its row with the Wii's visualizer bars; a failing one ends it with a red dot. */
+.source-btn.playing::after, .source-btn.error::after { content: ""; flex: none; margin-left: auto; color: var(--accent); }
+.source-btn.playing::after {
+    width: 14px;
+    height: 12px;
+    background: linear-gradient(currentColor 0 0) 0 100% / 2px 6px no-repeat,
+        linear-gradient(currentColor 0 0) 4px 100% / 2px 12px no-repeat,
+        linear-gradient(currentColor 0 0) 8px 100% / 2px 8px no-repeat,
+        linear-gradient(currentColor 0 0) 12px 100% / 2px 10px no-repeat;
+}
+.source-btn.error::after { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+.source-btn.playing .sub { color: var(--accent-text); }
 .source-btn .name { display: block; font-weight: 700; line-height: 1.2; }
 .source-btn .sub { display: block; font-size: 12px; color: var(--dim); }
 
@@ -485,6 +516,7 @@ html.in-app #page-menu { display: none; }
 .channel:hover, .channel:focus-visible { border-color: var(--accent); background: var(--tile-hover); }
 .channel .kind { padding-bottom: 4px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .channel .name { font-size: 18px; font-weight: 800; line-height: 1.15; }
+.channel .channel-icon { position: absolute; top: 12px; right: 14px; width: 26px; height: 26px; }
 .channel .state { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim); }
 .channel .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--edge); flex: none; }
 .channel.configured .dot, .channel.ready .dot { background: var(--ok); }
@@ -592,7 +624,8 @@ html.in-app #page-menu { display: none; }
 #home-recent > .home-section { margin-top: 0; }
 .home-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-height: 32px; margin-bottom: 6px; }
 .home-head h3 { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
-.home-from { min-height: 28px; padding: 0 10px 0 12px; gap: 6px; border: 0; transition: background .15s ease, color .15s ease; }
+.home-from { min-height: 28px; padding: 0 10px 0 8px; gap: 6px; border: 0; transition: background .15s ease, color .15s ease; }
+.home-from .channel-icon { width: 14px; height: 14px; }
 .home-from .g { font-size: 8px; }
 .home-from:hover { background: var(--accent-soft); color: var(--accent-text); }
 .home-arrows { display: none; gap: 8px; margin-left: auto; }
@@ -639,6 +672,7 @@ span.play-all { pointer-events: none; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.card .tag .channel-icon { width: 11px; height: 11px; margin-right: 4px; vertical-align: -1px; }
 /* Stations have no cover, so they get level bars in place of the jukebox. */
 .ph.live::before {
     inset: 26% 30%;
@@ -810,7 +844,8 @@ details.advanced .form { margin-top: 10px; max-width: none; }
 #np-text { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 #np-title { font-size: 22px; font-weight: 800; line-height: 26px; overflow-wrap: anywhere; }
 #np-artist { color: var(--dim); font-size: 15px; line-height: 21px; overflow-wrap: anywhere; min-height: 21px; }
-#np-source { margin-top: 4px; }
+#np-source { margin-top: 4px; gap: 6px; padding-left: 8px; }
+#np-source .channel-icon { width: 14px; height: 14px; }
 
 #seek { width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 10px; }
 .time { font-size: 12px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }

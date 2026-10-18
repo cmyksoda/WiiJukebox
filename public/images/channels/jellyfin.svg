@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <mask id="holes">
+    <rect width="100" height="100" fill="#fff"/>
+    <polygon points="50,42 68,74 32,74"/>
+  </mask>
+  <polygon points="50,8 94,86 6,86" mask="url(#holes)"/>
+</svg>
