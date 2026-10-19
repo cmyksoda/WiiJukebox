@@ -13,12 +13,18 @@
 const net = require('net');
 const tls = require('tls');
 const { Source } = require('./base');
+const { readCapped } = require('./podcasts');
 
 // A healthy radio stream never goes quiet this long; treat it as a stall.
 const STALL_MS = 30000;
 const RETRY_MS = 30000;
 const MAX_REDIRECTS = 5;
 const MAX_HEADER_BYTES = 65536;
+const PLAYLIST_PATH = /\.(pls|m3u8?)$/i;
+const PLAYLIST_TYPE = /scpls|mpegurl|pls\+xml/i;
+const PLAYLIST_TIMEOUT_MS = 8000;
+const MAX_PLAYLIST_BYTES = 65536;
+const MAX_PLAYLIST_DEPTH = 3;
 
 class RadioSource extends Source {
     static id = 'radio';
@@ -95,10 +101,11 @@ class RadioSource extends Source {
             duration: null,
         });
 
-        this._startMetadataReader(url);
+        const stream = await resolveStream(url, this.deps.fetch || fetch);
+        this._startMetadataReader(stream);
         this._setState('playing');
 
-        return { type: 'uri', uri: url };
+        return { type: 'uri', uri: stream };
     }
 
     async close() {
@@ -296,6 +303,37 @@ function hostOf(url) {
 }
 
 /**
+ * Many station links are a .pls or .m3u listing the real streams, which ffmpeg can't open,
+ * so this follows one to the first stream it names. HLS playlists go to ffmpeg as they are.
+ */
+async function resolveStream(url, fetchImpl, depth = 0) {
+    if (depth >= MAX_PLAYLIST_DEPTH || !PLAYLIST_PATH.test(new URL(url).pathname)) return url;
+    let text;
+    try {
+        const res = await fetchImpl(url, {
+            headers: { 'User-Agent': 'WiiJukebox' },
+            signal: AbortSignal.timeout(PLAYLIST_TIMEOUT_MS),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const type = res.headers.get('content-type') || '';
+        if (/^(audio|video)\//i.test(type) && !PLAYLIST_TYPE.test(type)) {
+            await res.body?.cancel().catch(() => {});
+            return url;
+        }
+        text = (await readCapped(res, MAX_PLAYLIST_BYTES)).toString('utf8');
+    } catch (err) {
+        throw new Error(`couldn't read the station's playlist (${err.message})`);
+    }
+    if (/^#EXT-X-/m.test(text)) return url;
+    const entries = /^\s*\[playlist\]/i.test(text)
+        ? [...text.matchAll(/^\s*File\d+\s*=\s*(\S+)/gim)].map((match) => match[1])
+        : text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+    const next = entries.find((entry) => /^https?:\/\/\S+$/i.test(entry));
+    if (!next) throw new Error("the station's playlist names no stream");
+    return resolveStream(next, fetchImpl, depth + 1);
+}
+
+/**
  * Stations almost universally pack "Artist - Title" into one field. Splitting it
  * lets the WebUI show them separately; the pipeline recombines them for the Wii,
  * which only has one line anyway.
@@ -315,4 +353,4 @@ function splitTitle(raw) {
     return { artist: '', title: text, album: '', artwork: null, duration: null };
 }
 
-module.exports = { RadioSource, splitTitle };
+module.exports = { RadioSource, splitTitle, resolveStream };

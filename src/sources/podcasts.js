@@ -502,4 +502,4 @@ class PodcastsSource extends Source {
     }
 }
 
-module.exports = { PodcastsSource, parseFeed, parseDuration };
+module.exports = { PodcastsSource, parseFeed, parseDuration, readCapped };
