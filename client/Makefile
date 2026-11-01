@@ -19,12 +19,31 @@ PRESET_DIR ?=
 PRESET_TOUR_LABEL ?= flagged
 PRESET_TOUR_FILE ?= flagged-presets.txt
 LIBS := -L$(PORTLIBS_PPC)/lib -lfreetype -lpng16 -lbz2 -lbrotlidec -lbrotlicommon -lz -lfat -lwiiuse -lbte -lmad -lasnd -logc -lm
+# Extra controllers, folded onto the Wii Remote / GameCube pad calls the program already makes (see source/libwiiinput/extrainput.h):
+# USB mouse, pen tablets, uDraw GameTablet and the GameCube adapter for Wii U always; DualShock 3, Wii U Pro Controller
+# and Wii U GamePad once scripts/build_controller_portlibs.sh has built their libraries into ./portlibs/ppc
+EXTRA_PORTLIBS := $(CURDIR)/portlibs/ppc
+CFLAGS += -DHAVE_TABLET -DHAVE_GCADAPTER -Isource/libwiiinput -include extrainput_compat.h -I$(EXTRA_PORTLIBS)/include
+LIBS := -L$(EXTRA_PORTLIBS)/lib -Wl,--wrap=classic_ctrl_handshake,--wrap=parse_event,--wrap=USB_GetDeviceList $(LIBS)
+ifneq ($(wildcard $(EXTRA_PORTLIBS)/lib/libsicksaxis.a),)
+CFLAGS += -DHAVE_SICKSAXIS
+LIBS := -lsicksaxis $(LIBS)
+endif
+ifneq ($(wildcard $(EXTRA_PORTLIBS)/lib/libwupc.a),)
+CFLAGS += -DHAVE_WUPC
+LIBS := -lwupc -Wl,-wrap,wiiuse_accept $(LIBS)
+endif
+ifneq ($(wildcard $(EXTRA_PORTLIBS)/lib/libwiidrc.a),)
+CFLAGS += -DHAVE_WIIDRC
+LIBS := -lwiidrc $(LIBS)
+endif
+
 FONT_LATIN := vendor/fonts/Nunito-SemiBold-WiiJukebox.ttf
 FONT_GREEK := vendor/fonts/NotoSans-Greek-WiiJukebox.ttf
 FONT_CJK := vendor/fonts/NotoSansCJKjp-Medium-WiiJukebox.otf
 FONT_KR := vendor/fonts/NotoSansCJKkr-Medium-WiiJukebox.otf
 LOGO_MARK := assets/jukebox-mark.i8
-OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o build/logo_data.o
+OBJECTS := $(patsubst source/%.c,build/%.o,$(wildcard source/*.c) $(wildcard source/libwiiinput/*.c)) build/visualizer.o build/presets.o build/mp3player.o build/font_data.o build/logo_data.o
 include projectm.mk
 .PHONY: all clean host-test package FORCE
 all: dist/apps/wiijukebox/boot.dol
@@ -40,6 +59,7 @@ build/tour.h: FORCE | build
 	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
 build/main.o: build/tour.h
 build/%.o: source/%.c | build
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 build/logo_data.o: source/logo_data.S $(LOGO_MARK) | build
 	$(CC) $(MACHDEP) -DLOGO_MARK='"$(LOGO_MARK)"' -c $< -o $@
